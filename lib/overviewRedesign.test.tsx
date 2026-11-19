@@ -311,7 +311,8 @@ describe("top recommendations: the action plan, prioritized by real points", () 
     expect(html).toContain("High priority");
     expect(html).toContain("+6 pts");
     expect(html).toContain('href="/business/b/growth"');
-    expect(html).toContain("See this check →");
+    // Day 23B: ONE dark button per item, to where it's fixed (lib/fixDestination.ts).
+    expect(html.match(/data-testid="fix-button"/g)).toHaveLength(1);
     expect(render(<TopRecommendations businessId="b" recommendations={recs} />, "es")).toContain("Prioridad alta");
   });
 });
@@ -528,7 +529,8 @@ describe("connect card and business listing (tweaks)", () => {
     const fs = await import("node:fs");
     const view = fs.readFileSync("app/business/[id]/BusinessScoreView.tsx", "utf8");
     expect(view).not.toContain("gbpConnectPublic");
-    expect(view).not.toContain("ListingCard");
+    // Day 23B: the only listing card is Premium's "Your Google listing" (GoogleListingCard).
+    expect(view.replace(/GoogleListingCard/g, "")).not.toContain("ListingCard");
     expect(view).not.toContain("businessListingHeading");
     expect(view.indexOf("<ListingChips business={business} now={now} />")).toBeLessThan(view.indexOf('"dashboard.overview.atAGlanceHeading"'));
     // The connect page is viewable (read-only until GBP_CONNECT_PUBLIC);
@@ -574,7 +576,7 @@ describe("Overview layout and scan history (GBP card tweaks)", () => {
     const fs = await import("node:fs");
     const view = fs.readFileSync("app/business/[id]/BusinessScoreView.tsx", "utf8");
     expect(view).toContain(`<div data-testid="overview-recs-row" className="grid grid-cols-1 gap-4 nav:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]">
-        <TopRecommendations businessId={businessId} recommendations={recommendations?.slice(0, TOP_RECOMMENDATIONS) ?? null} />
+        <TopRecommendations businessId={businessId} recommendations={recommendations ?? null} limit={TOP_RECOMMENDATIONS} detailsMismatch={detailsMismatch} />
         <SinceLastScanCard businessId={businessId} snapshots={recentSnapshots} liveBreakdown={breakdown} gbpConnected={gbpConnected} now={{ rating: business.rating, reviewCount: business.review_count }} />
       </div>`);
     // PostStudio keeps its own row.

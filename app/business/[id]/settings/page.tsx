@@ -38,7 +38,7 @@ import { LazyBusinessName, LazyNamesProvider, LoadMoreNames } from "@/components
  * is shown; "Cancel subscription" appears only for a real paid
  * subscription (none exist until checkout ships — see the TODO below).
  */
-export default async function SettingsPage({ params }: { params: { id: string } }) {
+export default async function SettingsPage({ params, searchParams = {} }: { params: { id: string }; searchParams?: { use?: string; field?: string } }) {
   const [summary, reportsResult, hasSubscription, businessesResult] = await Promise.all([
     getBusinessSummary(params.id),
     // Only the monthly email toggle is shown here: no Google call.
@@ -61,7 +61,10 @@ export default async function SettingsPage({ params }: { params: { id: string } 
     niche,
   ] = await Promise.all([supabase.auth.getUser(), loadBusinessNiche(supabase, params.id)]);
 
-  const [websiteChoice, ownerDetails] = await Promise.all([getWebsiteChoice(params.id), getOwnerDetailsCard(params.id)]);
+  const [websiteChoice, ownerDetails] = await Promise.all([getWebsiteChoice(params.id), getOwnerDetailsCard(params.id, {
+    // Day 23B "Update your confirmed hours": the card opens on Google's version of that field.
+    useGoogle: searchParams.use === "google" && (searchParams.field === "phone" || searchParams.field === "address" || searchParams.field === "hours") ? searchParams.field : null,
+  })]);
   const autoDetectedProfile = autoDetectedBizProfile(business.category, business.primary_type, locale, business.categories, business.biz_type_resolved);
   const businessTypeOverride = business.business_type_override ?? null;
   const profile = resolveBizProfile(business.category, business.primary_type, businessTypeOverride, locale, business.categories, business.name, business.biz_type_resolved);

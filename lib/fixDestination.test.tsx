@@ -8,7 +8,7 @@ vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
 // points, to where it's fixed; no inline editors; Done rows have none; and
 // no raw translation key ever renders (Overview breakdown, Google Profile tab).
 
-import { breakdownAction } from "@/lib/breakdownAction";
+import { fixDestination, withFromScore, type FixContext } from "@/lib/fixDestination";
 import { CategoryCard } from "@/components/scoring/CategoryCard";
 import { GbpEditProvider, optionLabel, readableId } from "@/components/gbp/CustomerDetailsGoogleEdit";
 import { GoogleProfileTab } from "@/components/gbp/GoogleProfileTab";
@@ -19,24 +19,41 @@ import { breakdownFixLinks } from "@/components/overview/ScoreBreakdownPanel";
 const RAW_KEY = /\b(dashboard|content|growth)\.[a-zA-Z]+\.[a-zA-Z_.]+/;
 const text = (html: string) => html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ");
 
-describe("destination per check", () => {
-  const go = (checkId: string, googleTab = true, extra = {}) => breakdownAction({ businessId: "b1", checkId, googleTab, fixHref: "/business/b1/fix", ...extra });
-  test("Google Profile tab editors when the business has the tab", () => {
-    expect(go("completeness.customer_details", true, { missingParts: ["parking", "accessibility"] })).toEqual({ key: "addParts", params: { parts: "parking|accessibility" }, href: "/business/b1/growth?tab=google#edit-customer-details" });
-    expect(go("completeness.photos")!.href).toBe("/business/b1/growth?tab=google#edit-photos");
-    expect(go("completeness.hours")!.href).toBe("/business/b1/growth?tab=google#edit-hours");
-    expect(go("completeness.phone")!.href).toBe("/business/b1/growth?tab=google#edit-phone");
-    expect(go("completeness.website_link")!.href).toBe("/business/b1/growth?tab=google#edit-website-link");
-    expect(go("website.info_consistency", true, { hoursMismatch: true })).toEqual({ key: "compareHours", href: "/business/b1/growth?tab=google#compare-hours" });
+describe("destination per check (lib/fixDestination.ts)", () => {
+  const ctx = (o: Partial<FixContext> = {}): FixContext => ({ businessId: "b1", premium: true, connected: true, practice: false, canEdit: true, ...o });
+  const go = (checkId: string, c: FixContext = ctx(), extra = {}) => fixDestination({ checkId, ...extra }, c);
+  test("Premium + connected, Google writes on: “PostScore can do this for you” → that row's editor on the Google Profile tab", () => {
+    expect(go("completeness.customer_details", ctx(), { missingParts: ["parking", "accessibility"] })).toEqual({ kind: "do_it", key: "doItForYou", href: "/business/b1/growth?tab=google#edit-customer-details" });
+    expect(go("completeness.photos").href).toBe("/business/b1/growth?tab=google#edit-photos");
+    expect(go("completeness.hours").href).toBe("/business/b1/growth?tab=google#edit-hours");
+    expect(go("completeness.phone").href).toBe("/business/b1/growth?tab=google#edit-phone");
+    expect(go("completeness.website_link").href).toBe("/business/b1/growth?tab=google#edit-website-link");
+    expect(go("website.info_consistency", ctx(), { hoursMismatch: true })).toEqual({ kind: "do_it", key: "doItForYou", href: "/business/b1/growth?tab=google#compare-hours" });
+  });
+  test("Premium + connected, writes off (GOOGLE_WRITES_LIVE_PLACES): the same editor, with the verb (it opens read-only)", () => {
+    expect(go("completeness.customer_details", ctx({ canEdit: false }), { missingParts: ["parking"] })).toEqual({ kind: "steps", key: "addParts", params: { parts: "parking" }, href: "/business/b1/growth?tab=google#edit-customer-details" });
+    expect(go("website.info_consistency", ctx({ canEdit: false }), { hoursMismatch: true })).toEqual({ kind: "steps", key: "compareHours", href: "/business/b1/growth?tab=google#compare-hours" });
   });
   test("reviews and the website", () => {
-    expect(go("visibility.review_replies")).toEqual({ key: "replyReviews", href: "/business/b1/website-reviews#google-reviews" });
-    expect(go("visibility.review_count")!.key).toBe("moreReviews");
-    expect(go("website.performance_mobile")).toEqual({ key: "fixWebsite", href: "/business/b1/website#check-performance_mobile" });
+    // Premium + connected: the replies go out from PostScore's inbox; Grow: the steps there.
+    expect(go("visibility.review_replies")).toEqual({ kind: "do_it", key: "doItForYou", href: "/business/b1/website-reviews#google-reviews" });
+    expect(go("visibility.review_replies", ctx({ premium: false }))).toEqual({ kind: "steps", key: "replyReviews", href: "/business/b1/website-reviews#google-reviews" });
+    expect(go("visibility.review_count").key).toBe("moreReviews");
+    expect(go("visibility.review_count").href).toBe("/business/b1/website-reviews#review-link");
+    expect(go("website.performance_mobile")).toEqual({ kind: "steps", key: "fixWebsite", href: "/business/b1/website#check-performance_mobile" });
   });
-  test("without the Google Profile tab: the check's fix page", () => {
-    expect(go("completeness.photos", false)!.href).toBe("/business/b1/fix");
-    expect(go("website.info_consistency", false, { hoursMismatch: true })!.key).toBe("fixWebsite");
+  test("Grow, or not connected: the Growth step with “How to fix it” open; the hours mismatch: the Website page's fix steps", () => {
+    for (const c of [ctx({ premium: false }), ctx({ connected: false })]) {
+      expect(go("completeness.photos", c)).toEqual({ kind: "steps", key: "addPhotos", href: "/business/b1/growth?open=howto#task-completeness-photos" });
+      expect(go("completeness.hours", c).href).toBe("/business/b1/growth?open=howto#task-completeness-hours");
+      expect(go("website.info_consistency", c, { hoursMismatch: true })).toEqual({ kind: "steps", key: "compareHours", href: "/business/b1/website#check-info_consistency" });
+    }
+    // Practice mode counts as having the tab.
+    expect(go("completeness.phone", ctx({ connected: false, practice: true, canEdit: false })).kind).toBe("do_it");
+  });
+  test("from the Overview: “← Back to your score” on arrival", () => {
+    expect(withFromScore("/business/b1/growth?tab=google#edit-hours")).toBe("/business/b1/growth?tab=google&from=score#edit-hours");
+    expect(withFromScore("/business/b1/website#check-links")).toBe("/business/b1/website?from=score#check-links");
   });
 });
 
@@ -58,7 +75,7 @@ describe("the breakdown cards", () => {
       for (const category of breakdown.categories) {
         const html = wrap(<CategoryCard category={category} embedded fixLinks={links} businessId="b1" />, locale);
         const needsWork = category.checks.filter((c) => c.earnedPoints !== null && c.earnedPoints < c.maxPoints && !(c.id === "visibility.rating" && (c.meta?.ratingBand === "excellent" || c.meta?.ratingBand === "good"))).length;
-        const buttons = (html.match(/data-testid="row-action"/g) ?? []).length;
+        const buttons = (html.match(/data-testid="fix-button"/g) ?? []).length;
         expect([category.id, buttons <= needsWork]).toEqual([category.id, true]);
         for (const block of html.split('data-testid="row-actions"').slice(1)) expect((block.split("</div>")[0].match(/<a /g) ?? []).length).toBeLessThanOrEqual(1);
         expect(html).not.toMatch(/data-testid="(gbp-edit|website-link-fix|fix-with-postscore|row-how-to)"/);

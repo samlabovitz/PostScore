@@ -20,6 +20,9 @@ import { isPremiumPlan, type Plan } from "@/lib/plan";
 import { type GoogleProfileConnection, GoogleProfilePanel, type GoogleListingFacts } from "@/components/gbp/GoogleProfilePanel";
 import { GoogleProfileTab, type GoogleProfileTabProps } from "@/components/gbp/GoogleProfileTab";
 import { BookingTaskCard } from "@/components/gbp/BookingSteps";
+import { DetailsMismatchTasks } from "@/components/overview/DetailsMismatchTasks";
+import type { DetailsMismatchState } from "@/lib/detailsMismatch.server";
+import { mismatchesCoveredBy, URGENT_DETAILS } from "@/lib/detailsMismatch";
 import { GOOGLE_TAB_PARAM, isGoogleTabParam } from "@/lib/googleProfileTab";
 import type { SearchDemandView } from "@/components/gbp/SearchDemandSection";
 import { growthMoveOverlapsActionPlan } from "@/lib/growthMoveOverlap";
@@ -187,6 +190,7 @@ export function GrowthView({
   googleProfile,
   googleTab = null,
   bookingTask = null,
+  detailsMismatch = null,
   lastScanAt,
   websiteRecheck = null,
   gbpConnected = false,
@@ -203,6 +207,8 @@ export function GrowthView({
   googleTab?: GoogleProfileTabProps | null;
   /** Case B (lib/bookingPartners.ts): a one-time "Turn on Google booking" task. */
   bookingTask?: { provider: string; still: boolean } | null;
+  /** Day 23B: confirmed details that differ from Google or the website (no points). */
+  detailsMismatch?: DetailsMismatchState | null;
   /** The Google Profile tab's real data (see GoogleProfilePanel). */
   googleProfile: {
     listing: GoogleListingFacts | null;
@@ -314,6 +320,16 @@ export function GrowthView({
   // move's badge checks itself against (see growthMoveOverlapsActionPlan
   // in lib/growthMoveOverlap.ts), never a separate/stale copy.
   const openActionPlanTasks = [...actionPlan.weeklyTasks, ...actionPlan.laterTasks];
+  // Day 23B: a confirmed-details mismatch and "Matches your Google listing" on
+  // the same field are ONE step — first in its list, Urgent for hours/phone.
+  const mismatchList = detailsMismatch?.mismatches ?? [];
+  const mergedFirst = (tasks: ActionPlanTask[]) => {
+    const covers = (task: ActionPlanTask) => mismatchesCoveredBy(task, mismatchList);
+    const merged = tasks.filter((task) => covers(task).length > 0).map((task) => (covers(task).some((m) => URGENT_DETAILS.includes(m.field)) ? { ...task, urgent: true } : task));
+    return [...merged, ...tasks.filter((task) => covers(task).length === 0)];
+  };
+  const coveredFields = new Set(openActionPlanTasks.flatMap((task) => mismatchesCoveredBy(task, mismatchList).map((m) => m.field)));
+  const standaloneMismatches = mismatchList.filter((m) => !coveredFields.has(m.field));
   // Whole points only: "+2 within reach this week".
   const reach = wholePointRange(Math.max(0, pointsWithinReachLow), pointsWithinReachHigh !== null ? Math.max(0, pointsWithinReachHigh) : null);
   const withinReachText =
@@ -446,13 +462,16 @@ export function GrowthView({
                     </div>
                     {/* One time, not weekly: until Google counts the bookings. */}
                     {bookingTask && <BookingTaskCard businessId={businessId} provider={bookingTask.provider} still={bookingTask.still} />}
+                    {/* Day 23B: the ones no "Matches your Google listing" step already shows. */}
+                    {standaloneMismatches.length > 0 && <DetailsMismatchTasks businessId={businessId} mismatches={standaloneMismatches} owner={detailsMismatch?.owner ?? null} />}
                     {/* The "Connect Google" step replaces this card when it's in the plan. */}
                     {!gbpConnected && !actionPlan.weeklyTasks.some((task) => task.checkId === CONNECT_GOOGLE_STEP_ID) && (
                       <PremiumConnectCard businessId={businessId} premium={isPremiumPlan(plan)} />
                     )}
                     <TaskListCard
                       premium={isPremiumPlan(plan)}
-                      tasks={actionPlan.weeklyTasks}
+                      tasks={mergedFirst(actionPlan.weeklyTasks)}
+                      detailsMismatches={mismatchList}
                       businessId={businessId}
                       context="weekly"
                       lastScanAt={lastScanAt}
@@ -478,7 +497,8 @@ export function GrowthView({
                     )}
                     {(actionPlan.laterTasks.length > 0 || !actionPlan.websiteBanner) && (
                       <TaskListCard
-                        tasks={actionPlan.laterTasks}
+                        tasks={mergedFirst(actionPlan.laterTasks)}
+                        detailsMismatches={mismatchList}
                         businessId={businessId}
                         lastScanAt={lastScanAt}
                         linkOptions={linkOptions}

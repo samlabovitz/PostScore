@@ -112,11 +112,11 @@ describe("a Done check shows no fix button", () => {
 
   test("website link losing points (Colorful Yun Nan, 0/4): ONE button to where it's fixed, no inline editor", () => {
     const premium = row(check("completeness.website_link", 0, 4));
-    expect(premium.match(/data-testid="row-action"/g)).toHaveLength(1);
+    expect(premium.match(/data-testid="fix-button"/g)).toHaveLength(1);
     expect(premium).toContain("#edit-website-link");
     expect(premium).not.toContain('data-testid="website-link-fix"');
     const other = row(check("completeness.website_link", 0, 4), { premium: false, connected: false, undo: null, websiteUndo: null });
-    expect(other.match(/data-testid="row-action"/g)).toHaveLength(1);
+    expect(other.match(/data-testid="fix-button"/g)).toHaveLength(1);
     expect(other).not.toContain('data-testid="website-link-fix-manual"');
   });
 
@@ -124,9 +124,9 @@ describe("a Done check shows no fix button", () => {
     const meta = { parts: "accessibility,parking", ownerRemoved: "", ownerCanRemove: "" };
     const done = row(check("completeness.customer_details", 3, 3, { meta }));
     expect(done).not.toContain("gbp-edit");
-    expect(done).not.toContain('data-testid="row-action"');
+    expect(done).not.toContain('data-testid="fix-button"');
     const needs = row(check("completeness.customer_details", 1, 3, { meta, gaps: ["accessibility"] }));
-    expect(needs.match(/data-testid="row-action"/g)).toHaveLength(1);
+    expect(needs.match(/data-testid="fix-button"/g)).toHaveLength(1);
     expect(needs).not.toContain('data-testid="gbp-edit"');
   });
 

@@ -33,3 +33,7 @@ Today: Settings → "Your business details" is the only place to confirm them. T
 - **Strings:** EN + ES (formal "usted").
 - **Wording:** honest. A detail is "confirmed" only when the owner confirmed it.
 - **Score:** no score change from owner details. Differences only create tasks.
+
+## Later
+
+- **After a website re-check too:** ask "Your {field} now match. Save these as your confirmed details?" once, when a re-check shows the website now matches Google and the confirmed details differ. Today the question comes only after a PostScore change is read back live on Google (lib/detailsMismatch.ts `nowMatchPrompt`); a website-side match shows the merged task's "Update your confirmed {field}" instead.

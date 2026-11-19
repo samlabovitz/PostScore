@@ -37,11 +37,13 @@ export function AnchorHighlight() {
   useEffect(() => {
     const timers: ReturnType<typeof setTimeout>[] = [];
     function highlight() {
-      const id = decodeURIComponent(window.location.hash.slice(1));
+      // "#edit-hours?use=own": the part before "?" (Day 23B).
+      const id = decodeURIComponent(window.location.hash.slice(1)).split("?")[0];
       if (!/^[A-Za-z0-9_-]+$/.test(id)) return;
       let tries = 0;
       const attempt = () => {
-        const el = document.getElementById(id);
+        // A row can answer to other names too (the Google Profile tab's Hours row is #edit-hours).
+        const el = document.getElementById(id) ?? document.querySelector<HTMLElement>(`[data-anchor-alias~="${id}"]`);
         if (!el) {
           if (tries++ < 20) timers.push(setTimeout(attempt, 100));
           return;

@@ -1,5 +1,7 @@
 "use client";
 
+import type { DetailsMismatchState } from "@/lib/detailsMismatch.server";
+import type { ComponentProps } from "react";
 import { useState } from "react";
 import { isFullScanKind, isScoringUpdate } from "@/lib/websiteRecheckPolicy";
 import { IconChevronDown, IconExternalLink } from "@tabler/icons-react";
@@ -38,6 +40,7 @@ import type { ReviewCountChange } from "@/lib/scanChanges";
 import type { LinkOptions } from "@/lib/postaiLinks";
 import type { GetLocalBenchmarkResult } from "@/app/actions/competitors";
 import { LiveListingSection } from "@/components/gbp/LiveListingSection";
+import { GoogleListingCard } from "@/components/overview/GoogleListingCard";
 import { InfoTip } from "@/components/reports/ScoreHistoryChart";
 import { FreeReviews, FreeSection, RankUnlockLine } from "@/components/overview/FreeOverview";
 import { FixPlanBox } from "@/components/overview/FixPlanUpsell";
@@ -77,6 +80,8 @@ export function BusinessScoreView({
   replyDrafts = null,
   freePostai = null,
   gbpReplyCheck = null,
+  googleListing = null,
+  detailsMismatch = null,
   monthlyReportsLive = false,
   archived = false,
   serviceOptions = null,
@@ -123,6 +128,10 @@ export function BusinessScoreView({
   freePostai?: FreeAiAllowance | null;
   /** Free: connect Google for the "Replying to reviews" check (null = hidden). */
   gbpReplyCheck?: GbpReplyCheckState | null;
+  /** Premium: the "Your Google listing" card (Day 23B); null = the Premium preview (Free, Grow). */
+  googleListing?: ComponentProps<typeof GoogleListingCard> | null;
+  /** Day 23B: confirmed details that differ from Google or the website (lib/detailsMismatch.ts). */
+  detailsMismatch?: DetailsMismatchState | null;
   /** isMonthlyReportsLive() — the Free plan list's monthly email row says
    * "Coming soon" until it's true. */
   monthlyReportsLive?: boolean;
@@ -326,7 +335,7 @@ export function BusinessScoreView({
           breakdown → "More customers" → the rest. PostAI is the "Ask
           PostAI" button on every page (components/assistant/PostAIDock.tsx). */}
       <div data-testid="overview-recs-row" className="grid grid-cols-1 gap-4 nav:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]">
-        <TopRecommendations businessId={businessId} recommendations={recommendations?.slice(0, TOP_RECOMMENDATIONS) ?? null} />
+        <TopRecommendations businessId={businessId} recommendations={recommendations ?? null} limit={TOP_RECOMMENDATIONS} detailsMismatch={detailsMismatch} />
         <SinceLastScanCard businessId={businessId} snapshots={recentSnapshots} liveBreakdown={breakdown} gbpConnected={gbpConnected} now={{ rating: business.rating, reviewCount: business.review_count }} />
       </div>
 
@@ -376,8 +385,15 @@ export function BusinessScoreView({
 
       <StudioComingSoon businessId={businessId} />
 
-      <SectionHeading title={t(locale, "dashboard.overview.liveListingHeading")} />
-      <LiveListingSection businessId={businessId} connected={gbpConnected} premium={plan === "premium" || plan === "multi"} />
+      {googleListing ? (
+        // Day 23B: the real listing card (Premium — the Google Profile tab is Premium).
+        <GoogleListingCard {...googleListing} />
+      ) : (
+        <>
+          <SectionHeading title={t(locale, "dashboard.overview.liveListingHeading")} />
+          <LiveListingSection businessId={businessId} connected={gbpConnected} premium={plan === "premium" || plan === "multi"} />
+        </>
+      )}
 
       <SectionHeading title={t(locale, "dashboard.overview.scanHistoryHeading")} />
       <ScanHistory history={history} />

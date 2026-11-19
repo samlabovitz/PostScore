@@ -1,6 +1,7 @@
 "use client";
 
-import { ReactNode, useEffect, useState } from "react";
+import { BackToScore } from "@/components/layout/BackToScore";
+import { ReactNode, Suspense, useEffect, useState } from "react";
 import Link from "next/link";
 import { IconMenu2 } from "@tabler/icons-react";
 import { Sidebar } from "@/components/layout/Sidebar";
@@ -126,6 +127,10 @@ export function DashboardShell({
           />
 
           <main className="min-w-0 p-4 sm:p-8 nav:ml-[250px] nav:p-10">
+            {/* Day 23B: arrived from the Overview's fix buttons. */}
+            <Suspense fallback={null}>
+              <BackToScore />
+            </Suspense>
             {children}
             {upgrade && upgrade.cards.length > 0 && <PromoCards />}
             <footer className="mt-12 border-t border-paper-line pt-4">

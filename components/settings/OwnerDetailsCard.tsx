@@ -35,10 +35,11 @@ const toInput = (f: Form) => ({ name: f.name, address: f.address, phone: f.phone
 
 export function OwnerDetailsCard({ businessId, card }: { businessId: string; card: Card }) {
   const locale = useLocale();
-  const [form, setForm] = useState<Form>(toForm(card.details));
+  // Day 23B: from "Update your confirmed hours", the fields start on Google's version.
+  const [form, setForm] = useState<Form>(toForm(card.suggested ?? card.details));
   const [confirmed, setConfirmed] = useState<OwnerDetails | null>(card.confirmedAt ? card.details : null);
-  // Collapsed to the summary once confirmed.
-  const [editing, setEditing] = useState(!card.confirmedAt);
+  // Collapsed to the summary once confirmed (open when there's a suggestion to confirm).
+  const [editing, setEditing] = useState(!card.confirmedAt || !!card.suggested);
   const [state, setState] = useState<{ kind: "idle" } | { kind: "saving" } | { kind: "error"; message: MessageKey; reason?: string }>({ kind: "idle" });
 
   const current = sanitizeOwnerDetails(toInput(form));
@@ -105,6 +106,11 @@ export function OwnerDetailsCard({ businessId, card }: { businessId: string; car
   return (
     <div data-testid="owner-details" className="flex flex-col gap-3">
       {card.liveUnavailable && !confirmed && <LiveUnavailableNote />}
+      {card.suggested && (
+        <p data-testid="owner-details-suggested" className="rounded-lg bg-[color:color-mix(in_srgb,var(--color-brass)_10%,white)] px-3 py-2 text-[12.5px] text-ink">
+          {t(locale, k("suggested"))}
+        </p>
+      )}
       <div className="flex flex-col gap-1.5">
         <p className="text-[12.5px] leading-snug text-ink-soft">{t(locale, k(confirmed ? "intro" : prefilled ? "introPrefilled" : "introEmpty"))}</p>
         {prefilled && (

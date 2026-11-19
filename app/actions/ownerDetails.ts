@@ -26,6 +26,8 @@ export type OwnerDetailsCard = {
   noListing: boolean;
   /** Read Google, and it shows no hours: "Google doesn't show hours for you yet." */
   noGoogleHours: boolean;
+  /** Day 23B "Update your confirmed hours": the confirmed details with that field as Google shows it now (the card opens on these, to confirm). */
+  suggested?: OwnerDetails | null;
 };
 
 export type GetOwnerDetailsCardResult = { status: "ok"; card: OwnerDetailsCard } | { status: "unauthenticated" } | { status: "not_found" };
@@ -35,7 +37,7 @@ export type GetOwnerDetailsCardResult = { status: "ok"; card: OwnerDetailsCard }
  * confirmed: the listing as Google shows it now (one live read, shared
  * with the visit's other pages — lib/ownerListing.server.ts).
  */
-export async function getOwnerDetailsCardWithClient(supabase: SupabaseClient, businessId: string): Promise<GetOwnerDetailsCardResult> {
+export async function getOwnerDetailsCardWithClient(supabase: SupabaseClient, businessId: string, options: { useGoogle?: "phone" | "address" | "hours" | null } = {}): Promise<GetOwnerDetailsCardResult> {
   const { data: row, error } = await supabase
     .from("businesses")
     .select("id, place_id, listing_mode, language, business_type_override, biz_type_resolved")
@@ -50,7 +52,10 @@ export async function getOwnerDetailsCardWithClient(supabase: SupabaseClient, bu
   );
   const noListing = !row.place_id || row.listing_mode === "website_only";
   const saved = await loadOwnerDetails(supabase, businessId);
-  if (saved) return { status: "ok", card: { details: saved.details, confirmedAt: saved.confirmedAt, liveUnavailable: false, noListing, noGoogleHours: false } };
+  if (saved) {
+    const suggested = options.useGoogle && !noListing ? await googleVersionOf(supabase, businessId, row, saved.details, options.useGoogle) : null;
+    return { status: "ok", card: { details: saved.details, confirmedAt: saved.confirmedAt, liveUnavailable: false, noListing, noGoogleHours: false, ...(suggested ? { suggested } : {}) } };
+  }
   if (noListing) return { status: "ok", card: { details: ownerDetailsPrefill(null, { byAppointment }), confirmedAt: null, liveUnavailable: false, noListing, noGoogleHours: false } };
   const live = await liveListingForRow(supabase, businessId, row);
   const values = live.status === "ok" ? live.values : null;
@@ -66,13 +71,24 @@ export async function getOwnerDetailsCardWithClient(supabase: SupabaseClient, bu
   };
 }
 
-export async function getOwnerDetailsCard(businessId: string): Promise<GetOwnerDetailsCardResult> {
+/** The confirmed details with one field as Google shows it now (null: Google couldn't be read). */
+async function googleVersionOf(supabase: SupabaseClient, businessId: string, row: { place_id: string | null; listing_mode: string | null }, details: OwnerDetails, field: "phone" | "address" | "hours"): Promise<OwnerDetails | null> {
+  const live = await liveListingForRow(supabase, businessId, row).catch(() => null);
+  if (live?.status !== "ok") return null;
+  if (field === "phone") return { ...details, phone: live.values.phone ?? "" };
+  if (field === "address") return { ...details, address: live.values.address ?? "" };
+  const { weekFromPlacesPeriods } = await import("@/lib/hoursEditor");
+  const week = weekFromPlacesPeriods(live.values.openingHoursPeriods);
+  return week ? { ...details, hours: { kind: "regular", week } } : null;
+}
+
+export async function getOwnerDetailsCard(businessId: string, options: { useGoogle?: "phone" | "address" | "hours" | null } = {}): Promise<GetOwnerDetailsCardResult> {
   const supabase = createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return { status: "unauthenticated" };
-  return getOwnerDetailsCardWithClient(supabase, businessId);
+  return getOwnerDetailsCardWithClient(supabase, businessId, options);
 }
 
 export type SaveOwnerDetailsResult =
@@ -115,4 +131,38 @@ export async function saveOwnerDetails(businessId: string, input: unknown): Prom
   // The header and the Overview's prompt read them.
   if (result.status === "ok") revalidatePath(`/business/${businessId}`, "layout");
   return result;
+}
+
+export type AnswerNowMatchResult = { status: "ok" | "unauthenticated" | "unavailable" | "error" };
+
+/**
+ * Day 23B: "Your {field} now match. Save these as your confirmed details?" —
+ * Save: the confirmed details take that field as Google shows it now (the
+ * rest stay; none yet → all from the listing). Either answer is asked once
+ * (promo_dismissals, the change's key).
+ */
+export async function answerNowMatch(businessId: string, field: "phone" | "hours", key: string, save: boolean): Promise<AnswerNowMatchResult> {
+  if ((field !== "phone" && field !== "hours") || typeof key !== "string" || !/^match-(phone|hours)-[0-9T:-]{10,19}$/.test(key)) return { status: "error" };
+  const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { status: "unauthenticated" };
+  if (save) {
+    const { data: row } = await supabase.from("businesses").select("id, place_id, listing_mode").eq("id", businessId).maybeSingle();
+    if (!row) return { status: "error" };
+    const live = await liveListingForRow(supabase, businessId, row);
+    if (live.status !== "ok") return { status: "unavailable" };
+    const current = (await loadOwnerDetails(supabase, businessId))?.details ?? ownerDetailsPrefill(live.values);
+    const { weekFromPlacesPeriods } = await import("@/lib/hoursEditor");
+    const week = weekFromPlacesPeriods(live.values.openingHoursPeriods);
+    const next = field === "phone" ? { ...current, phone: live.values.phone ?? "" } : { ...current, hours: week ? { kind: "regular" as const, week } : current.hours };
+    const saved = await saveOwnerDetailsWithClient(supabase, businessId, next);
+    if (saved.status !== "ok") return { status: "error" };
+  }
+  const { error } = await supabase
+    .from("promo_dismissals")
+    .upsert({ user_id: user.id, business_id: businessId, promo_key: key, hidden_until: "2100-01-01T00:00:00Z" }, { onConflict: "user_id,business_id,promo_key" });
+  revalidatePath(`/business/${businessId}`, "layout");
+  return { status: error ? "error" : "ok" };
 }

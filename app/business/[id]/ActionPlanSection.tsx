@@ -1,13 +1,14 @@
 "use client";
 
-import { useState, createContext, useContext } from "react";
+import { DetailsVersions, MergedActions, mergedTitle } from "@/components/overview/DetailsMismatchTasks";
+import { mergedKind, mismatchesCoveredBy, type DetailsMismatch } from "@/lib/detailsMismatch";
+import { useEffect, useState, createContext, useContext } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { IconChevronDown, IconBrandGoogle, IconCircleCheck, IconPhoto, IconTag, IconTicket, IconTrendingUp, IconUsers, IconWorld } from "@tabler/icons-react";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { LINK_PILL_CLASS } from "@/components/ui/linkPill";
-import { taskFixLink } from "@/lib/overviewTiles";
 import type { LinkOptions } from "@/lib/postaiLinks";
 import { cn } from "@/lib/utils";
 import { wholePointRange } from "@/lib/pointRange";
@@ -26,9 +27,10 @@ import {
 } from "@/lib/actionPlan";
 import type { GrowthMove } from "@/lib/growthMoves";
 import { GoogleMapsAttribution } from "@/components/google/GoogleMapsAttribution";
-import { CustomerDetailsGoogleEdit, useGbpEdit } from "@/components/gbp/CustomerDetailsGoogleEdit";
-import { FixWithPostScore, fixFlowHref } from "@/components/gbp/FixWithPostScore";
-import { HoursMismatchChooser } from "@/components/hours/HoursMismatchChooser";
+import { useGbpEdit } from "@/components/gbp/CustomerDetailsGoogleEdit";
+import { FixButton, FIX_BUTTON_CLASS, useFixContext } from "@/components/scoring/FixButton";
+import { fixDestination, hasGoogleTab } from "@/lib/fixDestination";
+import { GOOGLE_BUSINESS_URL } from "@/lib/googleProfileTab";
 import { formatMonthDayTime, t, useLocale, useTimeZone, type Locale } from "@/lib/i18n";
 
 /** What a website task needs for "Re-check my website". */
@@ -255,6 +257,12 @@ function effortBadge(task: ActionPlanTask, context: TaskCardContext, locale: Loc
 
 /** The small brass points chip — whole numbers only. Exported for tests. */
 export function taskPointsLabel(task: ActionPlanTask, context: TaskCardContext, locale: Locale): string {
+  // "+1 pt", never "+1 pts" (Day 23B).
+  const label = taskPointsText(task, context, locale);
+  return /\+1 pts\b/.test(label) ? label.replace(/\+1 pts\b/, "+1 pt") : label;
+}
+
+function taskPointsText(task: ActionPlanTask, context: TaskCardContext, locale: Locale): string {
   // The real weighted contribution to the 0-100 total (see
   // ActionPlanTask.weightedPoints) — what makes a weekly card's points
   // add up to "within reach".
@@ -279,12 +287,14 @@ export function TaskCard({
   context = "later",
   lastScanAt = null,
   step = null,
-  linkOptions = {},
   websiteRecheck = null,
   premium = false,
+  merged = [],
 }: {
   task: ActionPlanTask;
   businessId: string;
+  /** Day 23B: the details mismatches this task shows with every version (one task per field). */
+  merged?: DetailsMismatch[];
   /** Premium: steps PostScore will one day do say "Coming soon". */
   premium?: boolean;
   context?: TaskCardContext;
@@ -303,12 +313,26 @@ export function TaskCard({
   const [state, setState] = useState<MarkState>({ kind: "idle" });
   // Premium "Update on Google" (Step 1: customer details only).
   const gbpEdit = useGbpEdit();
+  const fixCtx = useFixContext(businessId);
   const onGoogle = task.checkId === "completeness.customer_details";
   // Premium + connected: PostScore can make this change ("Update on Google").
   const canUpdateOnGoogle = onGoogle && gbpEdit.enabled && gbpEdit.premium && gbpEdit.connected;
-  // Premium: a step whose fix PostScore can make opens that editor ("Fix it
-  // with PostScore (Beta)"); "Coming soon" only for steps with no editor yet.
-  const hasEditor = gbpEdit.enabled && (onGoogle || fixFlowHref(businessId, task.checkId, task.mergedCheckIds) !== null);
+  // Day 23B: ONE button (lib/fixDestination.ts). Premium with Google writes:
+  // "PostScore can do this for you" (the editor); "Coming soon" only for
+  // steps PostScore has no editor for yet.
+  const fixItem = { checkId: task.checkId, mergedCheckIds: task.mergedCheckIds, hoursMismatch: task.checkId === GOOGLE_MISMATCH_CHECK_ID && (task.mismatchFields ?? []).includes("hours") };
+  // An editor exists for this step at all (whatever this business's connection or writes).
+  const hasEditor = fixDestination(fixItem, { ...fixCtx, premium: true, connected: true, canEdit: true }).kind === "do_it";
+  const cardId = `task-${task.checkId.replace(/\./g, "-")}`;
+  // "?open=howto#task-…" (the step-by-step from the Overview): open "How to fix it" here.
+  useEffect(() => {
+    const open = () => {
+      if (window.location.hash.slice(1) === cardId && new URLSearchParams(window.location.search).get("open") === "howto") setExpanded(true);
+    };
+    open();
+    window.addEventListener("hashchange", open);
+    return () => window.removeEventListener("hashchange", open);
+  }, [cardId]);
 
   async function handleMarkDone() {
     setState({ kind: "saving" });
@@ -342,20 +366,18 @@ export function TaskCard({
   // The obtainable ask, front and center — a weekly target for a
   // gradual check, or the one-shot action itself when there isn't one.
   const headline = task.weeklyTarget ?? task.action;
-  // Where this is fixed — the same link PostAI and the Overview use. None
-  // when that's this Growth page itself.
   const isSetup = task.effort === "setup";
-  // The task's own links (PostScore tool, then official Google pages),
-  // then the usual fix link unless it's the same page.
+  // The task's own links (PostScore tool, official Google pages): in "How to fix it".
   const stepLinks = task.links ?? [];
-  const fix = isSetup ? null : taskFixLink(task.checkId, businessId, linkOptions);
-  const fixLink =
-    fix && !fix.href.startsWith(`/business/${businessId}/growth`) && !stepLinks.some((l) => l.href.split("#")[0] === fix.href.split("#")[0]) ? fix : null;
   // The card title is the action; the check's name is the small label.
-  const title = task.title ?? task.label;
+  // Merged with the confirmed details: "Your hours don't match everywhere".
+  const title = merged.length > 0 ? mergedTitle(merged, locale) : (task.title ?? task.label);
+  // Google and the website agree now: only the confirmed details differ — the
+  // scan's "show different hours" line and its points are out of date.
+  const ownerOnly = merged.length > 0 && mergedKind(merged) === "owner_only";
 
   return (
-    <li id={`task-${task.checkId.replace(/\./g, "-")}`} className="scroll-mt-20 rounded-2xl border border-paper-deep bg-white p-4 shadow-card sm:p-5">
+    <li id={cardId} className="scroll-mt-20 rounded-2xl border border-paper-deep bg-white p-4 shadow-card sm:p-5">
       <div className="flex items-start gap-3">
         {step !== null && (
           <span aria-hidden className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full font-serif text-[14px] font-semibold text-ink ps-icon-tile">
@@ -392,7 +414,7 @@ export function TaskCard({
             </p>
           )}
 
-          {!isSetup && (
+          {!isSetup && !ownerOnly && (
             <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1.5">
               {/* Never the title twice ("Reply to your recent reviews"). */}
               {headline !== title && <p className="text-[13.5px] font-medium text-ink">{headline}</p>}
@@ -411,11 +433,8 @@ export function TaskCard({
 
           {task.timingNote && <p className="text-[12px] italic text-ink-mute">{task.timingNote}</p>}
 
-          <CurrentStatus task={task} pendingStatus={pendingStatus} metricProgress={metricProgress} lastScanAt={lastScanAt} />
+          {merged.length > 0 ? <DetailsVersions mismatches={merged} /> : <CurrentStatus task={task} pendingStatus={pendingStatus} metricProgress={metricProgress} lastScanAt={lastScanAt} />}
 
-          {onGoogle && <CustomerDetailsGoogleEdit businessId={businessId} />}
-          {task.checkId === GOOGLE_MISMATCH_CHECK_ID && (task.mismatchFields ?? []).includes("hours") && <HoursMismatchChooser businessId={businessId} />}
-          {premium && !isSetup && <FixWithPostScore businessId={businessId} checkId={task.checkId} mergedCheckIds={task.mergedCheckIds} />}
 
           <div>
             <button
@@ -442,6 +461,34 @@ export function TaskCard({
                   <span className="font-semibold text-ink">{t(locale, "dashboard.overview.actionPlan.howLabel")}</span>
                   {task.fix}
                 </p>
+                {/* The steps' own pages (official Google help, the listing) — links, never a second button. */}
+                {!isSetup && (stepLinks.length > 0 || (task.checkId.startsWith("completeness.") && !hasEditor)) && (
+                  <p data-testid="how-to-links" className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[12.5px]">
+                    {task.checkId.startsWith("completeness.") && !hasEditor && <span className="text-ink-mute">{t(locale, "dashboard.fix.orOnGoogle")}</span>}
+                    {stepLinks.map((link) =>
+                      link.external ? (
+                        <a key={link.href} href={link.href} target="_blank" rel="noopener noreferrer" className="font-semibold text-ink underline decoration-brass underline-offset-2">
+                          {link.label} ↗
+                        </a>
+                      ) : (
+                        <Link key={link.href} href={link.href} className="font-semibold text-ink underline decoration-brass underline-offset-2">
+                          {link.label}
+                        </Link>
+                      )
+                    )}
+                    {task.checkId.startsWith("completeness.") && !hasEditor && !stepLinks.some((l) => l.external) && (
+                      <a href={GOOGLE_BUSINESS_URL} target="_blank" rel="noopener noreferrer" data-testid="open-on-google" className="font-semibold text-ink underline decoration-brass underline-offset-2">
+                        {t(locale, "dashboard.fix.openOnGoogle")} ↗
+                      </a>
+                    )}
+                  </p>
+                )}
+                {/* Day 23B: one main button + "I did this" on the card; the re-check lives with the steps. */}
+                {websiteRecheck && task.checkId.startsWith("website.") && task.checkId !== "website.has_website" && (
+                  <div className="mt-2.5 border-t border-paper-line pt-2.5" data-testid="how-to-recheck">
+                    <WebsiteRecheck businessId={businessId} initialLeft={websiteRecheck.left} hasWebsite={websiteRecheck.hasWebsite} compact />
+                  </div>
+                )}
                 {task.ownerActionOnGoogle && (
                   <p className="mt-2.5 flex items-start gap-1.5 border-t border-paper-line pt-2.5 text-[12px] text-ink-mute">
                     <IconBrandGoogle size={14} className="mt-0.5 shrink-0" aria-hidden />
@@ -459,7 +506,7 @@ export function TaskCard({
           {isSetup && (task.href || stepLinks.length > 0) && (
             <div className="flex flex-wrap items-center gap-2 border-t border-paper-line pt-3">
               {task.href && (
-                <Link href={task.href} className={LINK_PILL_CLASS}>
+                <Link href={task.href} data-testid="fix-button" className={FIX_BUTTON_CLASS}>
                   {t(locale, "content.actionPlan.connectGoogle.link")}
                 </Link>
               )}
@@ -471,23 +518,26 @@ export function TaskCard({
             </div>
           )}
 
-          {!isSetup && (fixLink || stepLinks.length > 0 || !isPending || canMarkAgain) && (
+          {!isSetup && (
             <div className="flex flex-wrap items-center gap-2 border-t border-paper-line pt-3">
-              {stepLinks.map((link) =>
-                link.external ? (
-                  <a key={link.href} href={link.href} target="_blank" rel="noopener noreferrer" className={LINK_PILL_CLASS}>
-                    {link.label} ↗
-                  </a>
-                ) : (
-                  <Link key={link.href} href={link.href} className={LINK_PILL_CLASS}>
-                    {link.label}
-                  </Link>
-                )
-              )}
-              {fixLink && (
-                <Link href={fixLink.href} className={LINK_PILL_CLASS}>
-                  {fixLink.label ? t(locale, fixLink.label) : t(locale, "dashboard.overview.recs.seeCheck")}
+              {/* Day 23B: Premium without Google connected — what connecting adds. */}
+              {fixCtx.premium && !hasGoogleTab(fixCtx) && hasEditor && (
+                <Link href={`/business/${businessId}/connect-gbp`} data-testid="fix-connect" className="w-full text-[12.5px] font-semibold text-ink underline decoration-brass underline-offset-2">
+                  {t(locale, "dashboard.detailsMismatch.connect")}
                 </Link>
+              )}
+              {/* Day 23B: the one dark button — on this page the step-by-step opens right here. */}
+              {merged.length > 0 ? (
+                <MergedActions businessId={businessId} mismatches={merged} only="button" />
+              ) : (
+                <FixButton
+                  businessId={businessId}
+                  item={fixItem}
+                  onSteps={() => {
+                    setExpanded(true);
+                    requestAnimationFrame(() => document.getElementById(cardId)?.scrollIntoView({ behavior: "smooth", block: "start" }));
+                  }}
+                />
               )}
               {(!isPending || canMarkAgain) && (
                 <Button variant="default" size="sm" onClick={handleMarkDone} disabled={state.kind === "saving"}>
@@ -499,6 +549,11 @@ export function TaskCard({
                 </Button>
               )}
               {state.kind === "error" && <span className="text-[12px] text-red">{state.message}</span>}
+              {merged.length > 0 && (
+                <div className="w-full">
+                  <MergedActions businessId={businessId} mismatches={merged} only="link" />
+                </div>
+              )}
               {noChangeYet && (
                 <p data-testid="check-again-note" className="w-full text-[12px] text-ink-mute">
                   {t(locale, "dashboard.overview.actionPlan.checkAgainNote")}
@@ -506,11 +561,7 @@ export function TaskCard({
               )}
             </div>
           )}
-          {websiteRecheck && task.checkId.startsWith("website.") && task.checkId !== "website.has_website" && (
-            <div className="border-t border-paper-line pt-3">
-              <WebsiteRecheck businessId={businessId} initialLeft={websiteRecheck.left} hasWebsite={websiteRecheck.hasWebsite} compact />
-            </div>
-          )}
+
         </div>
       </div>
     </li>
@@ -587,11 +638,14 @@ export function TaskListCard({
   linkOptions = {},
   websiteRecheck = null,
   premium = false,
+  detailsMismatches = [],
 }: {
   tasks: ActionPlanTask[];
   businessId: string;
   /** See TaskCard's premium. */
   premium?: boolean;
+  /** Day 23B: confirmed details that differ — merged into "Matches your Google listing". */
+  detailsMismatches?: DetailsMismatch[];
   emptyMessage: string;
   footnote?: string;
   context?: TaskCardContext;
@@ -617,6 +671,7 @@ export function TaskListCard({
             linkOptions={linkOptions}
             websiteRecheck={websiteRecheck}
             premium={premium}
+            merged={mismatchesCoveredBy(task, detailsMismatches)}
           />
         ))}
       </ol>

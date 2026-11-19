@@ -17,6 +17,8 @@
 // Not connected (and not practice): one card, what connecting unlocks.
 // The wording never says PostScore caused a change in the rate.
 
+import type { NowMatchPrompts } from "@/lib/detailsMismatch.server";
+import { NowMatchPrompt } from "@/components/gbp/NowMatchPrompt";
 import Link from "next/link";
 import { createContext, Fragment, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
@@ -147,6 +149,8 @@ export interface GoogleProfileTabProps {
   nicheId?: string | null;
   /** Writes from PostScore allowed (practice, or GOOGLE_WRITES_LIVE_PLACES). */
   canEditGoogle?: boolean;
+  /** Day 23B: after a PostScore change is live, "Your {field} now match…" (lib/detailsMismatch.ts). */
+  nowMatch?: NowMatchPrompts;
 }
 
 /** Gold-on-navy and the mockup's soft tones, from the app's own colors. */
@@ -1380,6 +1384,20 @@ function NextSection(props: GoogleProfileTabProps & { sample: boolean }) {
 // 4 Your listing
 // ---------------------------------------------------------------------------
 
+/** The other names a row answers to (the editor links' #edit-…), for the landing highlight. */
+const ROW_ALIASES: Record<string, string> = {
+  hours: "edit-hours compare-hours",
+  phone: "edit-phone",
+  website: "edit-website-link",
+  customerDetails: "edit-customer-details",
+  photos: "edit-photos",
+  booking: "edit-booking edit-booking-steps",
+  messaging: "edit-messaging",
+  holiday: "edit-holiday",
+  services: "edit-services",
+  description: "edit-description",
+};
+
 const EDITOR_ROW: Record<Editor, string> = {
   holiday: "holiday",
   services: "services",
@@ -1695,7 +1713,7 @@ function ListingRowView({ row, props, live, open, onToggle, prefill, startHours 
     if (compareRequest > 0 && compare) setCompareOpen(true);
   }, [compareRequest, compare]);
   return (
-    <div id={`listing-${row.id}`} className="scroll-mt-24 border-t border-paper-line/70" data-testid={`listing-row-${row.id}`} data-status={row.status}>
+    <div id={`listing-${row.id}`} data-anchor-alias={ROW_ALIASES[row.id]} className="scroll-mt-24 border-t border-paper-line/70" data-testid={`listing-row-${row.id}`} data-status={row.status}>
       <div className="grid min-h-[44px] grid-cols-[24px_1fr_auto] items-center gap-x-3 gap-y-0.5 px-3 py-[7px] text-[13px] sm:grid-cols-[24px_160px_1fr_auto]">
         <span className={cn("flex h-5 w-5 items-center justify-center rounded-full text-[11px] font-bold", dot.cls)} aria-hidden>
           {dot.mark}
@@ -1751,6 +1769,12 @@ function ListingRowView({ row, props, live, open, onToggle, prefill, startHours 
       {compare && compareOpen && !open && (
         <div className="px-3 pb-2.5 sm:pl-[51px]" data-testid="listing-compare-hours">
           <HoursComparePanel businessId={props.businessId} onTab />
+        </div>
+      )}
+      {/* Day 23B: a PostScore change to this field is live — save it as the confirmed details? (asked once) */}
+      {(row.id === "phone" || row.id === "hours") && props.nowMatch?.[row.id] && (
+        <div className="px-3 pb-2.5 sm:pl-[51px]">
+          <NowMatchPrompt businessId={props.businessId} field={row.id} prompt={props.nowMatch[row.id]!} />
         </div>
       )}
       {/* After a choice, once a scan shows they match: "Hours match … ✓". */}
@@ -1810,15 +1834,14 @@ const SMALL_BTN = "inline-flex h-[26px] items-center rounded-md border px-2.5 te
  * it only filled in that matches our scan), amber with "I know, that's
  * right" / "Review" — red with "Review" only for the name, the address or a
  * closed listing. */
-export function GoogleEditsBanner({ businessId, saved, scan }: { businessId: string; saved: GoogleTabSaved | null; scan: { website?: string | null; phone?: string | null } }) {
-  const locale = useLocale();
-  const router = useRouter();
-  const [busy, setBusy] = useState(false);
-  const [hidden, setHidden] = useState(false);
+/** The banner's one line ("Your hours were changed on Google on Nov 14"), or
+ * null when nothing changed and the listing is open — also the Overview's
+ * "Your Google listing" card's first line (Day 23B). */
+export function googleEditsLine(saved: GoogleTabSaved | null, scan: { website?: string | null; phone?: string | null }, locale: Locale): { headline: string; serious: boolean; ids: string[] } | null {
   const edits = bannerEdits(saved?.googleEdits?.open ?? [], scan);
   const status = saved?.businessStatus ?? null;
   const closed = status === "CLOSED_TEMPORARILY" || status === "CLOSED_PERMANENTLY";
-  if (hidden || (edits.length === 0 && !closed)) return null;
+  if (edits.length === 0 && !closed) return null;
   const serious = bannerSerious(edits.map((e) => e.field), status);
   const latest = edits.map((e) => e.detected_at).sort().pop();
   const date = latest ? formatShortDate(latest, locale).replace(/,? \d{4}$/, "") : "";
@@ -1829,6 +1852,17 @@ export function GoogleEditsBanner({ businessId, saved, scan }: { businessId: str
       : edits.length === 1
         ? t(locale, K(PLURAL_FIELDS.includes(edits[0].field) ? "banner.onePlural" : "banner.one"), { field: names[0], date })
         : t(locale, K("banner.many"), { fields: joinFields(names, t(locale, K("banner.and"))), date });
+  return { headline, serious, ids: edits.map((e) => e.id) };
+}
+
+export function GoogleEditsBanner({ businessId, saved, scan }: { businessId: string; saved: GoogleTabSaved | null; scan: { website?: string | null; phone?: string | null } }) {
+  const locale = useLocale();
+  const router = useRouter();
+  const [busy, setBusy] = useState(false);
+  const [hidden, setHidden] = useState(false);
+  const line = googleEditsLine(saved, scan, locale);
+  if (hidden || !line) return null;
+  const { headline, serious } = line;
   return (
     <div
       role={serious ? "alert" : "status"}
@@ -1847,7 +1881,7 @@ export function GoogleEditsBanner({ businessId, saved, scan }: { businessId: str
         {!serious && (
           <BannerAccept
             businessId={businessId}
-            ids={edits.map((e) => e.id)}
+            ids={line.ids}
             busy={busy}
             onDone={() => {
               setHidden(true);

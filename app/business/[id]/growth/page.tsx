@@ -1,4 +1,5 @@
 import { GOOGLE_MISMATCH_CHECK_ID } from "@/lib/actionPlan";
+import { loadDetailsMismatches, loadNowMatchPrompts } from "@/lib/detailsMismatch.server";
 import { googleWritesAllowed } from "@/lib/gbpReviewPractice";
 import { parseGbpResult } from "@/lib/gbpLanding";
 import { isGbpOAuthConfigured } from "@/lib/googleBusinessProfile";
@@ -254,6 +255,8 @@ export default async function GrowthPage({ params, searchParams = {} }: { params
             })(),
             hoursMismatch: actionPlanResult.status === "ok" ? actionPlanResult.tasks.some((task) => task.checkId === GOOGLE_MISMATCH_CHECK_ID && (task.mismatchFields ?? []).includes("hours")) : undefined,
             canEditGoogle: practice || googleWritesAllowed((row as { place_id?: string | null }).place_id ?? null),
+            // Day 23B: "Your {field} now match. Save these as your confirmed details?" (once per change).
+            nowMatch: gbpConnected ? await loadNowMatchPrompts(db, params.id, { made: saved?.made ?? [], google: scored.scoringBusiness ?? scored.business }).catch(() => ({})) : {},
           };
         })()
       : null;
@@ -306,6 +309,7 @@ export default async function GrowthPage({ params, searchParams = {} }: { params
         googleProfile={googleProfile}
         googleTab={googleTab}
         bookingTask={bookingState?.tracking.kind === "turn_on" ? { provider: bookingState.tracking.provider, still: bookingState.tracking.still } : null}
+        detailsMismatch={await loadDetailsMismatches(createClient(), params.id, scored.scoringBusiness ?? scored.business).catch(() => null)}
         actionPlan={actionPlan}
         growthMoves={growthMoves}
         weeklyChecklist={weeklyChecklist}

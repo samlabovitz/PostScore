@@ -258,7 +258,8 @@ describe("the Website link check: change the link any time on Premium + Google c
     expect(linkRow(missing, { premium: false, connected: false })).toContain("Fix your website link →");
     const premium = linkRow(missing, { premium: true, connected: true });
     expect(premium).toContain("Fix your website link →");
-    expect(premium).toContain("growth?tab=google#edit-website-link");
+    // Day 23B: from the Overview it carries "← Back to your score".
+    expect(premium).toContain("growth?tab=google&amp;from=score#edit-website-link");
   });
 
   test("opening it on a working link starts from today's link, to edit (same checks, preview, approve, read-back and undo)", () => {

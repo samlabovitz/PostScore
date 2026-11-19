@@ -2447,6 +2447,49 @@ export type MessageKey =
   | "dashboard.breakdown.action.chooseCategory"
   | "dashboard.breakdown.action.fixOnGoogle"
   | "dashboard.breakdown.action.compareHours"
+  | "dashboard.breakdown.action.doItForYou"
+  | "dashboard.fix.backToScore"
+  | "dashboard.detailsMismatch.heading"
+  | "dashboard.detailsMismatch.merged.ownerOnly.hours"
+  | "dashboard.detailsMismatch.merged.ownerOnly.phone"
+  | "dashboard.detailsMismatch.merged.ownerOnly.address"
+  | "dashboard.detailsMismatch.merged.update.hours"
+  | "dashboard.detailsMismatch.merged.update.phone"
+  | "dashboard.detailsMismatch.merged.update.address"
+  | "dashboard.detailsMismatch.merged.orChangeThem"
+  | "dashboard.detailsMismatch.merged.orChangeIt"
+  | "dashboard.detailsMismatch.merged.title.hours"
+  | "dashboard.detailsMismatch.merged.title.phone"
+  | "dashboard.detailsMismatch.merged.title.address"
+  | "dashboard.detailsMismatch.merged.titleMany"
+  | "dashboard.detailsMismatch.fieldTitle.phone"
+  | "dashboard.detailsMismatch.fieldTitle.address"
+  | "dashboard.detailsMismatch.fieldTitle.hours"
+  | "dashboard.detailsMismatch.versions.owner"
+  | "dashboard.detailsMismatch.versions.google"
+  | "dashboard.detailsMismatch.versions.website"
+  | "dashboard.detailsMismatch.versions.none"
+  | "dashboard.detailsMismatch.field.phone"
+  | "dashboard.detailsMismatch.field.address"
+  | "dashboard.detailsMismatch.field.hours"
+  | "dashboard.detailsMismatch.title.google"
+  | "dashboard.detailsMismatch.title.both"
+  | "dashboard.detailsMismatch.title.website"
+  | "dashboard.detailsMismatch.why"
+  | "dashboard.detailsMismatch.steps.phone"
+  | "dashboard.detailsMismatch.steps.address"
+  | "dashboard.detailsMismatch.steps.hours"
+  | "dashboard.detailsMismatch.connect"
+  | "dashboard.detailsMismatch.keepGoogle"
+  | "dashboard.detailsMismatch.keepWebsite"
+  | "dashboard.detailsMismatch.nowMatch.phone"
+  | "dashboard.detailsMismatch.nowMatch.hours"
+  | "dashboard.detailsMismatch.nowMatch.save"
+  | "dashboard.detailsMismatch.nowMatch.no"
+  | "dashboard.detailsMismatch.nowMatch.saved"
+  | "dashboard.detailsMismatch.nowMatch.waiting"
+  | "dashboard.fix.orOnGoogle"
+  | "dashboard.fix.openOnGoogle"
   | "dashboard.breakdown.action.fixWebsite"
   | "dashboard.breakdown.action.fixIt"
   | "dashboard.gbpEdit.option.has_wheelchair_accessible_entrance"
@@ -3195,6 +3238,11 @@ export type MessageKey =
   | "dashboard.overview.profileChecklistTitle"
   | "dashboard.overview.profileChecklistDescription"
   | "dashboard.overview.gbpConnectedNotWiredUp"
+  | "dashboard.overview.listingCard.title"
+  | "dashboard.overview.listingCard.open"
+  | "dashboard.overview.listingCard.allGood"
+  | "dashboard.overview.listingCard.review"
+  | "dashboard.overview.listingCard.connect"
   | "dashboard.overview.ptsAvailable"
   | "dashboard.overview.askPostAI"
   | "dashboard.postaiDock.button"
@@ -5175,6 +5223,7 @@ export type MessageKey =
   | "dashboard.settings.website.helper"
   | "dashboard.settings.nav.details"
   | "dashboard.settings.details.helper"
+  | "dashboard.settings.details.suggested"
   | "dashboard.settings.details.introPrefilled"
   | "dashboard.settings.details.introEmpty"
   | "dashboard.settings.details.intro"
@@ -8465,6 +8514,49 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.breakdown.action.chooseCategory": "Choose your category",
     "dashboard.breakdown.action.fixOnGoogle": "Fix it on Google",
     "dashboard.breakdown.action.compareHours": "Compare your hours",
+    "dashboard.breakdown.action.doItForYou": "PostScore can do this for you",
+    "dashboard.fix.backToScore": "Back to your score",
+    "dashboard.detailsMismatch.heading": "Your details don't match",
+    "dashboard.detailsMismatch.merged.ownerOnly.hours": "Your confirmed hours differ from Google and your website",
+    "dashboard.detailsMismatch.merged.ownerOnly.phone": "Your confirmed phone number differs from Google and your website",
+    "dashboard.detailsMismatch.merged.ownerOnly.address": "Your confirmed address differs from Google and your website",
+    "dashboard.detailsMismatch.merged.update.hours": "Update your confirmed hours",
+    "dashboard.detailsMismatch.merged.update.phone": "Update your confirmed phone number",
+    "dashboard.detailsMismatch.merged.update.address": "Update your confirmed address",
+    "dashboard.detailsMismatch.merged.orChangeThem": "Or change them on Google and your website",
+    "dashboard.detailsMismatch.merged.orChangeIt": "Or change it on Google and your website",
+    "dashboard.detailsMismatch.merged.title.hours": "Your hours don't match everywhere",
+    "dashboard.detailsMismatch.merged.title.phone": "Your phone number doesn't match everywhere",
+    "dashboard.detailsMismatch.merged.title.address": "Your address doesn't match everywhere",
+    "dashboard.detailsMismatch.merged.titleMany": "Your {field} don't match everywhere",
+    "dashboard.detailsMismatch.fieldTitle.phone": "Phone number",
+    "dashboard.detailsMismatch.fieldTitle.address": "Address",
+    "dashboard.detailsMismatch.fieldTitle.hours": "Hours",
+    "dashboard.detailsMismatch.versions.owner": "You confirmed",
+    "dashboard.detailsMismatch.versions.google": "Google",
+    "dashboard.detailsMismatch.versions.website": "Website",
+    "dashboard.detailsMismatch.versions.none": "None shown",
+    "dashboard.detailsMismatch.field.phone": "phone number",
+    "dashboard.detailsMismatch.field.address": "address",
+    "dashboard.detailsMismatch.field.hours": "hours",
+    "dashboard.detailsMismatch.title.google": "Your {field} on Google doesn't match the details you confirmed",
+    "dashboard.detailsMismatch.title.both": "Your {field} on Google and on your website don't match the details you confirmed",
+    "dashboard.detailsMismatch.title.website": "Your website's {field} doesn't match the details you confirmed",
+    "dashboard.detailsMismatch.why": "This doesn't change your score. Customers go by what Google and your website show, so fix it there.",
+    "dashboard.detailsMismatch.steps.phone": "On Google: Edit profile → Contact → Phone, then Save.",
+    "dashboard.detailsMismatch.steps.address": "On Google: Edit profile → Location → Business location, then Save. Google may ask you to verify again.",
+    "dashboard.detailsMismatch.steps.hours": "On Google: Edit profile → Hours, then Save.",
+    "dashboard.detailsMismatch.connect": "Connect Google so PostScore can do this for you",
+    "dashboard.detailsMismatch.keepGoogle": "Is Google's version right? Update your confirmed details",
+    "dashboard.detailsMismatch.keepWebsite": "Is your website's version right? Update your confirmed details",
+    "dashboard.detailsMismatch.nowMatch.phone": "Your phone number now matches. Save it as your confirmed details?",
+    "dashboard.detailsMismatch.nowMatch.hours": "Your hours now match. Save them as your confirmed details?",
+    "dashboard.detailsMismatch.nowMatch.save": "Save",
+    "dashboard.detailsMismatch.nowMatch.no": "No thanks",
+    "dashboard.detailsMismatch.nowMatch.saved": "Saved as your confirmed details.",
+    "dashboard.detailsMismatch.nowMatch.waiting": "Waiting for Google. We'll ask once it's live.",
+    "dashboard.fix.orOnGoogle": "Or update it on Google yourself:",
+    "dashboard.fix.openOnGoogle": "Open on Google",
     "dashboard.breakdown.action.fixWebsite": "Fix on your website",
     "dashboard.breakdown.action.fixIt": "Fix it",
     "dashboard.gbpEdit.option.has_wheelchair_accessible_entrance": "Wheelchair-accessible entrance",
@@ -9368,6 +9460,11 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.overview.gbpConnectedNotWiredUp":
       "Google Business Profile connected. Live field-by-field completeness isn't wired up yet — that's a later update, not something broken here. We'll show your real checklist here once it ships.",
     "dashboard.overview.ptsAvailable": "+{points} pts available",
+    "dashboard.overview.listingCard.title": "Your Google listing",
+    "dashboard.overview.listingCard.open": "Open your Google listing",
+    "dashboard.overview.listingCard.allGood": "Everything on your listing looks right ✓",
+    "dashboard.overview.listingCard.review": "Review",
+    "dashboard.overview.listingCard.connect": "Connect your Google listing to see and fix it here.",
 
     "dashboard.overview.askPostAI": "Ask PostAI",
     "dashboard.postaiDock.button": "Ask PostAI",
@@ -11521,6 +11618,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.settings.website.helper": "The site PostScore grades, screenshots and shows for this business.",
     "dashboard.settings.nav.details": "Your business details",
     "dashboard.settings.details.helper": "Your name, address, phone and hours as you want them on your prints, emails and PostScore pages.",
+    "dashboard.settings.details.suggested": "Filled in with what Google and your website show now. Check it, then confirm.",
     "dashboard.settings.details.introPrefilled": "Filled in from your Google listing as it shows right now. Check them, change anything that's off, then confirm. We save only what you confirm.",
     "dashboard.settings.details.introEmpty": "Enter your details, then confirm. We save only what you confirm.",
     "dashboard.settings.details.intro": "Provided by you. Change anything and confirm again.",
@@ -14609,6 +14707,49 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.breakdown.action.chooseCategory": "Elegir su categoría",
     "dashboard.breakdown.action.fixOnGoogle": "Corregirlo en Google",
     "dashboard.breakdown.action.compareHours": "Comparar sus horarios",
+    "dashboard.breakdown.action.doItForYou": "PostScore puede hacerlo por usted",
+    "dashboard.fix.backToScore": "Volver a su puntuación",
+    "dashboard.detailsMismatch.heading": "Sus datos no coinciden",
+    "dashboard.detailsMismatch.merged.ownerOnly.hours": "Su horario confirmado no coincide con Google ni con su sitio web",
+    "dashboard.detailsMismatch.merged.ownerOnly.phone": "Su número de teléfono confirmado no coincide con Google ni con su sitio web",
+    "dashboard.detailsMismatch.merged.ownerOnly.address": "Su dirección confirmada no coincide con Google ni con su sitio web",
+    "dashboard.detailsMismatch.merged.update.hours": "Actualice su horario confirmado",
+    "dashboard.detailsMismatch.merged.update.phone": "Actualice su número de teléfono confirmado",
+    "dashboard.detailsMismatch.merged.update.address": "Actualice su dirección confirmada",
+    "dashboard.detailsMismatch.merged.orChangeThem": "O cámbielo en Google y en su sitio web",
+    "dashboard.detailsMismatch.merged.orChangeIt": "O cámbielo en Google y en su sitio web",
+    "dashboard.detailsMismatch.merged.title.hours": "Su horario no coincide en todas partes",
+    "dashboard.detailsMismatch.merged.title.phone": "Su número de teléfono no coincide en todas partes",
+    "dashboard.detailsMismatch.merged.title.address": "Su dirección no coincide en todas partes",
+    "dashboard.detailsMismatch.merged.titleMany": "Sus datos ({field}) no coinciden en todas partes",
+    "dashboard.detailsMismatch.fieldTitle.phone": "Número de teléfono",
+    "dashboard.detailsMismatch.fieldTitle.address": "Dirección",
+    "dashboard.detailsMismatch.fieldTitle.hours": "Horario",
+    "dashboard.detailsMismatch.versions.owner": "Usted confirmó",
+    "dashboard.detailsMismatch.versions.google": "Google",
+    "dashboard.detailsMismatch.versions.website": "Sitio web",
+    "dashboard.detailsMismatch.versions.none": "No se muestra",
+    "dashboard.detailsMismatch.field.phone": "número de teléfono",
+    "dashboard.detailsMismatch.field.address": "dirección",
+    "dashboard.detailsMismatch.field.hours": "horario",
+    "dashboard.detailsMismatch.title.google": "Su {field} en Google no coincide con los datos que confirmó",
+    "dashboard.detailsMismatch.title.both": "Su {field} en Google y en su sitio web no coincide con los datos que confirmó",
+    "dashboard.detailsMismatch.title.website": "Su sitio web no coincide con los datos que confirmó ({field})",
+    "dashboard.detailsMismatch.why": "Esto no cambia su puntuación. Sus clientes se guían por lo que muestran Google y su sitio web, así que corríjalo allí.",
+    "dashboard.detailsMismatch.steps.phone": "En Google: Editar perfil → Contacto → Teléfono y luego Guardar.",
+    "dashboard.detailsMismatch.steps.address": "En Google: Editar perfil → Ubicación → Ubicación de la empresa y luego Guardar. Es posible que Google le pida verificar de nuevo.",
+    "dashboard.detailsMismatch.steps.hours": "En Google: Editar perfil → Horario y luego Guardar.",
+    "dashboard.detailsMismatch.connect": "Conecte Google para que PostScore pueda hacerlo por usted",
+    "dashboard.detailsMismatch.keepGoogle": "¿La versión de Google es la correcta? Actualice sus datos confirmados",
+    "dashboard.detailsMismatch.keepWebsite": "¿La versión de su sitio web es la correcta? Actualice sus datos confirmados",
+    "dashboard.detailsMismatch.nowMatch.phone": "Su número de teléfono ya coincide. ¿Desea guardarlo como sus datos confirmados?",
+    "dashboard.detailsMismatch.nowMatch.hours": "Su horario ya coincide. ¿Desea guardarlo como sus datos confirmados?",
+    "dashboard.detailsMismatch.nowMatch.save": "Guardar",
+    "dashboard.detailsMismatch.nowMatch.no": "No, gracias",
+    "dashboard.detailsMismatch.nowMatch.saved": "Guardado como sus datos confirmados.",
+    "dashboard.detailsMismatch.nowMatch.waiting": "Esperando a Google. Le preguntaremos cuando esté publicado.",
+    "dashboard.fix.orOnGoogle": "O actualícelo usted mismo en Google:",
+    "dashboard.fix.openOnGoogle": "Abrir en Google",
     "dashboard.breakdown.action.fixWebsite": "Corregir en su sitio web",
     "dashboard.breakdown.action.fixIt": "Corregirlo",
     "dashboard.gbpEdit.option.has_wheelchair_accessible_entrance": "Entrada accesible para sillas de ruedas",
@@ -15417,6 +15558,11 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.overview.profileChecklistDescription": "Deje que PostScore haga el trabajo pesado por usted. Vea sus llamadas, visitas y reseñas en un solo lugar, y reciba respuestas a sus reseñas ya redactadas.",
     "dashboard.overview.gbpConnectedNotWiredUp": "Perfil de Empresa en Google conectado. La verificación de campos en vivo aún no está habilitada — es una actualización futura, no algo averiado aquí. Mostraremos su lista real aquí cuando esté disponible.",
     "dashboard.overview.ptsAvailable": "+{points} pts disponibles",
+    "dashboard.overview.listingCard.title": "Su ficha de Google",
+    "dashboard.overview.listingCard.open": "Abrir su ficha de Google",
+    "dashboard.overview.listingCard.allGood": "Todo en su ficha se ve bien ✓",
+    "dashboard.overview.listingCard.review": "Revisar",
+    "dashboard.overview.listingCard.connect": "Conecte su ficha de Google para verla y corregirla aquí.",
     "dashboard.overview.askPostAI": "Pregunte a PostAI",
     "dashboard.postaiDock.button": "Pregunte a PostAI",
     "dashboard.postaiDock.grounding": "Las respuestas usan sus datos reales de PostScore. Los consejos generales van marcados.",
@@ -17874,6 +18020,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.settings.website.helper": "El sitio que PostScore evalúa, captura y muestra para este negocio.",
     "dashboard.settings.nav.details": "Datos de su negocio",
     "dashboard.settings.details.helper": "Su nombre, dirección, teléfono y horario tal como desea que aparezcan en sus impresos, correos y páginas de PostScore.",
+    "dashboard.settings.details.suggested": "Completado con lo que muestran Google y su sitio web ahora. Revíselo y luego confírmelo.",
     "dashboard.settings.details.introPrefilled": "Completados con su ficha de Google tal como aparece ahora. Revíselos, cambie lo que no esté bien y confírmelos. Solo guardamos lo que usted confirma.",
     "dashboard.settings.details.introEmpty": "Ingrese sus datos y confírmelos. Solo guardamos lo que usted confirma.",
     "dashboard.settings.details.intro": "Proporcionados por usted. Cambie lo que desee y confírmelos de nuevo.",

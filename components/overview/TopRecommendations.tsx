@@ -3,18 +3,20 @@
 // The action plan's biggest open items (the same list as Growth), with
 // a priority: Urgent when customers are hitting it right now
 // (lib/urgency.ts), otherwise from their real points on the 0–100 total —
-// High 5+, Medium 2+ (lib/overviewTiles.ts) — and PostAI's fix link for each.
+// High 5+, Medium 2+ (lib/overviewTiles.ts) — and ONE button to where each is fixed.
 
 import Link from "next/link";
 import { IconArrowRight, IconMapPin, IconStar, IconWorld } from "@tabler/icons-react";
 import { pointsText, recRangeText, websiteRangeText, wholePointRange } from "@/lib/pointRange";
-import { LINK_PILL_CLASS } from "@/components/ui/linkPill";
-import { ANCHOR_HIGHLIGHT_EVENT } from "@/components/layout/AnchorHighlight";
+import { FixButton, FIX_BUTTON_CLASS } from "@/components/scoring/FixButton";
+import { DetailsMismatchTasks, DetailsVersions, MergedActions, mergedTitle } from "@/components/overview/DetailsMismatchTasks";
+import { mergedKind, mismatchesCoveredBy, URGENT_DETAILS, type DetailsMismatch } from "@/lib/detailsMismatch";
+import type { OwnerDetails } from "@/lib/ownerDetails";
+import { withFromScore } from "@/lib/fixDestination";
 import { HIGH_PRIORITY_POINTS, MEDIUM_PRIORITY_POINTS, type Priority, type Recommendation } from "@/lib/overviewTiles";
 import { t, tPlural, useLocale, type Locale } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import { GOOGLE_MISMATCH_CHECK_ID } from "@/lib/actionPlan";
-import { HoursMismatchChooser } from "@/components/hours/HoursMismatchChooser";
 
 function PriorityTag({ priority }: { priority: Priority }) {
   const locale = useLocale();
@@ -85,8 +87,30 @@ function recPointsText(locale: Locale, rec: Recommendation): string {
   return pointsText(locale, points, rec.source.kind === "website");
 }
 
-export function TopRecommendations({ businessId, recommendations }: { businessId: string; recommendations: Recommendation[] | null }) {
+export function TopRecommendations({
+  businessId,
+  recommendations: allRecommendations,
+  detailsMismatch = null,
+  limit = Infinity,
+}: {
+  businessId: string;
+  recommendations: Recommendation[] | null;
+  /** How many to show (after the merged details task moves first). */
+  limit?: number;
+  /** Day 23B: confirmed details that differ from Google or the website — tasks first, no points. */
+  detailsMismatch?: { mismatches: DetailsMismatch[]; owner: OwnerDetails | null } | null;
+}) {
   const locale = useLocale();
+  // Day 23B: a details mismatch and the scored "Matches your Google listing"
+  // check about the same field are ONE task — first, Urgent for hours/phone.
+  const mismatches = detailsMismatch?.mismatches ?? [];
+  const covered = (rec: Recommendation) => (rec.source.kind === "task" ? mismatchesCoveredBy(rec.source.task, mismatches) : []);
+  const recommendations =
+    allRecommendations === null
+      ? null
+      : [...allRecommendations.filter((r) => covered(r).length > 0), ...allRecommendations.filter((r) => covered(r).length === 0)].slice(0, limit);
+  const coveredFields = new Set((recommendations ?? []).flatMap((r) => covered(r).map((m) => m.field)));
+  const standalone = mismatches.filter((m) => !coveredFields.has(m.field));
   return (
     <section className="flex h-full flex-col rounded-2xl border border-paper-deep bg-white p-4 shadow-card sm:p-5">
       <div className="flex items-center justify-between gap-3">
@@ -111,41 +135,57 @@ export function TopRecommendations({ businessId, recommendations }: { businessId
           right under the banner; any extra height goes below it, above
           the footer note — never spread between items. */}
       <div className="flex-1">
+        {detailsMismatch && standalone.length > 0 && <DetailsMismatchTasks businessId={businessId} mismatches={standalone} owner={detailsMismatch.owner} className="mt-3 border-b border-paper-line pb-2" />}
         {recommendations === null ? (
           <p className="mt-3 text-sm text-ink-soft">{t(locale, "dashboard.overview.recs.unavailable")}</p>
         ) : recommendations.length === 0 ? (
           <p className="mt-3 text-sm text-ink-soft">{t(locale, "dashboard.overview.recs.empty")}</p>
         ) : (
           <ol className="mt-3 flex flex-col divide-y divide-paper-line">
-            {recommendations.map((rec) => (
-              <li key={rec.key} className="flex gap-3 py-3 first:pt-1 last:pb-1">
+            {recommendations.map((rec) => {
+              const merged = covered(rec);
+              // Google and the website agree: only the confirmed details differ — no points to win.
+              const ownerOnly = merged.length > 0 && mergedKind(merged) === "owner_only";
+              const priority = merged.some((m) => URGENT_DETAILS.includes(m.field)) ? "urgent" : rec.priority;
+              return (
+              <li key={rec.key} data-merged={merged.length > 0 ? merged.map((m) => m.field).join(",") : undefined} className="flex gap-3 py-3 first:pt-1 last:pb-1">
                 <RecIcon rec={rec} />
                 <div className="flex min-w-0 flex-1 flex-col gap-1">
                   {/* Pill + points sit in the same top-right spot on every
                       item (stacked, so long text never pushes them around). */}
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-                      <RecText rec={rec} />
+                      {merged.length > 0 ? <span className="text-sm font-semibold text-ink">{mergedTitle(merged, locale)}</span> : <RecText rec={rec} />}
                       {rec.pending && <span className="text-[12px] font-medium text-ink-soft">{t(locale, "dashboard.overview.recs.pending")}</span>}
                     </div>
                     <div className="flex shrink-0 flex-col items-end gap-1">
-                      {rec.priority && <PriorityTag priority={rec.priority} />}
-                      <span className="whitespace-nowrap text-[12px] font-semibold tabular-nums text-ink">{recPointsText(locale, rec)}</span>
+                      {priority && <PriorityTag priority={priority} />}
+                      {!ownerOnly && <span className="whitespace-nowrap text-[12px] font-semibold tabular-nums text-ink">{recPointsText(locale, rec)}</span>}
                     </div>
                   </div>
-                  <Link
-                    href={rec.href}
-                    // Same-page anchors (a listing check's row in the
-                    // breakdown) don't fire "hashchange" under client navigation.
-                    onClick={() => setTimeout(() => window.dispatchEvent(new Event(ANCHOR_HIGHLIGHT_EVENT)), 150)}
-                    className={LINK_PILL_CLASS}
-                  >
-                    {rec.linkLabel ? t(locale, rec.linkLabel) : t(locale, "dashboard.overview.recs.seeCheck")}
-                  </Link>
-                  {rec.source.kind === "task" && rec.source.task.checkId === GOOGLE_MISMATCH_CHECK_ID && (rec.source.task.mismatchFields ?? []).includes("hours") && <HoursMismatchChooser businessId={businessId} />}
+                  {merged.length > 0 && <DetailsVersions mismatches={merged} />}
+                  {/* Day 23B: ONE button, straight to where it's fixed (lib/fixDestination.ts). */}
+                  {merged.length > 0 ? (
+                    <MergedActions businessId={businessId} mismatches={merged} fromScore />
+                  ) : rec.source.kind === "task" ? (
+                    <FixButton
+                      businessId={businessId}
+                      fromScore
+                      item={{
+                        checkId: rec.source.task.checkId,
+                        mergedCheckIds: rec.source.task.mergedCheckIds,
+                        hoursMismatch: rec.source.task.checkId === GOOGLE_MISMATCH_CHECK_ID && (rec.source.task.mismatchFields ?? []).includes("hours"),
+                      }}
+                    />
+                  ) : (
+                    <Link href={withFromScore(rec.href)} data-testid="fix-button" data-kind="steps" className={FIX_BUTTON_CLASS}>
+                      {(rec.linkLabel ? t(locale, rec.linkLabel) : t(locale, "dashboard.overview.recs.seeCheck")).replace(/\s*→$/, "")} →
+                    </Link>
+                  )}
                 </div>
               </li>
-            ))}
+              );
+            })}
           </ol>
         )}
       </div>

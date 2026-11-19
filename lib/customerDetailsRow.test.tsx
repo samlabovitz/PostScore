@@ -140,15 +140,16 @@ describe("the customer-details row on the Overview: one sentence, ONE button", (
 
   test("Premium + connected: one button to the Google Profile tab's editor", () => {
     const html = row({ premium: true, connected: true });
-    expect(html.match(/data-testid="row-action"/g)).toHaveLength(1);
-    expect(html).toContain('href="/business/b1/growth?tab=google#edit-customer-details"');
+    expect(html.match(/data-testid="fix-button"/g)).toHaveLength(1);
+    // Day 23B: from the Overview, "← Back to your score" on arrival.
+    expect(html).toContain('href="/business/b1/growth?tab=google&amp;from=score#edit-customer-details"');
     expect(html).toContain("Add parking →");
   });
 
   test("not on the Google Profile tab (Grow, or not connected): the same one button, to the fix page", () => {
     for (const plan of [{ premium: false, connected: false }, { premium: true, connected: false }]) {
       const html = row(plan);
-      expect(html.match(/data-testid="row-action"/g)).toHaveLength(1);
+      expect(html.match(/data-testid="fix-button"/g)).toHaveLength(1);
       expect(html).not.toContain("growth?tab=google#edit-customer-details");
       expect(html).not.toContain('data-testid="row-how-to"');
     }
@@ -167,7 +168,7 @@ describe("other Needs work rows read the same way", () => {
     const category = breakdown.categories.find((c) => c.id === "completeness")!;
     const only = { ...category, checks: category.checks.filter((c) => c.id === "completeness.hours") };
     const html = wrap(<CategoryCard category={only} embedded fixLinks={links} businessId="b1" />);
-    expect(html.match(/data-testid="row-action"/g)).toHaveLength(1);
+    expect(html.match(/data-testid="fix-button"/g)).toHaveLength(1);
     expect(html).toContain("Set your hours →");
     expect(html).not.toContain("How to fix it");
   });
@@ -225,8 +226,11 @@ describe("Growth step on Premium + connected", () => {
       pointsAvailable: 1, minutes: 5,
     } as never;
     const premium = wrap(<GbpEditProvider value={{ premium: true, connected: true, undo: null }}><TaskCard task={task} businessId="b1" context="weekly" premium /></GbpEditProvider>);
+    // Day 23B: ONE button to the Google Profile tab's editor (no inline editor), never "Coming soon".
+    expect(premium.match(/data-testid="fix-button"/g)).toHaveLength(1);
+    expect(premium).toContain('href="/business/b1/growth?tab=google#edit-customer-details"');
+    expect(premium).not.toContain("step-coming-soon");
     // The expanded "How to fix it" is closed in static HTML; the switch is the rule:
-    expect(premium).toContain("Update on Google");
     const src = (await import("node:fs")).readFileSync("app/business/[id]/ActionPlanSection.tsx", "utf8");
     expect(src).toContain('{!canUpdateOnGoogle && <>{t(locale, "dashboard.overview.actionPlan.ownerActionOnGoogle")} </>}');
     expect(src).toContain('"dashboard.gbpEdit.howToIntro"');

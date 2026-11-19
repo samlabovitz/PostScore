@@ -1,5 +1,6 @@
 "use client";
 
+import { OrUpdateOnGoogle } from "@/components/scoring/OrUpdateOnGoogle";
 import { ChangedOnGoogleNote } from "@/components/scoring/ChangedOnGoogleNote";
 import { isNotScoredYet } from "@/lib/checkOutcome";
 import { IconAlertTriangle, IconCheck, IconMinus, IconX } from "@tabler/icons-react";
@@ -277,6 +278,9 @@ function CheckRow({
         {(state === "partial" || state === "zero" || fixes.some((f) => f.gap === "no_main_content")) && fixes.length > 0 && check.id !== "website.has_website" && (
           <WebsiteFixGuide fixes={fixes} builder={builderId} siteUrl={siteUrl} />
         )}
+
+        {/* Day 23B: hours that differ from Google — the Google side of the fix too. */}
+        {check.id === "website.info_consistency" && (state === "partial" || state === "zero") && /hour|horario/i.test(check.explanation) && <OrUpdateOnGoogle />}
 
         {spamFinding && trust && (
           <SiteSecurityDetails finding={spamFinding} trust={trust} siteUrl={siteUrl} businessName={businessName} />

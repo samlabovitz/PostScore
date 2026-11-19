@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, test, vi } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn() }), useSearchParams: () => new URLSearchParams() }));
@@ -144,18 +145,25 @@ describe("the step card", () => {
   const input = businessRowToScoringInput(ROW);
   const replies = growthPlan(input).weeklyTasks.find((t) => t.checkId === "visibility.review_replies")! as ActionPlanTask;
 
-  test("time estimate and links; Google links open in a new tab", () => {
+  test("time estimate and ONE button; the step's own links sit in “How to fix it” (Google's open in a new tab)", () => {
     const html = render(<TaskCard task={replies} businessId="b1" context="weekly" step={1} />);
     expect(html).toContain("About 15 min");
-    expect(html).toContain('href="/business/b1/website-reviews#reply-to-reviews"');
-    expect(html).toContain(`href="${GOOGLE_LINKS.businessProfileReviews}" target="_blank" rel="noopener noreferrer"`);
+    // Day 23B: one dark button to where it's fixed; the links are no longer a second row of buttons.
+    expect(html.match(/data-testid="fix-button"/g)).toHaveLength(1);
+    expect(html).toContain('href="/business/b1/website-reviews#google-reviews"');
+    expect(html).not.toContain(`href="${GOOGLE_LINKS.businessProfileReviews}"`);
+    expect(replies.links?.some((l) => l.href === GOOGLE_LINKS.businessProfileReviews && l.external)).toBe(true);
+    const src = readFileSync("app/business/[id]/ActionPlanSection.tsx", "utf8");
+    expect(src).toContain('<p data-testid="how-to-links"');
+    expect(src).toContain('<a key={link.href} href={link.href} target="_blank" rel="noopener noreferrer"');
     expect(html).not.toContain("Coming soon");
   });
 
-  test("Premium: \"Coming soon: PostScore can do this for you\" — a label, never a button", () => {
-    const html = render(<TaskCard task={replies} businessId="b1" context="weekly" premium />);
+  test("Premium: \"Coming soon: PostScore can do this for you\" — a label, never a button (steps with no editor yet)", () => {
+    const recency = { ...replies, checkId: "visibility.review_recency", automatable: true };
+    const html = render(<TaskCard task={recency} businessId="b1" context="weekly" premium />);
     expect(html).toMatch(/<p data-testid="step-coming-soon"[^>]*>Coming soon: PostScore can do this for you<\/p>/);
-    expect(render(<TaskCard task={replies} businessId="b1" context="weekly" premium />, "es")).toContain("Próximamente: PostScore podrá hacerlo por usted");
+    expect(render(<TaskCard task={recency} businessId="b1" context="weekly" premium />, "es")).toContain("Próximamente: PostScore podrá hacerlo por usted");
     const photos = { ...replies, checkId: "completeness.photos", automatable: false, links: [] };
     expect(render(<TaskCard task={photos} businessId="b1" context="weekly" premium />)).not.toContain("Coming soon");
   });
@@ -213,7 +221,8 @@ describe("every Needs work row: its own How to fix it", () => {
     expect(html).not.toContain("How to fix it");
     expect(html).toContain("About 5 min");
     expect(html).not.toContain(`href="${GOOGLE_LINKS.editProfileHelp}"`);
-    expect(html).toContain(`href="${links["completeness.hours"].href}"`);
+    // Day 23B: not on the Google Profile tab → the Growth step with "How to fix it" open.
+    expect(html).toContain('href="/business/b1/growth?open=howto&amp;from=score#task-completeness-hours"');
   });
 
   test("every v1.12.0 check has a time; every official link is a verified one (EN + ES)", () => {

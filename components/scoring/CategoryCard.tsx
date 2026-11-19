@@ -1,5 +1,4 @@
 import { IconAlertTriangle, IconCircleCheck, IconMinus } from "@tabler/icons-react";
-import Link from "next/link";
 import { WebsiteCoverageNote } from "./WebsiteCoverageNote";
 import { Card } from "@/components/ui/Card";
 import { Pill } from "@/components/ui/Pill";
@@ -13,9 +12,8 @@ export { checkOutcome, formatPoints, ChangedOnGoogleNote };
 import { t, useLocale, type Locale, type MessageKey } from "@/lib/i18n";
 import { LockedFixRow } from "@/components/overview/FixPlanUpsell";
 import { checkAnchorId } from "@/lib/postaiLinks";
-import { useGbpEdit } from "@/components/gbp/CustomerDetailsGoogleEdit";
 import { timeEstimateText, type CheckHowTo } from "@/lib/actionPlan";
-import { breakdownAction } from "@/lib/breakdownAction";
+import { FixButton } from "@/components/scoring/FixButton";
 
 /** A needs-work row's fix: its own "How to fix it" (steps, a rough time,
  * official links) and the PostScore page as a secondary link. */
@@ -197,7 +195,7 @@ function partList(parts: string[], locale: Locale): string {
 }
 
 /** ONE button on a row that's missing points: a verb, and where it's
- * fixed (lib/breakdownAction.ts), with the rough time as small grey text.
+ * fixed (lib/fixDestination.ts), with the rough time as small grey text.
  * No inline editors, no "How to fix it" here — those are on the destination. */
 function RowActions({
   check,
@@ -212,7 +210,6 @@ function RowActions({
   lockedFixes: boolean;
   businessId: string | null;
 }) {
-  const gbp = useGbpEdit();
   const locale = useLocale();
   if (outcome !== "needs_work") return null;
   if (lockedFixes) {
@@ -223,24 +220,14 @@ function RowActions({
     );
   }
   if (!businessId) return null;
-  const action = breakdownAction({
-    businessId,
-    checkId: check.id,
-    googleTab: gbp.enabled && gbp.premium && (gbp.connected || gbp.practice === true),
-    fixHref: fix?.href ?? null,
-    missingParts: missingParts(check) ?? undefined,
-    hoursMismatch: check.id === "website.info_consistency" && /hour|horario/i.test(check.explanation),
-  });
-  if (!action) return null;
-  const label =
-    action.key === "addParts"
-      ? t(locale, "dashboard.breakdown.action.addParts", { parts: partList((action.params?.parts ?? "").split("|"), locale) })
-      : t(locale, `dashboard.breakdown.action.${action.key}` as MessageKey);
   return (
     <div data-testid="row-actions" className="ml-[25px] mt-1 flex flex-wrap items-center gap-x-3 gap-y-1">
-      <Link href={action.href} data-testid="row-action" className="inline-flex h-8 items-center rounded-lg border border-ink bg-ink px-3 text-[12.5px] font-semibold text-white hover:bg-ink/90">
-        {label} →
-      </Link>
+      {/* Day 23B: the same one button as Top recommendations and the Growth step (lib/fixDestination.ts). */}
+      <FixButton
+        businessId={businessId}
+        fromScore
+        item={{ checkId: check.id, missingParts: missingParts(check) ?? undefined, hoursMismatch: check.id === "website.info_consistency" && /hour|horario/i.test(check.explanation) }}
+      />
       {fix?.howTo?.minutes ? <span className="text-[12px] text-ink-mute">{timeEstimateText(fix.howTo.minutes, locale)}</span> : null}
     </div>
   );

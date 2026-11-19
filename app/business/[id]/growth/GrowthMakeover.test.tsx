@@ -145,7 +145,7 @@ describe("Growth → Action plan makeover", () => {
 
   test("points labels are always whole numbers", () => {
     expect(taskPointsLabel(task({ weightedPoints: 1.5 }), "weekly", "en")).toBe("Up to +2 pts");
-    expect(taskPointsLabel(task({ weightedPoints: 1.4, effort: "quick_win_action" }), "weekly", "en")).toBe("About +1 pts this week");
+    expect(taskPointsLabel(task({ weightedPoints: 1.4, effort: "quick_win_action" }), "weekly", "en")).toBe("About +1 pt this week");
     expect(taskPointsLabel(task({ weightedPoints: 29.2, weightedPointsHigh: 31.4 }), "weekly", "en")).toContain("+29–31");
   });
 

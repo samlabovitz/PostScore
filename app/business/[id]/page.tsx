@@ -1,4 +1,9 @@
 import { notFound, redirect } from "next/navigation";
+import { loadDetailsMismatches } from "@/lib/detailsMismatch.server";
+import { loadOverviewListing } from "@/lib/overviewListing.server";
+import { canConnectGbp } from "@/lib/premium";
+import { isGbpOAuthConfigured } from "@/lib/googleBusinessProfile";
+import { DEFAULT_BUSINESS_TIMEZONE } from "@/lib/i18n";
 import { getListingModeForPage } from "@/components/scoring/websiteOnlyGuard";
 import { DashboardShell } from "@/components/layout/DashboardShell";
 import { loadUpgradeContext } from "@/lib/upgradePromos.server";
@@ -238,6 +243,29 @@ export default async function BusinessPage({ params, searchParams = {} }: { para
         replyDrafts={replyDrafts}
         freePostai={freePostai}
         monthlyReportsLive={isMonthlyReportsLive()}
+        detailsMismatch={await loadDetailsMismatches(createClient(), params.id, scored.scoringBusiness ?? scored.business).catch(() => null)}
+        googleListing={
+          isPremiumPlan(upgrade.plan)
+            ? {
+                businessId: params.id,
+                connected: gbpStatus.status === "ok" && gbpStatus.connected,
+                canStart: canConnectGbp() && isGbpOAuthConfigured(),
+                // Day 23B: the Google Profile tab's section 4, from the same reads.
+                data:
+                  gbpStatus.status === "ok" && gbpStatus.connected
+                    ? await loadOverviewListing(createClient(), params.id, {
+                        business: scored.business,
+                        checks: scored.result.breakdown.checks,
+                        connected: true,
+                        practice: false,
+                        timeZone: scored.business.time_zone ?? DEFAULT_BUSINESS_TIMEZONE,
+                        replyCounts: gbpStatus.replyCounts,
+                        lastScanAt: history[0]?.created_at ?? null,
+                      }).catch(() => null)
+                    : null,
+              }
+            : null
+        }
         gbpReplyCheck={free ? gbpReplyCheckState(upgrade.plan, gbpStatus, searchParams.gbp, { name: scored.business.name ?? null, address: scored.business.address ?? null }) : null}
       />
       </GbpEditProvider>
