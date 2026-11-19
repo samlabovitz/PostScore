@@ -32,9 +32,13 @@ function BusinessCard({ business, locale }: { business: MyBusinessRow; locale: L
           <div className="truncate font-serif text-base font-semibold text-ink">
             {business.name ?? t(locale, "dashboard.home.untitledBusiness")}
           </div>
-          <div className="truncate text-sm text-ink-soft">
-            {business.address ?? t(locale, "dashboard.home.noAddressOnFile")}
-          </div>
+          {/* Day 23 2d-5: never a saved Google value — when Google can't be read, say so;
+              not read this time (many businesses, nothing cached), no line. */}
+          {!(business.nameNotRead && !business.address) && (
+            <div className="truncate text-sm text-ink-soft">
+              {business.address ?? t(locale, business.nameUnavailable ? "dashboard.live.unavailable" : "dashboard.home.noAddressOnFile")}
+            </div>
+          )}
         </div>
         {business.websiteOnly ? (
           // Day 2b: no Google listing, so no PostScore to show.

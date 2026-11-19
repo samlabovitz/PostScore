@@ -203,11 +203,13 @@ export async function withLiveCompetitorValues(
  * competitor snapshot, reports, the monthly job): reads where to search
  * from the business row and its niche. `db` may be a session or admin client. */
 export async function withLiveCompetitorValuesFor(db: SupabaseClient, businessId: string, scan: SavedCompetitorScan, deps?: LiveDeps): Promise<{ scan: SavedCompetitorScan; unavailable: boolean; extra: Record<string, LivePlace> }> {
-  const [{ data }, niche] = await Promise.all([
-    db.from("businesses").select(`name, ${LIVE_QUERY_COLUMNS}`).eq("id", businessId).maybeSingle(),
-    loadBusinessNiche(db, businessId),
-  ]);
-  const row = data as (LiveQueryBusinessRow & { name: string | null }) | null;
-  if (!row) return { scan: scanWithoutPlacesValues(scan, null), unavailable: true, extra: {} };
-  return withLiveCompetitorValues(businessId, scan, row.name, liveQueryFromRow(row, niche), deps);
+  const [{ data }, niche] = await Promise.all([db.from("businesses").select(LIVE_QUERY_COLUMNS).eq("id", businessId).maybeSingle(), loadBusinessNiche(db, businessId)]);
+  if (!data) return { scan: scanWithoutPlacesValues(scan, null), unavailable: true, extra: {} };
+  // Day 23 2d-5: the owner's own listing as Google shows it now (the visit's
+  // read, shared for 10 minutes) — where to search from, never the saved columns.
+  const { withLiveListingFor } = await import("@/lib/ownerListing.server");
+  const { withOwnerDetailsFor } = await import("@/lib/ownerDetails.server");
+  const row = (await withLiveListingFor(db, businessId, data as { place_id: string | null; listing_mode: string | null })) as unknown as LiveQueryBusinessRow & { name: string | null };
+  const ownerName = (await withOwnerDetailsFor(db, businessId, { name: row.name ?? null }, { live: "cached" })).name ?? row.name ?? null;
+  return withLiveCompetitorValues(businessId, scan, ownerName, liveQueryFromRow(row, niche), deps);
 }

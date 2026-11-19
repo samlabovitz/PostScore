@@ -164,7 +164,11 @@ describe("checkGoogleEdits", () => {
 
   test("Google filled in the website the owner left empty, matching our scan: stored (info only), no notification", async () => {
     const { checkGoogleEdits } = await import("@/lib/gbpGoogleEdits.server");
-    const tables: Record<string, Row[]> = { gbp_connections: [connected()], gbp_google_edits: [], notifications: [], businesses: [{ id: "b1", website: "https://www.hairexpress.example/", phone: null }] };
+    const tables: Record<string, Row[]> = { gbp_connections: [connected()], gbp_google_edits: [], notifications: [], businesses: [{ id: "b1", place_id: "p1", listing_mode: "google" }] };
+    // "Our scan": the listing as this visit read it (Day 23 2d-5 — never the saved columns).
+    const { rememberOwnerListing, forgetOwnerListing } = await import("@/lib/ownerListing.server");
+    const { emptyListingColumns } = await import("@/lib/listingScoringRow");
+    rememberOwnerListing("b1", { status: "ok", source: "business_profile", values: { rating: null, reviewCount: null, phone: null, website: "https://www.hairexpress.example/", openingHours: null, openingHoursPeriods: null, businessStatus: null, photoCount: null, googleMapsUri: null }, columns: { ...emptyListingColumns(), website: "https://www.hairexpress.example/" } });
     const f = (async (input: RequestInfo | URL) => {
       const url = String(input);
       const owner = { ...OWNER, websiteUri: undefined };
@@ -174,6 +178,7 @@ describe("checkGoogleEdits", () => {
     await checkGoogleEdits(fakeDb(tables), "b1", { fetchImpl: f });
     expect(tables.gbp_google_edits).toEqual([expect.objectContaining({ field: "website", owner_value: null })]);
     expect(tables.notifications).toEqual([]);
+    forgetOwnerListing("b1");
   });
 
   test("none changed: nothing stored", async () => {

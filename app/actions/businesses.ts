@@ -1,9 +1,9 @@
 "use server";
 
 import { listingScoringRow, type ListingScoringColumns } from "@/lib/listingScoringRow";
-import { withOwnerDetails } from "@/lib/ownerDetails";
-import { loadOwnerDetailsMany, withOwnerDetailsFor, type OwnerNameLive } from "@/lib/ownerDetails.server";
-import { cachedOwnerListing } from "@/lib/ownerListing.server";
+import { namesLiveFor, ownerPrintPhone, shownNamesFor, withOwnerDetailsFor, type OwnerNameLive } from "@/lib/ownerDetails.server";
+import { sanitizeOwnerDetails } from "@/lib/ownerDetails";
+import { websiteOnlyDetails } from "@/lib/ownerListing.server";
 import { requestCache } from "@/lib/requestCache";
 import { afterBusinessAdded } from "@/lib/businessAdded.server";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -25,7 +25,7 @@ import { isMissingColumnError, parseListingMode } from "@/lib/listingMode";
 import { parsePublicWebsiteUrl } from "@/lib/publicUrl";
 import { businessTimeZone } from "@/lib/businessTimeZone";
 import { latestSavedScores } from "@/lib/savedScore.server";
-import { V112_SCORING_COLUMNS, type Grade, type WebsiteAnalysis } from "@/lib/scoring";
+import { type Grade, type WebsiteAnalysis } from "@/lib/scoring";
 
 export type SaveBusinessResult =
   /** `listing`: the scan's Google values in memory, for its score (server only — never returned to the browser). */
@@ -304,7 +304,7 @@ export async function saveBusinessWithClient(
         owner_id: ownerId,
         place_id: place.placeId,
         // Our own result: the business type we resolved from this read.
-        biz_type_resolved: savedBizTypeId(place.primaryCategory, place.primaryType, place.categories),
+        biz_type_resolved: savedBizTypeId(place.primaryCategory, place.primaryType, place.categories, place.name),
         lat: place.location?.lat ?? null,
         lng: place.location?.lng ?? null,
         https_status: httpsStatus,
@@ -443,7 +443,7 @@ async function getBusinessSummaryUncached(businessId: string, options: { live?: 
   const { data, error } = await supabase
     .from("businesses")
     .select(
-      "id, name, address, category, categories, primary_type, business_type_override, biz_type_resolved, trade_id, phone, services, avg_job_value_low, avg_job_value_high, language, lat, lng"
+      "id, business_type_override, biz_type_resolved, trade_id, services, avg_job_value_low, avg_job_value_high, language, lat, lng"
     )
     .eq("id", businessId)
     .single();
@@ -453,10 +453,12 @@ async function getBusinessSummaryUncached(businessId: string, options: { live?: 
   }
 
   const { lat, lng, ...rest } = data as BusinessSummary & { lat: number | null; lng: number | null };
-  // Day 23 2d-3: the owner's confirmed name and address, else the listing's
-  // as this visit reads it (lib/ownerDetails.ts).
+  // Day 23 2d-3/2d-5: the owner's confirmed name, address and phone, else
+  // the listing's as this visit reads it — never the saved Google columns.
+  // The business type is our own saved reading (biz_type_resolved).
   const shown = await withOwnerDetailsFor(supabase, businessId, rest, options);
-  return { status: "ok", business: { ...shown, time_zone: businessTimeZone(lat, lng) } };
+  const phone = await ownerPrintPhone(supabase, businessId, { live: options.live === undefined || options.live === true });
+  return { status: "ok", business: { ...shown, phone, time_zone: businessTimeZone(lat, lng) } };
 }
 
 export type UpdateBusinessProfileResult =
@@ -711,7 +713,10 @@ export interface MyBusinessRow {
   id: string;
   name: string | null;
   address: string | null;
-  category: string | null;
+  /** Not confirmed by the owner and Google couldn't be read just now. */
+  nameUnavailable: boolean;
+  /** Not confirmed, and not read this time (an account with many businesses): "Your business", no address line. */
+  nameNotRead: boolean;
   /** The latest saved scan's total and grade — the score every page shows
    * (Day 23 2d-1/2d-4). Null before a business's first scan, and for a
    * website-only business. */
@@ -752,9 +757,7 @@ export async function listMyBusinesses(): Promise<ListMyBusinessesResult> {
 
   const { data, error } = await supabase
     .from("businesses")
-    .select(
-      `id, name, address, category, primary_type, business_type_override, biz_type_resolved, phone, website, rating, review_count, categories, opening_hours, photo_count, business_status, https_status, website_analysis_json, verified_website_url, website_trust_overrides_json, created_at, language, ${V112_SCORING_COLUMNS}`
-    )
+    .select("id, created_at, language")
     .order("created_at", { ascending: false });
 
   if (error || !data) {
@@ -772,21 +775,24 @@ export async function listMyBusinesses(): Promise<ListMyBusinessesResult> {
 
   // Day 23 2d-1: each business's saved scan (lib/savedScore.ts).
   const saved = await latestSavedScores(supabase, data.map((row) => row.id));
-  // Day 23 2d-3: each one's confirmed name and address, else the listing's
-  // from this visit's read when there is one (never a Google call per business).
-  const owners = await loadOwnerDetailsMany(supabase, data.map((row) => row.id));
+  // Day 23 2d-5: each one's confirmed name and address, else the listing's
+  // as Google shows it now (one read per business per 10 minutes, shared
+  // with its pages; above 5 businesses only reads already made, else "Your
+  // business") — never the saved Google columns.
+  const names = await shownNamesFor(supabase, data.map((row) => row.id), { live: namesLiveFor(data.length) });
   const businesses: MyBusinessRow[] = data.map((row) => {
     const websiteOnly = websiteOnlyIds.has(row.id);
     // Day 23 2d-4: the latest saved scan's score (our own result) — never a
     // re-score of Google's saved columns, and no Google call per business.
     const last = websiteOnly ? null : saved.get(row.id) ?? null;
     const breakdown = last ? { total: last.total, grade: last.grade as Grade } : null;
-    const shown = withOwnerDetails({ name: row.name, address: row.address }, owners.get(row.id)?.details ?? null, cachedOwnerListing(row.id));
+    const shown = names.get(row.id) ?? { name: null, address: null, unavailable: true };
     return {
       id: row.id,
       name: shown.name,
       address: shown.address,
-      category: row.category,
+      nameUnavailable: shown.unavailable && !websiteOnly,
+      nameNotRead: !!shown.notRead && !websiteOnly,
       score: breakdown ? { total: breakdown.total, grade: breakdown.grade } : null,
       websiteOnly,
       language: row.language,
@@ -895,9 +901,14 @@ export async function saveWebsiteOnlyBusinessWithClient(
       owner_id: ownerId,
       place_id: null,
       listing_mode: "website_only",
-      name,
-      address: input.location.trim().slice(0, 200) || null,
-      website: url.toString(),
+      // Day 23 2d-5: what the owner typed is theirs — saved as their confirmed
+      // details and site (lib/ownerDetails.ts), never in the Google columns.
+      owner_details: sanitizeOwnerDetails({ name, address: input.location, phone: "", hours: { kind: "none" } }),
+      owner_details_confirmed_at: new Date().toISOString(),
+      owner_website_url: url.toString(),
+      owner_website_confirmed_at: new Date().toISOString(),
+      // Our own reading of the type from the name, like a listed business's.
+      biz_type_resolved: resolveBizProfile(null, null, null, "en", null, name).id,
       https_status: httpsStatus,
       https_checked_at: httpsStatus ? checkedAt : null,
       website_analysis_json: websiteAnalysis,
@@ -972,15 +983,17 @@ export async function recheckWebsiteOnlyBusinessWithClient(
 ): Promise<RecheckWebsiteOnlyResult> {
   const { data: row } = await supabase
     .from("businesses")
-    .select("id, name, website, listing_mode, website_analysis_json, website_analysis_checked_at, business_type_override")
+    .select("id, listing_mode, website_analysis_json, website_analysis_checked_at, business_type_override")
     .eq("id", businessId)
     .maybeSingle();
   if (!row || parseListingMode(row.listing_mode) !== "website_only") return { status: "not_found" };
+  // The name and site the owner gave (Day 23 2d-5).
+  const own = await websiteOnlyDetails(supabase, businessId);
   const lastCheck = row.website_analysis_checked_at ? Date.parse(row.website_analysis_checked_at) : NaN;
   if (Number.isFinite(lastCheck) && Date.now() - lastCheck < WEBSITE_RECHECK_COOLDOWN_MINUTES * 60_000) return { status: "too_soon" };
-  const url = parsePublicWebsiteUrl(row.website);
+  const url = parsePublicWebsiteUrl(own.website);
   if (!url) return { status: "error", message: "This business's website address isn't valid." };
-  const typeId = resolveBizProfile(null, null, row.business_type_override ?? null, "en", null, row.name).id;
+  const typeId = resolveBizProfile(null, null, row.business_type_override ?? null, "en", null, own.name).id;
   const { websiteAnalysis, httpsStatus, checkedAt, captureScreenshots, analysis } = await analyzeWebsiteForSave({
     analysisUrl: url.toString(),
     listingWebsite: null,

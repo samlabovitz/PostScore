@@ -5204,6 +5204,12 @@ export type MessageKey =
   | "dashboard.settings.details.notSaved"
   | "dashboard.settings.details.notEnabled"
   | "dashboard.overview.confirmDetails"
+  | "dashboard.overview.confirmCard.body"
+  | "dashboard.overview.confirmCard.fromGoogle"
+  | "dashboard.overview.confirmCard.confirm"
+  | "dashboard.overview.confirmCard.edit"
+  | "dashboard.overview.confirmCard.notNow"
+  | "dashboard.overview.confirmCard.saved"
   | "dashboard.settings.nav.account"
   | "dashboard.settings.profile.helper"
   | "dashboard.settings.profile.emailHelp"
@@ -9270,7 +9276,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.overview.predatesListingTracking":
       "Your last scan predates listing-change tracking — this will start working from your next re-scan.",
     "dashboard.overview.nothingChangedOnListing": "Nothing changed on your listing since your last scan.",
-    "dashboard.overview.untitledBusiness": "Untitled business",
+    "dashboard.overview.untitledBusiness": "Your business",
     "dashboard.overview.noAddressOnFile": "No address on file",
     "dashboard.overview.scoringVersionNote":
       "Scoring version {version} · computed live from the saved Google Places data below",
@@ -9642,7 +9648,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.home.savedBusinessCount.one": "{count} saved business.",
     "dashboard.home.savedBusinessCount.other": "{count} saved businesses.",
     "dashboard.home.addBusinessButton": "Add a business",
-    "dashboard.home.untitledBusiness": "Untitled business",
+    "dashboard.home.untitledBusiness": "Your business",
     "dashboard.home.noAddressOnFile": "No address on file",
     "dashboard.home.emptyStateHeading": "You haven't added a business yet",
     "dashboard.home.emptyStateBody":
@@ -11550,6 +11556,12 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.settings.details.notSaved": "Couldn't save your details right now. Please try again.",
     "dashboard.settings.details.notEnabled": "Saving your details isn't available yet.",
     "dashboard.overview.confirmDetails": "Confirm your business details",
+    "dashboard.overview.confirmCard.body": "PostScore will show these details in your account and emails, even when Google can't be reached. Your score still comes from your Google listing.",
+    "dashboard.overview.confirmCard.fromGoogle": "Filled in from your Google listing as it shows right now.",
+    "dashboard.overview.confirmCard.confirm": "Confirm",
+    "dashboard.overview.confirmCard.edit": "Edit",
+    "dashboard.overview.confirmCard.notNow": "Not now",
+    "dashboard.overview.confirmCard.saved": "Confirmed · provided by you. You can change them anytime in Settings.",
     "dashboard.settings.nav.account": "Account",
     "dashboard.settings.profile.helper": "Your login and the language PostScore uses for this business.",
     "dashboard.settings.profile.emailHelp": "This is your login email.",
@@ -15332,7 +15344,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.overview.noPriorScanListingChanges": "Aún no hay un análisis anterior con el que comparar — los cambios reales en su ficha aparecerán aquí después de su próximo análisis.",
     "dashboard.overview.predatesListingTracking": "Su último análisis es anterior al seguimiento de cambios en la ficha — esto empezará a funcionar a partir de su próximo análisis.",
     "dashboard.overview.nothingChangedOnListing": "Nada cambió en su ficha desde su último análisis.",
-    "dashboard.overview.untitledBusiness": "Negocio sin nombre",
+    "dashboard.overview.untitledBusiness": "Su negocio",
     "dashboard.overview.noAddressOnFile": "Sin dirección registrada",
     "dashboard.overview.scoringVersionNote": "Versión de puntuación {version} · calculada en vivo a partir de los datos guardados de Google Places de abajo",
     "dashboard.overview.viewCompetitors": "Ver competencia",
@@ -15675,7 +15687,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.home.savedBusinessCount.one": "{count} negocio guardado.",
     "dashboard.home.savedBusinessCount.other": "{count} negocios guardados.",
     "dashboard.home.addBusinessButton": "Agregar un negocio",
-    "dashboard.home.untitledBusiness": "Negocio sin nombre",
+    "dashboard.home.untitledBusiness": "Su negocio",
     "dashboard.home.noAddressOnFile": "Sin dirección registrada",
     "dashboard.home.emptyStateHeading": "Aún no ha agregado un negocio",
     "dashboard.home.emptyStateBody":
@@ -17903,6 +17915,12 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.settings.details.notSaved": "No se pudieron guardar sus datos en este momento. Inténtelo de nuevo.",
     "dashboard.settings.details.notEnabled": "Guardar sus datos aún no está disponible.",
     "dashboard.overview.confirmDetails": "Confirme los datos de su negocio",
+    "dashboard.overview.confirmCard.body": "PostScore mostrará estos datos en su cuenta y en sus correos, incluso cuando no se pueda acceder a Google. Su puntuación sigue basándose en su ficha de Google.",
+    "dashboard.overview.confirmCard.fromGoogle": "Completados con su ficha de Google tal como aparece ahora.",
+    "dashboard.overview.confirmCard.confirm": "Confirmar",
+    "dashboard.overview.confirmCard.edit": "Editar",
+    "dashboard.overview.confirmCard.notNow": "Ahora no",
+    "dashboard.overview.confirmCard.saved": "Confirmados · proporcionados por usted. Puede cambiarlos cuando quiera en Configuración.",
     "dashboard.settings.nav.account": "Cuenta",
     "dashboard.settings.profile.helper": "Su inicio de sesión y el idioma que PostScore usa para este negocio.",
     "dashboard.settings.profile.emailHelp": "Este es el correo con el que inicia sesión.",

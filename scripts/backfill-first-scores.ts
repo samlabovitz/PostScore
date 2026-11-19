@@ -1,8 +1,7 @@
 // ⚠ Day 23 2d-4: scores go through the shared scorer, which now reads each
 // listing LIVE (one counted, capped Places read per business unless it's
 // cached; Business Profile when connected) — running this costs Google
-// calls. Other values it reads from businesses are the pre-2d-5 saved
-// columns: stale, never current data.
+// calls. Since 2d-5 nothing else here reads Google's values.
 // Saves a first score snapshot for every business that has none — added
 // before saveBusiness saved one (lib/businessAdded.server.ts), so its
 // history, "Since your last scan" and Competitors had nothing to start
@@ -49,14 +48,14 @@ async function main() {
   const supabase = createClient(url, key, { auth: { persistSession: false } });
   const { scoreBusinessWithClient, saveScoreSnapshotWithClient, saveFirstScoreSnapshotWithClient, SCORING_UPDATE_KIND } = await load();
 
-  const { data: rows, error } = await supabase.from("businesses").select("id, name, archived_at, listing_mode").order("name", { ascending: true });
+  const { data: rows, error } = await supabase.from("businesses").select("id, archived_at, listing_mode").order("created_at", { ascending: true });
   if (error || !rows) {
     console.error("Could not read businesses:", error?.message);
     process.exit(1);
   }
 
   const targets: Array<{ id: string; name: string; total: number; grade: string }> = [];
-  for (const b of rows as Array<{ id: string; name: string | null; archived_at: string | null; listing_mode: string | null }>) {
+  for (const b of rows as Array<{ id: string; name?: string | null; archived_at: string | null; listing_mode: string | null }>) {
     if (b.archived_at || b.listing_mode === "website_only") continue;
     const { data: existing } = await supabase.from("scores").select("id").eq("business_id", b.id).limit(1);
     if ((existing ?? []).length > 0) continue;
@@ -65,7 +64,7 @@ async function main() {
       console.log(`  skipped ${b.name ?? b.id}: ${scored.status}`);
       continue;
     }
-    targets.push({ id: b.id, name: b.name ?? "(unnamed)", total: scored.result.breakdown.total, grade: scored.result.breakdown.grade });
+    targets.push({ id: b.id, name: scored.business.name ?? b.id, total: scored.result.breakdown.total, grade: scored.result.breakdown.grade });
   }
 
   console.log(`${dryRun ? "DRY RUN — " : ""}Businesses with no saved score: ${targets.length}\n`);

@@ -201,15 +201,14 @@ export interface ListingColumns {
  * the saved ones) and `live_unavailable` tells the page to say so. No
  * listing: the row as it is.
  */
-export function withLiveListing<T extends ListingColumns>(row: T, live: LiveListing): T & { live_unavailable?: boolean; live_source?: "business_profile" | "places" } {
-  if (live.status === "none") return row;
+export function withLiveListing<T extends ListingColumns>(row: T, live: LiveListing): T & ListingScoringColumns & { live_unavailable?: boolean; live_source?: "business_profile" | "places" } {
+  // No listing: no Google values (Day 23 2d-5 — a website-only business's
+  // own name, address and site are laid on by withLiveListingFor).
+  if (live.status === "none") return { ...emptyListingColumns(), ...row };
   if (live.status === "unavailable") {
-    // Every Google value empty; the name and address stay for the header
-    // (lib/ownerDetails.ts withOwnerDetails) until 2d-5.
-    const { name: _n, address: _a, ...empty } = emptyListingColumns();
-    void _n;
-    void _a;
-    return { ...row, ...empty, live_unavailable: true };
+    // Every Google value empty (Day 23 2d-5: the name and address too —
+    // the header shows the owner's confirmed ones, else a neutral label).
+    return { ...row, ...emptyListingColumns(), live_unavailable: true };
   }
   // Day 23 2d-4: every Google value as Google shows it now — the name and
   // address too (what the website-vs-Google checks compare with); the

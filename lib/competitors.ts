@@ -581,7 +581,7 @@ export function searchableTypes(types: readonly (string | null | undefined)[] | 
 export async function findAndScoreCompetitors(
   subject: CompetitorSourceBusiness,
   locale: Locale,
-  /** Diagnostics only (scripts/competitors-v2-dry-run.ts): every raw search
+  /** Diagnostics only (the competitors v2 dry run): every raw search
    * result, in Google's order. Never changes the result. */
   observe?: {
     onSearch?: (stage: "text" | "nearby", candidates: NearbyCandidate[]) => void;

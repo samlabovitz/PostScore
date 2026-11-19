@@ -1,11 +1,10 @@
-// ⚠ Day 23 2d-4: this script reads the SAVED Google columns (businesses /
-// competitor_scans) as they were before 2d-5 clears them. Scans stopped
-// writing them in 2d-4, so they're stale — never use what it prints as
-// current data. (Left as is until 2d-5.)
+// Day 23 2d-5: reads only PostScore's own saved results and the owner's
+// confirmed details; Google's values are read live when needed (counted,
+// capped Places reads — Business Profile when connected), never saved.
 // Applies the niche corrections approved in ~/Desktop/business-types-plan.md
 // (the ⚠ rows, and one law firm whose practice area the name can't show).
-// Needs supabase/business-niches.sql to have been run. Database only — no
-// Google calls. Each correction is marked 'approved', so the owner still
+// Needs supabase/business-niches.sql to have been run. Applied Nov 2026;
+// finding each business by name costs one live read (Day 23 2d-5). Each correction is marked 'approved', so the owner still
 // sees the one-time "We think you're…" banner and can change it.
 //
 //   npx tsx --env-file=.env.local scripts/apply-niche-corrections.ts          (dry run)
@@ -14,6 +13,7 @@
 import { createClient } from "@supabase/supabase-js";
 import { resolveBizProfile } from "@/config/bizProfiles";
 import { nicheById } from "@/lib/niches";
+import { findBusinessByName } from "./liveBusinessRow";
 
 export const APPROVED_CORRECTIONS: Array<{ name: string; nicheId: string }> = [
   { name: "Canadian Tire", nicheId: "department_store" },
@@ -30,10 +30,13 @@ async function main() {
   for (const c of APPROVED_CORRECTIONS) {
     const niche = nicheById(c.nicheId);
     if (!niche) throw new Error(`Unknown niche ${c.nicheId}`);
-    const { data, error } = await supabase.from("businesses").select("id, name, category, primary_type, categories, business_type_override, biz_type_resolved").eq("name", c.name);
+    // Day 23 2d-5: found by the shown name (owner-confirmed or live — one
+    // counted Places read per business); the type from our own saved reading.
+    const found = await findBusinessByName(supabase, c.name);
+    const { data, error } = found ? await supabase.from("businesses").select("id, biz_type_resolved").eq("id", found.id) : { data: [], error: null };
     if (error) throw error;
-    for (const b of data ?? []) {
-      const autoParent = resolveBizProfile(b.category, b.primary_type, null, "en", b.categories, b.name, b.biz_type_resolved).id;
+    for (const b of (data ?? []).map((r) => ({ ...r, name: found?.name ?? c.name }))) {
+      const autoParent = resolveBizProfile(null, null, null, "en", null, null, b.biz_type_resolved).id;
       const override = niche.parent === autoParent ? null : niche.parent;
       console.log(`${apply ? "APPLY" : "dry run"}: ${b.name} → ${niche.label.en} (type ${niche.parent}${override ? ", set as the business type" : ""})`);
       if (!apply) continue;

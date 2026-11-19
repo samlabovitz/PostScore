@@ -213,9 +213,22 @@ export async function liveListingForRow(db: SupabaseClient, businessId: string, 
   }).catch((): LiveListing => ({ status: "unavailable" }));
 }
 
-/** `row` with Google's values as read now (lib/ownerListing.ts withLiveListing). */
+/** `row` with Google's values as read now (lib/ownerListing.ts withLiveListing).
+ * No Google listing (website only): the name, address and site the owner gave. */
 export async function withLiveListingFor<T extends ListingColumns & { place_id?: string | null; listing_mode?: string | null }>(db: SupabaseClient, businessId: string, row: T) {
-  return withLiveListing(row, await liveListingForRow(db, businessId, row));
+  const live = await liveListingForRow(db, businessId, row);
+  return withLiveListing(live.status === "none" && row.listing_mode === "website_only" ? { ...row, ...(await websiteOnlyDetails(db, businessId)) } : row, live);
+}
+
+/**
+ * A website-only business's own name, address and site — what the owner
+ * typed when adding it (Day 23 2d-5: saved as their confirmed details and
+ * their confirmed site, never in the Google columns). Nulls when unreadable.
+ */
+export async function websiteOnlyDetails(db: SupabaseClient, businessId: string): Promise<{ name: string | null; address: string | null; website: string | null }> {
+  const [{ loadOwnerDetails }, { readOwnerWebsite }] = await Promise.all([import("@/lib/ownerDetails.server"), import("@/lib/ownerWebsite.server")]);
+  const [owner, site] = await Promise.all([loadOwnerDetails(db, businessId).catch(() => null), readOwnerWebsite(db, businessId).catch(() => null)]);
+  return { name: owner?.details.name ?? null, address: owner?.details.address || null, website: site?.url ?? null };
 }
 
 interface GbpMediaItem {

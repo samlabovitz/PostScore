@@ -4706,6 +4706,12 @@ function parseWebsiteTrustOverrides(value: unknown): WebsiteTrustOverride[] | nu
 export const V112_SCORING_COLUMNS =
   "has_recent_review, recent_reviews_seen, listing_has_accessibility, listing_has_payment, listing_has_parking, pure_service_area_business, owner_no_parking, owner_no_payment, gbp_reviews_in_window, gbp_replied, gbp_has_recent_review, gbp_recent_reviews";
 
+/** Day 23 2d-5: the v1.12.0 columns that are ours to keep — the owner's
+ * customer-details answers and the connected owner's own Business Profile
+ * review counts. Google's (recent reviews, the listing's yes/no facts) come
+ * from the scan's read or the live read (lib/listingScoringRow.ts). */
+export const OWNER_SCORING_COLUMNS = "owner_no_parking, owner_no_payment, gbp_reviews_in_window, gbp_replied, gbp_has_recent_review, gbp_recent_reviews";
+
 /** Maps a saved business row to scoring input. Pure. */
 export function businessRowToScoringInput(row: BusinessScoringRow): BusinessScoringInput {
   const rule = customerDetailsRuleFor(

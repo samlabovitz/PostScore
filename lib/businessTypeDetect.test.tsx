@@ -1,3 +1,4 @@
+import { emptyListingColumns } from "@/lib/listingScoringRow";
 import { describe, expect, test, vi } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 
@@ -65,13 +66,16 @@ function fakeDb(row: Record<string, unknown> | null, updateError: { code?: strin
   return { db: db as never, updates };
 }
 
+/** The add's own Google read, in memory (Day 23 2d-5: never the saved columns). */
+const listingOf = (row: Record<string, unknown>) => ({ ...emptyListingColumns(), name: row.name, category: row.category, primary_type: row.primary_type, categories: row.categories, website: row.website }) as never;
+
 const CLAY_ROW = { name: "Centered Clay Studio", category: "Educational Institution", primary_type: "educational_institution", categories: ["educational_institution"], website: "http://www.centeredclaystudio.com/", verified_website_url: null, niche_id: null, niche_source: null };
 const noSite = async () => null;
 
 describe("detectAndSaveBusinessTypeWithClient", () => {
   test("confident and no type set: saved as PostScore's pick, unconfirmed, the parent type following", async () => {
     const { db, updates } = fakeDb(CLAY_ROW);
-    const r = await detectAndSaveBusinessTypeWithClient(db, "b1", { readWebsite: noSite });
+    const r = await detectAndSaveBusinessTypeWithClient(db, "b1", { readWebsite: noSite, listing: listingOf(CLAY_ROW) });
     expect(r).toMatchObject({ status: "saved", nicheId: "art_classes" });
     expect(updates).toEqual([{ niche_id: "art_classes", niche_source: "auto", niche_confirmed_at: null, business_type_override: r.status === "saved" ? r.override : null, competitor_areas: null }]);
   });
@@ -79,29 +83,31 @@ describe("detectAndSaveBusinessTypeWithClient", () => {
   test("never over a type the owner chose (or any type already set)", async () => {
     for (const row of [{ ...CLAY_ROW, niche_id: "gift_shop", niche_source: "owner" }, { ...CLAY_ROW, niche_id: "art_classes", niche_source: "auto" }, { ...CLAY_ROW, niche_source: "owner" }]) {
       const { db, updates } = fakeDb(row);
-      expect((await detectAndSaveBusinessTypeWithClient(db, "b1", { readWebsite: noSite })).status).toBe("already_set");
+      expect((await detectAndSaveBusinessTypeWithClient(db, "b1", { readWebsite: noSite, listing: listingOf(row) })).status).toBe("already_set");
       expect(updates).toEqual([]);
     }
   });
 
   test("not confident: nothing saved (the Overview keeps asking)", async () => {
-    const { db, updates } = fakeDb({ ...CLAY_ROW, name: "Acme LLC", category: "Store", primary_type: "store", categories: ["store"] });
-    expect((await detectAndSaveBusinessTypeWithClient(db, "b1", { readWebsite: noSite })).status).toBe("unsure");
+    const acme = { ...CLAY_ROW, name: "Acme LLC", category: "Store", primary_type: "store", categories: ["store"] };
+    const { db, updates } = fakeDb(acme);
+    expect((await detectAndSaveBusinessTypeWithClient(db, "b1", { readWebsite: noSite, listing: listingOf(acme) })).status).toBe("unsure");
     expect(updates).toEqual([]);
   });
 
   test("dry run saves nothing; before supabase/niche-source-auto.sql the save is refused, not hidden", async () => {
     const dry = fakeDb(CLAY_ROW);
-    expect(await detectAndSaveBusinessTypeWithClient(dry.db, "b1", { readWebsite: noSite, apply: false })).toMatchObject({ status: "would_save", nicheId: "art_classes" });
+    expect(await detectAndSaveBusinessTypeWithClient(dry.db, "b1", { readWebsite: noSite, apply: false, listing: listingOf(CLAY_ROW) })).toMatchObject({ status: "would_save", nicheId: "art_classes" });
     expect(dry.updates).toEqual([]);
     const old = fakeDb(CLAY_ROW, { code: "23514", message: 'new row violates check constraint "businesses_niche_source_check"' });
-    expect(await detectAndSaveBusinessTypeWithClient(old.db, "b1", { readWebsite: noSite })).toMatchObject({ status: "not_enabled", nicheId: "art_classes" });
+    expect(await detectAndSaveBusinessTypeWithClient(old.db, "b1", { readWebsite: noSite, listing: listingOf(CLAY_ROW) })).toMatchObject({ status: "not_enabled", nicheId: "art_classes" });
   });
 
   test("reads the website's words (one plain fetch, never Google)", async () => {
-    const { db } = fakeDb({ ...CLAY_ROW, name: "Rooted On Main", category: "Store", primary_type: "store", categories: ["store"], website: "https://rootedshop.com/" });
+    const rooted = { ...CLAY_ROW, name: "Rooted On Main", category: "Store", primary_type: "store", categories: ["store"], website: "https://rootedshop.com/" };
+    const { db } = fakeDb(rooted);
     const readWebsite = vi.fn(async () => "Candles, gift sets and gifts — your local gift shop.");
-    expect(await detectAndSaveBusinessTypeWithClient(db, "b1", { readWebsite })).toMatchObject({ status: "saved", nicheId: "gift_shop" });
+    expect(await detectAndSaveBusinessTypeWithClient(db, "b1", { readWebsite, listing: listingOf(rooted) })).toMatchObject({ status: "saved", nicheId: "gift_shop" });
     expect(readWebsite).toHaveBeenCalledWith("https://rootedshop.com/", undefined);
   });
 });

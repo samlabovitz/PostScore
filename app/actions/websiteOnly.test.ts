@@ -103,13 +103,15 @@ describe("saving a website-only business", () => {
       owner_id: "owner-1",
       place_id: null,
       listing_mode: "website_only",
-      name: "Jane's English Tutoring",
-      address: "Dobbs Ferry, NY",
-      website: "https://janeenglish.com/",
+      // Day 23 2d-5: what the owner typed is saved as theirs — confirmed details and site.
+      owner_details: { name: "Jane's English Tutoring", address: "Dobbs Ferry, NY", phone: "", hours: { kind: "none" } },
+      owner_details_confirmed_at: expect.any(String),
+      owner_website_url: "https://janeenglish.com/",
+      owner_website_confirmed_at: expect.any(String),
       language: "es",
     });
-    // No listing facts are ever invented for it.
-    for (const field of ["rating", "review_count", "photo_count", "opening_hours", "category"]) {
+    // Never in the Google columns, and no listing facts are ever invented for it.
+    for (const field of ["name", "address", "website", "rating", "review_count", "photo_count", "opening_hours", "category"]) {
       expect(inserted[0]).not.toHaveProperty(field);
     }
   });
@@ -133,7 +135,7 @@ describe("saving a website-only business", () => {
 
 describe("re-checking and re-scanning", () => {
   test("re-check: the website again, no Google call; refused within the cooldown", async () => {
-    const old = { id: "b1", name: "X", website: "https://x.com/", listing_mode: "website_only", website_analysis_json: null, website_analysis_checked_at: "2026-01-01T00:00:00Z", business_type_override: null };
+    const old = { id: "b1", owner_details: { name: "X", address: "", phone: "", hours: { kind: "none" } }, owner_details_confirmed_at: "2026-01-01T00:00:00Z", owner_website_url: "https://x.com/", listing_mode: "website_only", website_analysis_json: null, website_analysis_checked_at: "2026-01-01T00:00:00Z", business_type_override: null };
     const { client, updated } = fakeSupabase({ rows: [old] });
     expect(await recheckWebsiteOnlyBusinessWithClient(client, "b1", true)).toEqual({ status: "ok" });
     expect(analysisSpy).toHaveBeenCalledTimes(1);

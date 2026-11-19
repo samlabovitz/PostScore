@@ -2,8 +2,8 @@ import "server-only";
 
 // Detects and saves a business's type (lib/businessTypeDetect.ts) — right
 // after it's added, before its first score and competitor scan (so both use
-// the type), and once for saved businesses with none
-// (scripts/detect-business-types.ts). Saved as niche_source "auto"
+// the type), and once for saved businesses with none (run Nov 2026; the
+// script was removed in Day 23 2d-5). Saved as niche_source "auto"
 // (supabase/niche-source-auto.sql): the Overview shows "We picked … —
 // Change" until the owner confirms or changes it. Only when confident, only
 // when no type is set — never over a type the owner chose. One plain fetch
@@ -48,13 +48,15 @@ export async function detectAndSaveBusinessTypeWithClient(
   const apply = options.apply ?? true;
   const { data: saved, error } = await db
     .from("businesses")
-    .select("name, category, primary_type, categories, biz_type_resolved, website, verified_website_url, niche_id, niche_source")
+    .select("place_id, listing_mode, biz_type_resolved, verified_website_url, niche_id, niche_source")
     .eq("id", businessId)
     .maybeSingle();
-  const l = options.listing;
-  const row = saved && l ? { ...saved, name: l.name, category: l.category, primary_type: l.primary_type, categories: l.categories, website: l.website } : saved;
   if (error) return { status: "error", message: error.message };
-  if (!row) return { status: "not_found" };
+  if (!saved) return { status: "not_found" };
+  // Day 23 2d-5: Google's name, category, types and link from the add's own
+  // read, else as Google shows them now — never the saved columns.
+  const l = options.listing ?? (await (await import("@/lib/ownerListing.server")).withLiveListingFor(db, businessId, saved));
+  const row = { ...saved, name: l.name, category: l.category, primary_type: l.primary_type, categories: l.categories, website: l.website };
   // A type is already set (by the owner, or picked before): never touched.
   if (row.niche_id || row.niche_source === "owner") return { status: "already_set", nicheId: row.niche_id ?? "", source: row.niche_source ?? null };
 

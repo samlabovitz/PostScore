@@ -3350,10 +3350,12 @@ export function autoDetectedBizProfile(
 }
 
 /** The value saved as businesses.biz_type_resolved at a scan: Google's
- * category and types read into one of our business types. Ours, not
- * Google's — the category itself is never kept. */
-export function savedBizTypeId(category: string | null | undefined, primaryType: string | null | undefined, categories?: string[] | null): string {
-  return bizProfile(category, primaryType, DEFAULT_LOCALE, categories, null).id;
+ * category, types and name read into one of our business types. Ours, not
+ * Google's — the category and name themselves are never kept (Day 23
+ * 2d-5: with the name, so the type stays the same once pages no longer
+ * have Google's saved name; resolveBizProfile gives the same answer). */
+export function savedBizTypeId(category: string | null | undefined, primaryType: string | null | undefined, categories?: string[] | null, name?: string | null): string {
+  return bizProfile(category, primaryType, DEFAULT_LOCALE, categories, name ?? null).id;
 }
 
 /** Best-effort city extraction from a Google formatted address (typically

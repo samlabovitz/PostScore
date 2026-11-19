@@ -67,12 +67,12 @@ async function owned(businessId: string) {
   if (!user) return { supabase, business: null, status: "unauthenticated" as const };
   const { data } = await supabase
     .from("businesses")
-    .select("id, place_id, listing_mode, name, phone, address, website, verified_website_url, website_analysis_json")
+    .select("id, place_id, listing_mode, verified_website_url, website_analysis_json")
     .eq("id", businessId)
     .eq("owner_id", user.id)
     .maybeSingle();
   // Day 23 2d-4: the listing's link, name, phone and address as Google (or the owner) shows them now.
-  const business = data ? ((await withLiveListingFor(supabase, businessId, await withOwnerDetailsFor(supabase, businessId, data))) as unknown as OwnedBusiness) : null;
+  const business = data ? ((await withOwnerDetailsFor(supabase, businessId, await withLiveListingFor(supabase, businessId, data))) as unknown as OwnedBusiness) : null;
   return { supabase, business, status: data ? ("ok" as const) : ("not_found" as const) };
 }
 

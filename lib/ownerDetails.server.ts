@@ -4,7 +4,7 @@
 // confirmed").
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { cachedOwnerListing, liveListingForRow } from "@/lib/ownerListing.server";
+import { cachedOwnerListing, liveListingForRow, ownerListingLive } from "@/lib/ownerListing.server";
 import { sanitizeOwnerDetails, withOwnerDetails, type OwnerDetails } from "@/lib/ownerDetails";
 
 export interface SavedOwnerDetails {
@@ -59,6 +59,92 @@ export async function loadOwnerDetailsMany(db: SupabaseClient, businessIds: stri
   return out;
 }
 
+/** Lists of an owner's businesses (the home list, Settings → Businesses,
+ * notifications) read each one live only for an account with at most this
+ * many; above it, only reads already made (the cache) — so one account with
+ * many businesses can't use up the month's live-read cap. */
+export const LIVE_NAMES_MAX_BUSINESSES = 5;
+
+/** How a list of `count` businesses reads their names. */
+export function namesLiveFor(count: number): OwnerNameLive {
+  return count <= LIVE_NAMES_MAX_BUSINESSES ? true : "cached";
+}
+
+export interface ShownName {
+  name: string | null;
+  address: string | null;
+  /** Not confirmed, and Google couldn't be read just now: the page says so. */
+  unavailable: boolean;
+  /** Not confirmed, and no read was made (only the cache, or none): nothing to say about Google. */
+  notRead?: boolean;
+}
+
+/**
+ * Each business's name and address to show (the home list, the business
+ * switcher, notifications): the owner's confirmed ones, else the listing
+ * as Google shows it now — with `live: true` one read per business per 10
+ * minutes (the shared live cache), "cached" only a read this visit already
+ * made, false none. Never the saved Google columns: null when unknown.
+ */
+export async function shownNamesFor(db: SupabaseClient, businessIds: string[], options: { live?: OwnerNameLive } = {}): Promise<Map<string, ShownName>> {
+  const ids = Array.from(new Set(businessIds));
+  const out = new Map<string, ShownName>();
+  const owners = await loadOwnerDetailsMany(db, ids);
+  const rest: string[] = [];
+  for (const id of ids) {
+    const owner = owners.get(id);
+    if (owner) out.set(id, { name: owner.details.name, address: owner.details.address || null, unavailable: false });
+    else rest.push(id);
+  }
+  const live = options.live ?? true;
+  if (live !== true) {
+    for (const id of rest) {
+      const cached = live === "cached" ? cachedOwnerListing(id) : null;
+      out.set(id, cached?.status === "ok" ? pick(cached) : { name: null, address: null, unavailable: false, notRead: true });
+    }
+    return out;
+  }
+  const [listings, connected] = await Promise.all([listingRows(db, rest), connectedIds(db, rest)]);
+  await Promise.all(
+    rest.map(async (id) => {
+      const row = listings.get(id);
+      const read = row
+        ? await ownerListingLive(id, { placeId: row.place_id, websiteOnly: row.listing_mode === "website_only", connected: connected.has(id) }).catch(() => null)
+        : null;
+      out.set(id, pick(read));
+    })
+  );
+  return out;
+}
+
+const pick = (live: Parameters<typeof withOwnerDetails>[2]): ShownName => {
+  const shown = withOwnerDetails<{ name?: string | null; address?: string | null }>({}, null, live);
+  return { name: shown.name ?? null, address: shown.address ?? null, unavailable: live?.status !== "ok" };
+};
+
+async function listingRows(db: SupabaseClient, businessIds: string[]): Promise<Map<string, { place_id: string | null; listing_mode: string | null }>> {
+  const out = new Map<string, { place_id: string | null; listing_mode: string | null }>();
+  if (businessIds.length === 0) return out;
+  try {
+    const { data } = await db.from("businesses").select("id, place_id, listing_mode").in("id", businessIds);
+    for (const r of (data ?? []) as Array<{ id: string; place_id: string | null; listing_mode: string | null }>) out.set(r.id, r);
+  } catch {
+    // Unknown: no read, no name.
+  }
+  return out;
+}
+
+/** The businesses that read their listing from Business Profile (0 Places calls). */
+async function connectedIds(db: SupabaseClient, businessIds: string[]): Promise<Set<string>> {
+  if (businessIds.length === 0) return new Set();
+  try {
+    const { data } = await db.from("gbp_connections").select("business_id, status, google_location_id").in("business_id", businessIds);
+    return new Set(((data ?? []) as Array<{ business_id: string; status?: string; google_location_id?: string | null }>).filter((c) => c.status === "connected" && !!c.google_location_id).map((c) => c.business_id));
+  } catch {
+    return new Set();
+  }
+}
+
 /** The listing's place and mode, for the live read. */
 async function listingRow(db: SupabaseClient, businessId: string): Promise<{ place_id: string | null; listing_mode: string | null } | null> {
   try {
@@ -74,7 +160,7 @@ export async function withOwnerDetailsFor<T extends { name?: string | null; addr
   const owner = await loadOwnerDetails(db, businessId);
   if (owner) return withOwnerDetails(row, owner.details);
   const live = options.live ?? true;
-  if (live === false) return row;
+  if (live === false) return withOwnerDetails(row, null, null);
   if (live === "cached") return withOwnerDetails(row, null, cachedOwnerListing(businessId));
   const listing = await listingRow(db, businessId);
   return withOwnerDetails(row, null, listing ? await liveListingForRow(db, businessId, listing) : null);

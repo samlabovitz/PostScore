@@ -1,3 +1,4 @@
+import { websiteOnlyDetails } from "@/lib/ownerListing.server";
 import { redirect } from "next/navigation";
 import { DashboardShell } from "@/components/layout/DashboardShell";
 import { createClient } from "@/lib/supabase/server";
@@ -26,8 +27,9 @@ export default async function AddBusinessPage({ searchParams }: { searchParams?:
   // (RLS limits the read to the owner's rows).
   let attachTo: AttachTarget | null = null;
   if (searchParams?.attach && (await getListingMode(supabase, searchParams.attach)) === "website_only") {
-    const { data } = await supabase.from("businesses").select("id, name").eq("id", searchParams.attach).maybeSingle();
-    if (data) attachTo = { businessId: data.id, name: data.name };
+    const { data } = await supabase.from("businesses").select("id").eq("id", searchParams.attach).maybeSingle();
+    // The name the owner gave the website-only business (Day 23 2d-5).
+    if (data) attachTo = { businessId: data.id, name: (await websiteOnlyDetails(supabase, data.id)).name };
   }
 
   return (

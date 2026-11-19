@@ -1,6 +1,6 @@
 // Day 23 2d-4 proof: the 10 businesses' scores, category points and every
 // check's points, recorded before and after the change and compared check
-// by check (scripts/day23-2d4-live-check.ts). Fails loudly on an empty or
+// by check (the 2d-4 live check, removed in 2d-5). Fails loudly on an empty or
 // partial snapshot. Pure.
 
 export const DAY23_2D4_IDS = [

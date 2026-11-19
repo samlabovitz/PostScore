@@ -1,3 +1,4 @@
+import { emptyListingColumns } from "@/lib/listingScoringRow";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import { readFileSync } from "node:fs";
 
@@ -106,7 +107,8 @@ describe("the owner's listing, read live when shown (Day 23 2d-2)", () => {
     expect(shown.website).toBe("https://hairexpress.example");
     const down = withLiveListing(ROW, { status: "unavailable" });
     expect(down).toMatchObject({ rating: null, review_count: null, phone: null, opening_hours: null, photo_count: null, live_unavailable: true });
-    expect(withLiveListing(ROW, { status: "none" })).toEqual(ROW);
+    // No listing: no Google values at all (a website-only business's own details are laid on by withLiveListingFor).
+    expect(withLiveListing(ROW, { status: "none" })).toEqual({ ...emptyListingColumns(), ...ROW });
   });
 
   test("Business Profile's hours, status and reviews summary in the shape the pages read", () => {

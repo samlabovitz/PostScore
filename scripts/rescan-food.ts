@@ -1,13 +1,12 @@
-// ⚠ Day 23 2d-4: this script reads the SAVED Google columns (businesses /
-// competitor_scans) as they were before 2d-5 clears them. Scans stopped
-// writing them in 2d-4, so they're stale — never use what it prints as
-// current data. (Left as is until 2d-5.)
+// Day 23 2d-5: reads only PostScore's own saved results and the owner's
+// confirmed details; Google's values are read live when needed (counted,
+// capped Places reads — Business Profile when connected), never saved.
 // Online ordering, step 1: re-scans ONLY the food businesses (restaurants,
 // cafés, bakeries, dessert shops — lib/serviceOptions.ts FOOD_PROFILE_IDS)
 // so their Google service options (takeout, delivery, curbside, dine-in)
 // get collected. No points come from them yet.
 //
-// It picks the businesses from saved data, prints what the re-scan will
+// It picks the businesses from our own saved results (their saved type), prints what the re-scan will
 // call, then hands them to scripts/rescan-all.ts --only=<ids>
 // --no-screenshots — the app's own re-scan (rescanBusinessWithClient),
 // one at a time, with every cap it already respects:
@@ -29,6 +28,7 @@ import { isFoodBusiness } from "../lib/serviceOptions";
 import { BILLED_DETAILS_KINDS, placesDetailsMonthlyCap } from "../lib/placesDetailsBudget";
 import { monthStartUtc } from "../lib/placesSearchBudget";
 import { businessWebsiteUrl } from "../lib/businessWebsite";
+import { gradedSiteUrl } from "../lib/gradedSite";
 
 /** PageSpeed: 1 run when Google has real-visitor data, else 3; each run
  * up to 2 attempts (lib/websiteAnalysis.ts fetchMobilePerformance). */
@@ -84,15 +84,18 @@ async function main(): Promise<void> {
   if (!url || !key) throw new Error("NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are required (use --env-file=.env.local).");
   const db = createClient(url, key, { auth: { persistSession: false } });
 
-  let rows: Row[] = [];
-  const withArchive = await db.from("businesses").select("id, name, category, primary_type, business_type_override, biz_type_resolved, categories, website, verified_website_url, listing_mode, archived_at, place_id").order("name");
-  if (withArchive.error) {
-    const plain = await db.from("businesses").select("id, name, category, primary_type, business_type_override, biz_type_resolved, categories, website, verified_website_url, listing_mode, place_id").order("name");
-    if (plain.error) throw new Error(`Couldn't read businesses: ${plain.error.message}`);
-    rows = (plain.data ?? []) as Row[];
-  } else {
-    rows = (withArchive.data ?? []) as Row[];
-  }
+  // Day 23 2d-5: our own saved type and the site our last scan graded —
+  // Google's category, name and link aren't saved.
+  const saved = await db.from("businesses").select("id, business_type_override, biz_type_resolved, verified_website_url, website_analysis_json, listing_mode, archived_at, place_id").order("created_at");
+  if (saved.error) throw new Error(`Couldn't read businesses: ${saved.error.message}`);
+  const rows: Row[] = ((saved.data ?? []) as Array<Omit<Row, "name" | "category" | "primary_type" | "categories" | "website"> & { website_analysis_json: unknown }>).map(({ website_analysis_json, ...r }) => ({
+    ...r,
+    name: null,
+    category: null,
+    primary_type: null,
+    categories: null,
+    website: gradedSiteUrl(website_analysis_json),
+  }));
   const targets = foodRescanTargets(rows);
   const calls = foodRescanCalls(targets);
 

@@ -1,7 +1,6 @@
-// ⚠ Day 23 2d-4: this script reads the SAVED Google columns (businesses /
-// competitor_scans) as they were before 2d-5 clears them. Scans stopped
-// writing them in 2d-4, so they're stale — never use what it prints as
-// current data. (Left as is until 2d-5.)
+// Day 23 2d-5: reads only PostScore's own saved results and the owner's
+// confirmed details; Google's values are read live when needed (counted,
+// capped Places reads — Business Profile when connected), never saved.
 // Dev-only, READ-ONLY live check of PostAI's real answers across several
 // real businesses — built to confirm Day 3's starter-prompt variety work
 // (buildAssistantStarterPrompts, lib/assistant.ts) actually produces good,
@@ -46,6 +45,7 @@
 // fewer of them), pass their flagLabels:
 //   npx tsx scripts/live-check-postai.ts blue-bottle santa-fe
 
+import { findBusinessByName, liveBusinessRow } from "./liveBusinessRow";
 import * as fs from "fs";
 import * as os from "os";
 import * as path from "path";
@@ -129,14 +129,16 @@ const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env
 // ---------------------------------------------------------------------------
 
 async function readAndScoreBusiness(businessId: string, locale: Locale) {
-  const { data, error } = await supabase
+  const { data: saved, error } = await supabase
     .from("businesses")
     .select(
-      "id, name, address, phone, website, rating, review_count, category, categories, opening_hours, opening_hours_periods, photo_count, business_status, https_status, website_analysis_json, google_maps_uri, language, google_listing_missing_website_since, google_listing_website_removed_since, google_listing_last_known_website_at, verified_website_url, website_trust_overrides_json"
+      "id, place_id, listing_mode, https_status, website_analysis_json, language, google_listing_missing_website_since, google_listing_website_removed_since, google_listing_last_known_website_at, verified_website_url, website_trust_overrides_json"
     )
     .eq("id", businessId)
     .single();
-  if (error || !data) return null;
+  if (error || !saved) return null;
+  // Day 23 2d-5: Google's values as read now (scripts/liveBusinessRow.ts).
+  const data = await liveBusinessRow(supabase, businessId, saved);
   const input = businessRowToScoringInput(data as unknown as BusinessScoringRow);
   const result = getScoreWithSuggestions(input, locale);
   return { business: data, input, result };
@@ -146,12 +148,12 @@ async function readBusinessSummary(businessId: string) {
   const { data, error } = await supabase
     .from("businesses")
     .select(
-      "id, name, address, category, primary_type, business_type_override, biz_type_resolved, trade_id, phone, services, avg_job_value_low, avg_job_value_high, language"
+      "id, place_id, listing_mode, business_type_override, biz_type_resolved, trade_id, services, avg_job_value_low, avg_job_value_high, language"
     )
     .eq("id", businessId)
     .single();
   if (error || !data) return null;
-  return data;
+  return liveBusinessRow(supabase, businessId, data);
 }
 
 async function readScoreHistory(businessId: string) {
@@ -225,7 +227,7 @@ async function readGrowthMoveSignals(
   snapshot: CompetitorSnapshot | null
 ): Promise<GrowthMoveSignals> {
   const [businessResult, promoResult, referralResult] = await Promise.all([
-    supabase.from("businesses").select("photo_count, pricing_assessed_at, website, verified_website_url").eq("id", businessId).single(),
+    supabase.from("businesses").select("place_id, listing_mode, pricing_assessed_at, verified_website_url").eq("id", businessId).single().then(async (r) => (r.data ? { ...r, data: await liveBusinessRow(supabase, businessId, r.data) } : r)),
     supabase.from("promos").select("id").eq("business_id", businessId).limit(1),
     supabase.from("referrals").select("id").eq("business_id", businessId).limit(1),
   ]);
@@ -748,8 +750,8 @@ async function ask(system: string, question: string, plan: Plan, fixes: string[]
 }
 
 async function planCheck(name: string) {
-  const { data: rows } = await supabase.from("businesses").select("id, name, owner_id").ilike("name", `%${name}%`).limit(1);
-  const row = (rows ?? [])[0] as { id: string; name: string; owner_id: string } | undefined;
+  // Day 23 2d-5: by the shown name (owner-confirmed or live) — Google's isn't saved.
+  const row = (await findBusinessByName(supabase, name)) ?? undefined;
   if (!row) throw new Error(`No business matching "${name}".`);
   const { count } = await supabase.from("businesses").select("id", { count: "exact", head: true }).eq("owner_id", row.owner_id);
   const loaded = await loadBusinessContext(row.id);
@@ -825,8 +827,7 @@ async function accuracyCheck() {
   let total = 0;
   let firstTryOk = 0;
   for (const run of runs) {
-    const { data: rows } = await supabase.from("businesses").select("id, owner_id").ilike("name", `%${run.match}%`).limit(1);
-    const row = (rows ?? [])[0] as { id: string; owner_id: string } | undefined;
+    const row = (await findBusinessByName(supabase, run.match)) ?? undefined;
     if (!row) throw new Error(`No business matching "${run.match}".`);
     const { count } = await supabase.from("businesses").select("id", { count: "exact", head: true }).eq("owner_id", row.owner_id);
     const loaded = await loadBusinessContext(row.id);
@@ -942,8 +943,7 @@ function checkedLines(c: Checked): string[] {
 }
 
 async function businessRow(match: string) {
-  const { data: rows } = await supabase.from("businesses").select("id, owner_id").ilike("name", `%${match}%`).limit(1);
-  const row = (rows ?? [])[0] as { id: string; owner_id: string } | undefined;
+  const row = (await findBusinessByName(supabase, match)) ?? undefined;
   if (!row) throw new Error(`No business matching "${match}".`);
   const { count } = await supabase.from("businesses").select("id", { count: "exact", head: true }).eq("owner_id", row.owner_id);
   return { id: row.id, count: count ?? 1 };

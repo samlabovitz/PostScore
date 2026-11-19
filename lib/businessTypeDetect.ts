@@ -1,5 +1,5 @@
-// Business type detection when a business is added (and once for saved
-// businesses with none — scripts/detect-business-types.ts): the closest
+// Business type detection when a business is added (and once, Nov 2026,
+// for saved businesses with none): the closest
 // niche across EVERY type, from the business's own name, Google's primary
 // type and category, and the words on its website — not only within the
 // broad type Google's category points to (a "Store" can be a gift shop,

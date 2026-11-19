@@ -100,7 +100,7 @@ interface CompetitorBusinessRow {
 }
 
 const BUSINESS_COLUMNS =
-  "place_id, listing_mode, name, address, phone, website, rating, review_count, category, categories, opening_hours, photo_count, business_status, https_status, website_analysis_json, verified_website_url, website_trust_overrides_json, primary_type, business_type_override, biz_type_resolved, price_level, lat, lng, language";
+  "place_id, listing_mode, https_status, website_analysis_json, verified_website_url, website_trust_overrides_json, business_type_override, biz_type_resolved, lat, lng, language";
 
 const SCAN_COLUMNS = SAVED_SCAN_COLUMNS;
 
@@ -193,7 +193,7 @@ export async function getCompetitorsWithClient(
   const [{ data: business, error }, { data: scanRows, error: scanError }, unfinished, scoring, niche, latestScore] = await Promise.all([
     supabase
       .from("businesses")
-      .select("name, address, place_id, listing_mode, language, category, categories, primary_type, business_type_override, biz_type_resolved, lat, lng, website, verified_website_url")
+      .select("place_id, listing_mode, language, business_type_override, biz_type_resolved, lat, lng, verified_website_url")
       .eq("id", businessId)
       .single()
       // Day 23 2d-4: the address, types and website the live query uses, as Google shows them now.
@@ -865,7 +865,7 @@ async function getLocalBenchmarkUncached(businessId: string): Promise<GetLocalBe
 
   const { data: business, error: businessError } = await supabase
     .from("businesses")
-    .select("name, category, categories, primary_type, business_type_override, biz_type_resolved, language")
+    .select("business_type_override, biz_type_resolved, language")
     .eq("id", businessId)
     .single();
 
@@ -885,7 +885,8 @@ async function getLocalBenchmarkUncached(businessId: string): Promise<GetLocalBe
   // The business's own niche when it has one ("art & pottery studios").
   const competitorNoun = ownerCompetitorNoun(
     scope?.nicheId,
-    resolveBizProfile(business.category, business.primary_type, business.business_type_override, normalizeLocale(business.language), business.categories, business.name, business.biz_type_resolved).competitorNoun,
+    // Our own saved reading of the type (Day 23 2d-5), never Google's saved columns.
+    resolveBizProfile(null, null, business.business_type_override, normalizeLocale(business.language), null, null, business.biz_type_resolved).competitorNoun,
     normalizeLocale(business.language)
   );
   const subject = snapshot.entries.find((e) => e.isSubject);

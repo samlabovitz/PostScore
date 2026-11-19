@@ -35,16 +35,16 @@ export async function getPrintStudioData(businessId: string, options: { live?: b
 
   const { data, error } = await supabase
     .from("businesses")
-    .select("name, address, place_id, google_maps_uri, website, verified_website_url, website_analysis_json, opening_hours, opening_hours_periods, language, category, primary_type, categories, listing_mode")
+    .select("place_id, verified_website_url, website_analysis_json, language, listing_mode")
     .eq("id", businessId)
     .single();
   if (error || !data) return { status: "not_found" };
 
   const locale = normalizeLocale(data.language);
-  const [owner, live] = await Promise.all([loadOwnerDetails(supabase, businessId), options.live === false ? Promise.resolve({ ...data, ...emptyListingColumns(), name: data.name, address: data.address }) : withLiveListingFor(supabase, businessId, data)]);
+  const [owner, live] = await Promise.all([loadOwnerDetails(supabase, businessId), options.live === false ? Promise.resolve({ ...data, ...emptyListingColumns() }) : withLiveListingFor(supabase, businessId, data)]);
   const ownerDetails = owner?.details ?? null;
   // Before the owner confirms: the listing's name and address as read now.
-  const shown = await withOwnerDetailsFor(supabase, businessId, { name: data.name as string | null, address: data.address as string | null }, { live: options.live !== false });
+  const shown = await withOwnerDetailsFor<{ name?: string | null; address?: string | null }>(supabase, businessId, {}, { live: options.live !== false });
   // The owner's own hours, formatted in their language (lib/ownerDetails.ts).
   const hours = ownerDetails
     ? ownerHoursLines(ownerDetails.hours, locale)
@@ -53,15 +53,15 @@ export async function getPrintStudioData(businessId: string, options: { live?: b
     status: "ok",
     locale,
     business: {
-      businessName: shown.name,
+      businessName: shown.name ?? null,
       placeId: data.place_id,
       googleMapsUri: live.google_maps_uri ?? null,
       // The site PostScore shows, with the owner's confirmed one (null before supabase/owner-website.sql).
       // Day 23 2d-4: the listing's link as Google shows it now (none on the showroom).
       website: realWebsite(await withOwnerWebsite(supabase, businessId, live)),
-      address: shown.address,
+      address: shown.address ?? null,
       hours: hours && hours.length ? hours : null,
-      icon: iconForBusiness(live.category ?? null, live.primary_type ?? null, (live.categories as string[] | null) ?? null, data.name),
+      icon: iconForBusiness(live.category ?? null, live.primary_type ?? null, (live.categories as string[] | null) ?? null, shown.name ?? null),
     },
   };
 }

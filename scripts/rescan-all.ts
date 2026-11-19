@@ -171,8 +171,8 @@ const PLACES_DETAILS_COST_USD = 0.025;
 
 interface BusinessRow {
   id: string;
+  /** For the log only: the owner's confirmed name (Day 23 2d-5 — Google's isn't saved). */
   name: string | null;
-  website: string | null;
   verified_website_url?: string | null;
   website_analysis_json: unknown;
   language?: string | null;
@@ -251,13 +251,17 @@ async function main() {
   const limitArg = args.find((a) => a.startsWith("--limit="));
   const limit = limitArg ? parseInt(limitArg.slice("--limit=".length), 10) : null;
 
-  let query = supabase.from("businesses").select("*");
+  // Our own columns only (Day 23 2d-5); the scan reads Google live.
+  let query = supabase.from("businesses").select("id, owner_id, listing_mode, archived_at, created_at, language, verified_website_url, website_analysis_json");
   if (onlyIds) query = query.in("id", onlyIds);
-  const { data: allBusinesses, error } = await query.order("created_at", { ascending: true });
-  if (error || !allBusinesses) {
+  const { data: rows, error } = await query.order("created_at", { ascending: true });
+  if (error || !rows) {
     console.error("Could not read businesses:", error?.message);
     process.exit(1);
   }
+  const { shownNamesFor } = await import("../lib/ownerDetails.server");
+  const ownerNames = await shownNamesFor(supabase, rows.map((r) => r.id), { live: false });
+  const allBusinesses = rows.map((r) => ({ ...r, name: ownerNames.get(r.id)?.name ?? null }));
 
   // Day 2b: a website-only business (listing_mode = 'website_only') has
   // no Google listing to re-fetch — never part of a bulk Google re-scan.
@@ -376,9 +380,8 @@ async function main() {
 
     // Day 23 2d-4: a scan no longer saves Google's listing values, so the
     // saved columns aren't current data — re-scoring them would mislead.
-    // To compare scores old vs new from one live read, use
-    // scripts/day23-2d4-live-check.ts.
-    console.log(`\n(No stored-data score comparison: since Day 23 2d-4 the saved Google columns aren't current — see scripts/day23-2d4-live-check.ts.)`);
+    // (Day 23 2d-5 cleared them.)
+    console.log(`\n(No stored-data score comparison: since Day 23 2d-4 Google's listing values aren't saved.)`);
 
     const placesCost = businesses.length * PLACES_DETAILS_COST_USD;
     console.log(`\nEstimated real, billed cost:`);

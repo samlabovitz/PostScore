@@ -76,7 +76,7 @@ type BusinessRow = {
 };
 
 const BUSINESS_COLUMNS =
-  "id, place_id, name, website, verified_website_url, phone, address, opening_hours_periods, category, primary_type, categories, business_type_override, biz_type_resolved, website_analysis_json, listing_mode, lat, lng";
+  "id, place_id, verified_website_url, business_type_override, biz_type_resolved, website_analysis_json, listing_mode, lat, lng";
 
 /** The site a re-check reads: the one PostScore grades, screenshots and
  * shows (lib/businessWebsite.ts gradedWebsite — the owner's confirmed

@@ -38,9 +38,9 @@ export async function loadWeeklyScans(supabase: SupabaseClient, businessId: stri
     // Scans don't keep Google's rating or review count (Day 23 2c-5): the
     // newest scan shows today's as Google shows them now (2d-2), as the
     // Overview does; older ones none.
-    supabase.from("businesses").select("place_id, listing_mode, rating, review_count").eq("id", businessId).maybeSingle(),
+    supabase.from("businesses").select("place_id, listing_mode").eq("id", businessId).maybeSingle(),
   ]);
-  const row = now as { place_id: string | null; listing_mode: string | null; rating: number | null; review_count: number | null } | null;
+  const row = now as { place_id: string | null; listing_mode: string | null } | null;
   const today = row ? await (await import("@/lib/ownerListing.server")).withLiveListingFor(supabase, businessId, row) : null;
   return rows.map((r, i) => ({
     id: String(r.id),

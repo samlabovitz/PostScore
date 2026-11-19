@@ -18,6 +18,7 @@
 // asked for here — this route only ever turns monthly_report_enabled
 // OFF, never on, so a stray prefetch/link-scanner re-visiting this URL
 // does no further harm than an owner clicking it twice.
+import { loadOwnerDetails } from "@/lib/ownerDetails.server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { Card } from "@/components/ui/Card";
 import { BackLink } from "@/components/legal/BackLink";
@@ -85,7 +86,7 @@ export default async function UnsubscribePage({
 
   const { data: business, error } = await supabase
     .from("businesses")
-    .select("id, name, unsubscribe_token, monthly_report_enabled, language")
+    .select("id, unsubscribe_token, monthly_report_enabled, language")
     .eq("id", businessId)
     .maybeSingle();
 
@@ -123,12 +124,16 @@ export default async function UnsubscribePage({
     }
   }
 
+  // Day 23 2d-5: the owner's confirmed name, else "this business" — never a
+  // saved Google value, and no Google call from a public link.
+  const ownerName = (await loadOwnerDetails(supabase, business.id))?.details.name ?? null;
+
   return (
     <UnsubscribeShell
       locale={locale}
       title={t(locale, "dashboard.unsubscribe.successTitle")}
       message={t(locale, "dashboard.unsubscribe.successMessage", {
-        name: business.name ?? t(locale, "dashboard.unsubscribe.thisBusinessFallback"),
+        name: ownerName ?? t(locale, "dashboard.unsubscribe.thisBusinessFallback"),
       })}
       tone="success"
     />

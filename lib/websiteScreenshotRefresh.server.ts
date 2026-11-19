@@ -10,6 +10,7 @@
 //   and the account-wide monthly cap both have room (lib/screenshotBudget.ts
 //   rules 2 and 4) — checked before ScreenshotOne is called; when either is
 //   used, the existing screenshot stays.
+import { gradedSiteUrl } from "@/lib/gradedSite";
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { businessWebsiteUrl } from "@/lib/businessWebsite";
@@ -47,15 +48,19 @@ export async function captureScreenshotsWithClient(
 ): Promise<CaptureScreenshotsResult> {
   const { data: row, error } = await supabase
     .from("businesses")
-    .select("website, verified_website_url, website_analysis_json")
+    .select("place_id, listing_mode, verified_website_url, website_analysis_json")
     .eq("id", businessId)
     .single();
 
   if (error || !row) {
     return { status: "not_found" };
   }
-  // The site PostScore grades: the owner's confirmed one, a verified one, or the listing's.
-  const siteUrl = businessWebsiteUrl(await withOwnerWebsite(supabase, businessId, row));
+  // The site PostScore grades: the owner's confirmed one, a verified one, or
+  // the listing's as Google shows it now (Day 23 2d-5: never the saved
+  // column) — when Google can't be read, the site our last scan graded.
+  const { withLiveListingFor } = await import("@/lib/ownerListing.server");
+  const live = await withLiveListingFor(supabase, businessId, row as typeof row & { place_id: string | null; listing_mode: string | null });
+  const siteUrl = businessWebsiteUrl(await withOwnerWebsite(supabase, businessId, { ...row, website: live.website ?? gradedSiteUrl(row.website_analysis_json) }));
   if (!siteUrl) {
     return { status: "no_website" };
   }

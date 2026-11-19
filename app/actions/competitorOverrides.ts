@@ -51,8 +51,8 @@ async function ownBusiness(businessId: string) {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return { supabase, user: null, business: null };
-  const { data: business } = await supabase.from("businesses").select("id, place_id, lat, lng, address, language").eq("id", businessId).eq("owner_id", user.id).maybeSingle();
-  return { supabase, user, business: business as { id: string; place_id: string; lat: number | null; lng: number | null; address: string | null; language: string | null } | null };
+  const { data: business } = await supabase.from("businesses").select("id, place_id, lat, lng, language").eq("id", businessId).eq("owner_id", user.id).maybeSingle();
+  return { supabase, user, business: business as { id: string; place_id: string; lat: number | null; lng: number | null; language: string | null } | null };
 }
 
 function done(businessId: string): OverrideResult {

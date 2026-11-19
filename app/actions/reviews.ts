@@ -10,7 +10,7 @@ import {
   scoreBusiness,
   type BusinessScoringRow,
   type CategoryResult,
-  V112_SCORING_COLUMNS,
+  OWNER_SCORING_COLUMNS,
 } from "@/lib/scoring";
 import { getGbpConnectionStatus } from "@/app/actions/gbp";
 import { normalizeLocale } from "@/lib/i18n";
@@ -85,7 +85,7 @@ export async function getReviewsPageData(businessId: string, options: { live?: b
   const { data, error } = await supabase
     .from("businesses")
     .select(
-      `name, address, category, primary_type, business_type_override, biz_type_resolved, place_id, listing_mode, rating, review_count, phone, opening_hours, website, categories, photo_count, business_status, https_status, website_analysis_json, verified_website_url, website_trust_overrides_json, language, lat, lng, ${V112_SCORING_COLUMNS}`
+      `business_type_override, biz_type_resolved, place_id, listing_mode, https_status, website_analysis_json, verified_website_url, website_trust_overrides_json, language, lat, lng, ${OWNER_SCORING_COLUMNS}`
     )
     .eq("id", businessId)
     .single();
@@ -99,7 +99,7 @@ export async function getReviewsPageData(businessId: string, options: { live?: b
   // shows no Google values.
   const liveRow =
     options.live === false
-      ? { ...data, ...emptyListingColumns(), name: data.name, address: data.address, live_unavailable: false }
+      ? { ...data, ...emptyListingColumns(), live_unavailable: false }
       : await withLiveListingFor(supabase, businessId, data as typeof data & { listing_mode?: string | null });
   const row = withTimeZone(liveRow) as unknown as BusinessScoringRow & {
     time_zone: string;

@@ -30,7 +30,7 @@ import {
   type WeeklyPlan,
 } from "@/lib/actionPlan";
 import { estimateStarterSiteRange, type StarterSiteTemplateData } from "@/lib/starterSiteScoring";
-import { businessRowToScoringInput, scoreBusiness, V112_SCORING_COLUMNS } from "@/lib/scoring";
+import { businessRowToScoringInput, scoreBusiness, OWNER_SCORING_COLUMNS } from "@/lib/scoring";
 import { withSavedScore } from "@/lib/savedScore";
 import { latestSavedScore } from "@/lib/savedScore.server";
 import type { BusinessScoringInput, BusinessScoringRow, ScoreBreakdown, Suggestion } from "@/lib/scoring";
@@ -239,7 +239,7 @@ export async function markTaskDone(businessId: string, checkId: string): Promise
   const { data: saved, error: businessError } = await supabase
     .from("businesses")
     .select(
-      `name, place_id, listing_mode, rating, review_count, phone, address, opening_hours, website, categories, category, primary_type, business_type_override, biz_type_resolved, photo_count, business_status, https_status, website_analysis_json, verified_website_url, website_trust_overrides_json, language, ${V112_SCORING_COLUMNS}`
+      `place_id, listing_mode, business_type_override, biz_type_resolved, https_status, website_analysis_json, verified_website_url, website_trust_overrides_json, language, ${OWNER_SCORING_COLUMNS}`
     )
     .eq("id", businessId)
     .single();

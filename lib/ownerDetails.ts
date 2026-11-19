@@ -92,13 +92,13 @@ export function ownerDetailsPrefill(live: LiveListingValues | null, options: { b
 /**
  * The name and address the header, switcher, emails and prints show: the
  * owner's once confirmed; before that, the listing as this visit read it
- * (`live`); the row's saved ones only when Google couldn't be read (or no
- * read was made) — until 2d-5 blanks them.
+ * (`live`); otherwise none (Day 23 2d-5: never a saved Google value — the
+ * page says "Couldn't load from Google right now" or a neutral label).
  */
 export function withOwnerDetails<T extends { name?: string | null; address?: string | null }>(row: T, details: OwnerDetails | null, live: LiveListing | null = null): T {
   if (details) return { ...row, name: details.name, address: details.address || null };
-  if (live?.status === "ok") return { ...row, name: live.values.name ?? row.name ?? null, address: live.values.address ?? null };
-  return row;
+  if (live?.status === "ok") return { ...row, name: live.values.name ?? null, address: live.values.address ?? null };
+  return { ...row, name: null, address: null };
 }
 
 const sameHours = (a: OwnerHours, b: OwnerHours) => a.kind === b.kind && (a.kind !== "regular" || sameWeek(a.week, (b as { week: WeeklyHours }).week));

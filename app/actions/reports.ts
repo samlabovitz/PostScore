@@ -137,7 +137,7 @@ export async function getReportsData(businessId: string, options: { live?: boole
     gbpStatus,
     { data: lastReport },
   ] = await Promise.all([
-    supabase.from("businesses").select("name, monthly_report_enabled, language, lat, lng, place_id, listing_mode, rating, review_count").eq("id", businessId).single(),
+    supabase.from("businesses").select("monthly_report_enabled, language, lat, lng, place_id, listing_mode").eq("id", businessId).single(),
     supabase
       .from("scores")
       .select(`id, total, grade, created_at, profile_snapshot_json, scoring_version, ${FP_KEY_COLUMN}, scan_kind:breakdown_json->>scanKind, breakdown_categories:breakdown_json->categories`)
@@ -220,7 +220,7 @@ export async function getReportsData(businessId: string, options: { live?: boole
   return {
     status: "ok",
     // Day 23 2d-3/2d-4: the owner's confirmed name, else the listing's as read now.
-    businessName: (await withOwnerDetailsFor(supabase, businessId, { name: business.name as string | null }, { live: options.live !== false })).name,
+    businessName: (await withOwnerDetailsFor<{ name?: string | null }>(supabase, businessId, {}, { live: options.live !== false })).name ?? null,
     history,
     confirmedFixCount: tasksError || confirmedFixCount === null ? 0 : confirmedFixCount,
     listingChangesDetected,

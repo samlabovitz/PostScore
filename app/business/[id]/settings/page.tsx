@@ -118,7 +118,7 @@ export default async function SettingsPage({ params }: { params: { id: string } 
                   <li key={b.id} className="flex flex-col gap-2 rounded-xl border border-paper-deep p-3.5">
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0">
-                        <p className="truncate text-[14px] font-semibold text-ink">{b.name ?? k("businessFallback")}</p>
+                        <p className="truncate text-[14px] font-semibold text-ink">{b.name ?? t(locale, "dashboard.home.untitledBusiness")}</p>
                         {b.address && <p className="truncate text-[12px] text-ink-mute">{b.address}</p>}
                       </div>
                       <span className="shrink-0 rounded-full border border-paper-deep bg-paper px-2 py-0.5 text-[11px] font-semibold text-ink-soft">{k(`plan.name.${plan}`)}</span>

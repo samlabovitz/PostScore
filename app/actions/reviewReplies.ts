@@ -101,8 +101,11 @@ export async function draftReviewReply(businessId: string, review: unknown, star
   } = await supabase.auth.getUser();
   if (!user) return { status: "unauthenticated" };
   // Ownership, through RLS.
-  const { data: business } = await supabase.from("businesses").select("id, name, language").eq("id", businessId).maybeSingle();
+  const { data: business } = await supabase.from("businesses").select("id, language").eq("id", businessId).maybeSingle();
   if (!business) return { status: "not_found" };
+  // Day 23 2d-5: the owner's confirmed name, else the listing's as this visit reads it.
+  const { withOwnerDetailsFor } = await import("@/lib/ownerDetails.server");
+  const shownName = (await withOwnerDetailsFor<{ name?: string | null }>(supabase, businessId, {})).name ?? null;
 
   const plan = await getPlan();
   // Free: this week's allowance, reserved before any AI call.
@@ -158,7 +161,7 @@ export async function draftReviewReply(businessId: string, review: unknown, star
       await callAnthropicMessage({
         // The reply matches the review's own language (EN or ES); the
         // business's language when it can't tell.
-        system: replySystemPrompt(reviewLanguage(input.review) ?? normalizeLocale(business.language), (business.name as string | null) ?? null),
+        system: replySystemPrompt(reviewLanguage(input.review) ?? normalizeLocale(business.language), shownName),
         userMessage: replyUserMessage(input),
         maxTokens: 300,
         onUsage: (u) => {

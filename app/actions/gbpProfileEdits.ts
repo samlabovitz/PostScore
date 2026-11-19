@@ -71,8 +71,10 @@ async function context(businessId: string): Promise<Context | Blocked> {
   const { gbpEditGate } = await import("@/lib/gbpEditGate.server");
   const gate = await gbpEditGate(businessId, { requirePremium: true });
   if (!gate.ok) return { ok: false, result: gate.result.status === "blocked" ? gate.result : { status: "error", error: gate.result.error } };
-  const { data: row } = await gate.admin.from("businesses").select("place_id, name").eq("id", businessId).maybeSingle();
-  const r = row as { place_id: string | null; name: string | null } | null;
+  const { data: row } = await gate.admin.from("businesses").select("place_id").eq("id", businessId).maybeSingle();
+  // Day 23 2d-5: the owner's confirmed name, else the listing's as read now (Business Profile).
+  const { withOwnerDetailsFor } = await import("@/lib/ownerDetails.server");
+  const r = row ? await withOwnerDetailsFor(gate.admin, businessId, row as { place_id: string | null; name?: string | null }) : null;
   return {
     ok: true,
     admin: gate.admin,
@@ -243,11 +245,11 @@ export async function draftProfileDescription(businessId: string): Promise<Draft
   if (!c.ok) return c.result.status === "blocked" ? c.result : { status: "unavailable" };
   const { data } = await c.admin
     .from("businesses")
-    .select("place_id, listing_mode, name, category, primary_type, address, services, differentiator, language, listing_has_accessibility, listing_has_parking, listing_has_payment")
+    .select("place_id, listing_mode, services, differentiator, language")
     .eq("id", businessId)
     .maybeSingle();
   // Day 23 2d-4: the listing's facts as Google shows them now (Business Profile — this is a connected owner).
-  const b = (data ? await withLiveListingFor(c.admin, businessId, await withOwnerDetailsFor(c.admin, businessId, data)) : {}) as Record<string, unknown>;
+  const b = (data ? await withOwnerDetailsFor(c.admin, businessId, await withLiveListingFor(c.admin, businessId, data)) : {}) as Record<string, unknown>;
   const { normalizeLocale } = await import("@/lib/i18n");
   const { extractCityFromAddress } = await import("@/lib/websiteTrust");
   const locale = normalizeLocale(typeof b.language === "string" ? b.language : null);

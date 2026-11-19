@@ -6,7 +6,11 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { competitorScopeFor, resolveBusinessNiche, type BusinessNicheRow, type ResolvedNiche } from "@/lib/businessNiche";
 import type { CompetitorScope } from "@/lib/competitorScope";
 
-const BASE = "name, category, primary_type, categories, business_type_override, biz_type_resolved, trade_id";
+// Day 23 2d-5: our own saved type and niche — never Google's saved name,
+// category or types (the niche detected when the business was added or
+// scanned is saved; lib/businessTypeDetect.server.ts).
+const BASE = "business_type_override, biz_type_resolved, trade_id";
+const NO_GOOGLE = { name: null, category: null, primary_type: null, categories: null };
 const NICHE = "niche_id, niche_source, niche_confirmed_at, competitor_areas, competitor_scope";
 
 export interface BusinessNicheState {
@@ -31,13 +35,13 @@ export async function loadBusinessNiche(supabase: SupabaseClient, businessId: st
 
 async function load(supabase: SupabaseClient, businessId: string): Promise<BusinessNicheState | null> {
   const full = await supabase.from("businesses").select(`${BASE}, ${NICHE}`).eq("id", businessId).maybeSingle();
-  let row = full.data as BusinessNicheRow | null;
+  let row = full.data ? ({ ...NO_GOOGLE, ...(full.data as object) } as BusinessNicheRow) : null;
   let enabled = !full.error;
   if (full.error) {
     if (!isMissingNicheColumns(full.error)) return null;
     const base = await supabase.from("businesses").select(BASE).eq("id", businessId).maybeSingle();
     if (base.error || !base.data) return null;
-    row = base.data as BusinessNicheRow;
+    row = { ...NO_GOOGLE, ...(base.data as object) } as BusinessNicheRow;
     enabled = false;
   }
   if (!row) return null;

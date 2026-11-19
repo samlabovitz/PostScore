@@ -1,13 +1,13 @@
-// ⚠ Day 23 2d-4: this script reads the SAVED Google columns (businesses /
-// competitor_scans) as they were before 2d-5 clears them. Scans stopped
-// writing them in 2d-4, so they're stale — never use what it prints as
-// current data. (Left as is until 2d-5.)
+// Day 23 2d-5: reads only PostScore's own saved results and the owner's
+// confirmed details; Google's values are read live when needed (counted,
+// capped Places reads — Business Profile when connected), never saved.
 // Backfills in-app notifications (supabase/notifications.sql) for every
-// business from its SAVED data — the same rules as after a scan
-// (lib/notifications.server.ts syncNotificationsFromSavedRow): one urgent
-// notification per urgent issue, never a duplicate, and the open ones the
-// saved data shows are fixed resolved. No Google call, no website fetch,
-// nothing scanned.
+// business from our saved results and its listing as Google shows it now
+// (one live read per business, like a page visit) — the same rules as
+// after a scan (lib/notifications.server.ts syncNotificationsFromSavedRow):
+// one urgent notification per urgent issue, never a duplicate, and the
+// open ones that are fixed resolved. A business Google can't be read for
+// is skipped. No website fetch, nothing scanned.
 //
 //   npx tsx --env-file=.env.local scripts/backfill-notifications.ts --dry-run
 //   npx tsx --env-file=.env.local scripts/backfill-notifications.ts
@@ -42,14 +42,20 @@ async function main(): Promise<void> {
   const table = await admin.from("notifications").select("id", { head: true, count: "exact" });
   if (table.error) throw new Error(`The notifications table isn't there yet — run supabase/notifications.sql first (${table.error.code ?? table.error.message}).`);
 
-  const { data, error } = await admin.from("businesses").select(SAVED_SCORING_SELECT).order("name");
+  const { data, error } = await admin.from("businesses").select(SAVED_SCORING_SELECT).order("created_at");
   if (error) throw new Error(`Couldn't read businesses: ${error.message}`);
   const rows = (data ?? []) as unknown as Array<Parameters<typeof syncNotificationsFromSavedRow>[1] & { name: string | null }>;
 
-  console.log(`${dryRun ? "DRY RUN — nothing is written. " : ""}${rows.length} business(es), from saved data only.\n`);
+  console.log(`${dryRun ? "DRY RUN — nothing is written. " : ""}${rows.length} business(es), each with one live listing read.\n`);
+  const { liveBusinessRow } = await import("./liveBusinessRow");
   let toCreate = 0;
   let toResolve = 0;
-  for (const row of rows) {
+  for (const saved of rows) {
+    const row = (await liveBusinessRow(admin, saved.id, saved)) as typeof saved & { live_unavailable?: boolean };
+    if (row.live_unavailable) {
+      console.log(`${saved.id}: skipped — couldn't read the listing from Google right now`);
+      continue;
+    }
     const r = await syncNotificationsFromSavedRow(admin, row, new Date(), dryRun);
     const create = dryRun ? (r.plan?.create ?? []) : null;
     const resolve = dryRun ? (r.plan?.resolve.map((n) => n.key) ?? []) : null;

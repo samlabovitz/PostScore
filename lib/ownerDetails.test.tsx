@@ -19,7 +19,6 @@ import { gbpAddressLine, liveValuesFromBusinessProfile, liveValuesFromPlaces, ty
 import { withOwnerDetailsFor } from "./ownerDetails.server";
 import { getOwnerDetailsCardWithClient, saveOwnerDetailsWithClient, type OwnerDetailsCard as CardData } from "@/app/actions/ownerDetails";
 import { OwnerDetailsCard } from "@/components/settings/OwnerDetailsCard";
-import { ConfirmDetailsPrompt } from "@/components/overview/ConfirmDetailsPrompt";
 import type { PlaceDetails } from "./google/places";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
@@ -154,15 +153,15 @@ describe("owner-confirmed business details (Day 23 2d-3)", () => {
     expect(src("lib/google/places.ts")).toMatch(/const DETAILS_FIELD_MASK = \[\n  "id",\n  "displayName",\n  "formattedAddress",/);
   });
 
-  test("name and address shown: the owner's once confirmed; before, the visit's live read; the saved row only when Google couldn't be read", () => {
+  test("name and address shown: the owner's once confirmed; before, the visit's live read; none when Google couldn't be read (never the saved row — Day 23 2d-5)", () => {
     const row = { id: "b1", name: "Saved Name", address: "Saved St", phone: "+1 973-555-0100" };
     const ok = { status: "ok" as const, source: "places" as const, values: LIVE, columns: emptyListingColumns() };
     expect(withOwnerDetails(row, CONFIRMED, ok)).toEqual({ ...row, name: "Centered Clay", address: "12 Main Street, Springfield" });
     expect(withOwnerDetails(row, null, ok)).toEqual({ ...row, name: "Centered Clay Studio", address: "12 Main St, Springfield, NJ 07081, USA" });
     // Google has no address (a service-area listing): none shown, never the saved one.
     expect(withOwnerDetails(row, null, { ...ok, values: { ...LIVE, address: null } }).address).toBeNull();
-    expect(withOwnerDetails(row, null, { status: "unavailable" })).toBe(row);
-    expect(withOwnerDetails(row, null, null)).toBe(row);
+    expect(withOwnerDetails(row, null, { status: "unavailable" })).toEqual({ ...row, name: null, address: null });
+    expect(withOwnerDetails(row, null, null)).toEqual({ ...row, name: null, address: null });
     // An address the owner left empty shows none.
     expect(withOwnerDetails(row, { ...CONFIRMED, address: "" }).address).toBeNull();
   });
@@ -180,8 +179,8 @@ describe("owner-confirmed business details (Day 23 2d-3)", () => {
     expect(liveRead).toHaveBeenCalledWith(expect.anything(), "b1", { ...unconfirmed });
 
     cachedRead.mockReturnValueOnce(null);
-    expect(await withOwnerDetailsFor(db(unconfirmed).client, "b1", row, { live: "cached" })).toEqual(row);
-    expect(await withOwnerDetailsFor(db(unconfirmed).client, "b1", row, { live: false })).toEqual(row);
+    expect(await withOwnerDetailsFor(db(unconfirmed).client, "b1", row, { live: "cached" })).toEqual({ name: null, address: null });
+    expect(await withOwnerDetailsFor(db(unconfirmed).client, "b1", row, { live: false })).toEqual({ name: null, address: null });
     expect(liveRead).toHaveBeenCalledTimes(1);
   });
 
@@ -224,7 +223,7 @@ describe("owner-confirmed business details (Day 23 2d-3)", () => {
 
     // No hours on Google: a salon starts on "By appointment only"; a restaurant on every day Closed.
     liveRead.mockResolvedValueOnce({ status: "ok", source: "places", values: { ...LIVE, openingHoursPeriods: null } });
-    const salon = await getOwnerDetailsCardWithClient(db({ ...base, category: "Hair salon", primary_type: "hair_salon" }).client, "b1");
+    const salon = await getOwnerDetailsCardWithClient(db({ ...base, biz_type_resolved: "salon" }).client, "b1");
     expect(salon.status === "ok" && salon.card).toMatchObject({ noGoogleHours: true, details: { hours: { kind: "appointment" } } });
     // Centered Clay: an art & pottery classes niche → "By appointment only".
     niche.loadBusinessNiche.mockResolvedValueOnce({ resolved: { nicheId: "art_classes" } });
@@ -232,7 +231,7 @@ describe("owner-confirmed business details (Day 23 2d-3)", () => {
     const clay = await getOwnerDetailsCardWithClient(db({ ...base, name: "Centered Clay Studio", category: "Tutoring service", primary_type: "tutoring_service" }).client, "b1");
     expect(clay.status === "ok" && clay.card).toMatchObject({ noGoogleHours: true, details: { hours: { kind: "appointment" } } });
     liveRead.mockResolvedValueOnce({ status: "ok", source: "places", values: { ...LIVE, openingHoursPeriods: [] } });
-    const food = await getOwnerDetailsCardWithClient(db({ ...base, category: "Restaurant", primary_type: "restaurant" }).client, "b1");
+    const food = await getOwnerDetailsCardWithClient(db({ ...base, biz_type_resolved: "restaurant" }).client, "b1");
     expect(food.status === "ok" && food.card).toMatchObject({ noGoogleHours: true, details: { hours: { kind: "regular", week: closedWeek() } } });
 
     liveRead.mockResolvedValueOnce({ status: "unavailable" });
@@ -302,20 +301,17 @@ describe("owner-confirmed business details (Day 23 2d-3)", () => {
     expect(card({ details: CONFIRMED, confirmedAt: "2026-11-17T17:00:00Z", liveUnavailable: false, noListing: false, noGoogleHours: true })).not.toContain("no-google-hours");
   });
 
-  test("the Overview's one-line prompt, EN + ES, until confirmed", () => {
-    expect(text(renderToStaticMarkup(<ConfirmDetailsPrompt businessId="b1" locale="en" />))).toContain("Confirm your business details");
-    expect(renderToStaticMarkup(<ConfirmDetailsPrompt businessId="b1" locale="es" />)).toContain('href="/business/b1/settings#details"');
-    expect(text(renderToStaticMarkup(<ConfirmDetailsPrompt businessId="b1" locale="es" />))).toContain("Confirme los datos de su negocio");
+  test("the Overview's card until confirmed (Day 23 2d-5 — lib/confirmDetailsCard.test.tsx has its rules)", () => {
     const overview = src("app/business/[id]/page.tsx");
-    expect(overview).toContain("{!detailsConfirmed && (");
-    expect(overview).toContain("const detailsConfirmed = (await loadOwnerDetails(createClient(), params.id)) !== null;");
+    expect(overview).toContain("const confirmCard = await getConfirmDetailsCardWithClient(createClient(), params.id);");
+    expect(overview).toContain("{confirmCard.shown && (");
     // Only the listing Overview: the website-only one returns before it.
-    expect(overview.indexOf('listingMode === "website_only"')).toBeLessThan(overview.indexOf("<ConfirmDetailsPrompt"));
+    expect(overview.indexOf('listingMode === "website_only"')).toBeLessThan(overview.indexOf("<ConfirmDetailsCard"));
   });
 
   test("where they show: header (every page's record), switcher, emails, Print studio and the starter site; Free's showroom makes no Google call", () => {
     expect(src("app/actions/businesses.ts")).toContain("const shown = await withOwnerDetailsFor(supabase, businessId, rest, options);");
-    expect(src("app/actions/businesses.ts")).toContain("owners.get(row.id)?.details ?? null");
+    expect(src("app/actions/businesses.ts")).toContain("const names = await shownNamesFor(supabase, data.map((row) => row.id), { live: namesLiveFor(data.length) });");
     expect(src("app/actions/scoring.ts")).toContain("const business = withOwnerDetails(scored.business,");
     // The score itself never reads them.
     expect(src("app/actions/scoring.ts")).toContain("const scoringBusiness = scored.business;");
@@ -326,19 +322,19 @@ describe("owner-confirmed business details (Day 23 2d-3)", () => {
     expect(src("app/actions/competitors.ts")).toContain("businessName: owner.name,");
     expect(src("lib/weekly/weeklyData.server.ts")).toContain("withOwnerDetailsFor(supabase, businessId,");
     const print = src("app/actions/printStudio.ts");
-    expect(print).toContain("businessName: shown.name,");
+    expect(print).toContain("businessName: shown.name ?? null,");
     expect(print).toContain("ownerDetails.hours");
     expect(src("app/business/[id]/campaigns/page.tsx")).toContain("businessPhone={printPhone}");
     expect(src("components/plan/freeShowroom.tsx")).toContain("getPrintStudioData(businessId, { live: false })");
     expect(src("components/plan/freeShowroom.tsx")).toContain("ownerPrintPhone(createClient(), businessId, { live: false })");
-    // Before confirming: the visit's live read; the switcher and monthly email only a read already made.
+    // Before confirming: the visit's live read (the switcher too, Day 23 2d-5); the monthly email only a read already made.
     expect(src("app/actions/scoring.ts")).toContain("?.details ?? null, scored.liveListing ?? null);");
-    expect(src("app/actions/businesses.ts")).toContain("owners.get(row.id)?.details ?? null, cachedOwnerListing(row.id));");
+    expect(src("app/actions/businesses.ts")).toContain("await shownNamesFor(supabase, data.map((row) => row.id), { live: namesLiveFor(data.length) });");
     expect(src("app/api/cron/monthly-reports/route.ts")).toContain('{ live: "cached" }');
     // Free's locked tabs: no Google call, the header's name included (decision 3).
     expect(src("components/plan/freeShowroom.tsx")).toContain("getBusinessSummary(businessId, { live: false })");
     expect(src("components/plan/freeShowroom.tsx")).toContain("getReviewsPageData(businessId, { live: false })");
-    expect(src("app/actions/reviews.ts")).toContain("? { ...data, ...emptyListingColumns(), name: data.name, address: data.address, live_unavailable: false }");
+    expect(src("app/actions/reviews.ts")).toContain("? { ...data, ...emptyListingColumns(), live_unavailable: false }");
     // Settings once confirmed: 0 Places calls — the card and header read the owner's own,
     // the monthly email toggle and the visit check make no Google call.
     expect(src("app/business/[id]/settings/page.tsx")).toContain("getReportsData(params.id, { live: false })");

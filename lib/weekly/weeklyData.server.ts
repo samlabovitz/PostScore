@@ -50,15 +50,15 @@ interface BusinessBasics {
 async function loadBusiness(supabase: SupabaseClient, businessId: string, options: { live?: boolean } = {}): Promise<BusinessBasics | null> {
   const { data } = await supabase
     .from("businesses")
-    .select("name, address, language, lat, lng, category, primary_type, business_type_override, biz_type_resolved, categories, place_id, listing_mode, rating, review_count")
+    .select("language, lat, lng, business_type_override, biz_type_resolved, place_id, listing_mode")
     .eq("id", businessId)
     .maybeSingle();
   if (!data) return null;
-  if (options.live === false) return { ...(data as BusinessBasics), rating: null, review_count: null };
-  // Day 23 2d-2: the rating and count as Google shows them now.
+  if (options.live === false) return { ...(data as unknown as BusinessBasics), name: null, address: null, category: null, primary_type: null, categories: null, rating: null, review_count: null };
+  // Day 23 2d-2/2d-5: Google's values as Google shows them now — never the saved columns.
   const { withLiveListingFor } = await import("@/lib/ownerListing.server");
-  const live = await withLiveListingFor(supabase, businessId, data as BusinessBasics & { place_id: string | null; listing_mode: string | null });
-  return { ...(data as BusinessBasics), rating: live.rating ?? null, review_count: live.review_count ?? null };
+  const live = await withLiveListingFor(supabase, businessId, data as unknown as BusinessBasics & { place_id: string | null; listing_mode: string | null });
+  return { ...(data as unknown as BusinessBasics), name: live.name, address: live.address, category: live.category, primary_type: live.primary_type, categories: live.categories, rating: live.rating ?? null, review_count: live.review_count ?? null };
 }
 
 /** A compact past-report row (dates · score · change). */
@@ -210,7 +210,7 @@ export async function weeklyReportDataWithClient(
     generatedAt: now.toISOString(),
     // Day 23 2d-3: the owner's confirmed name and address.
     business: await (async () => {
-      const shown = await withOwnerDetailsFor(supabase, businessId, { name: business.name as string | null, address: business.address as string | null });
+      const shown = await withOwnerDetailsFor(supabase, businessId, { name: business.name, address: business.address });
       return { name: shown.name ?? "", address: shown.address };
     })(),
     score: { total: score, grade: snapshot?.grade ?? saved.grade },

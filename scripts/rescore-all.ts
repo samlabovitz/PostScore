@@ -1,8 +1,7 @@
 // ⚠ Day 23 2d-4: scores go through the shared scorer, which now reads each
 // listing LIVE (one counted, capped Places read per business unless it's
 // cached; Business Profile when connected) — running this costs Google
-// calls. Other values it reads from businesses are the pre-2d-5 saved
-// columns: stale, never current data.
+// calls. Since 2d-5 nothing else here reads Google's values.
 // Re-scores every business from its latest saved data with the current
 // scoring code — after a scoring change, so every page shows the same
 // number (the real Colorful Yun Nan case: the score card said 80 while
@@ -72,9 +71,9 @@ async function main() {
   const supabase = createClient(url, key, { auth: { persistSession: false } });
   const { scoreBusinessWithClient, saveScoreSnapshotWithClient, SCORING_UPDATE_KIND, SCORING_VERSION } = await loadScoring();
 
-  let query = supabase.from("businesses").select("id, name, archived_at");
+  let query = supabase.from("businesses").select("id, archived_at");
   if (onlyIds) query = query.in("id", onlyIds);
-  const { data: rows, error } = await query.order("name", { ascending: true });
+  const { data: rows, error } = await query.order("created_at", { ascending: true });
   if (error || !rows) {
     console.error("Could not read businesses:", error?.message);
     process.exit(1);
@@ -83,8 +82,9 @@ async function main() {
   const plans: Plan[] = [];
   const unchanged: string[] = [];
   const skipped: string[] = [];
-  for (const b of rows as Array<{ id: string; name: string | null; archived_at: string | null }>) {
-    const name = b.name ?? "(unnamed)";
+  for (const b of rows as Array<{ id: string; archived_at: string | null }>) {
+    // Logged by id until the score below reads the name live (Day 23 2d-5).
+    let name = b.id;
     if (b.archived_at) {
       skipped.push(`${name}: archived`);
       continue;
@@ -99,6 +99,7 @@ async function main() {
       skipped.push(`${name}: ${scored.status}`);
       continue;
     }
+    name = scored.business.name ?? b.id;
     const after = { total: scored.result.breakdown.total, grade: scored.result.breakdown.grade, version: scored.result.breakdown.scoringVersion };
     if (before.scoring_version === after.version && before.total === after.total) {
       unchanged.push(`${name}: ${before.total} (already ${after.version})`);

@@ -41,7 +41,8 @@ const ROWS: SavedScanRow[] = [
 ];
 
 function fakeSupabase(rows: SavedScanRow[]) {
-  const business = { name: "J & G Italian Deli", category: "Deli", categories: ["deli"], primary_type: "deli", business_type_override: null, language: "en" };
+  // Day 23 2d-5: our own saved columns only (no saved Google name or types).
+  const business = { business_type_override: null, biz_type_resolved: "restaurant", language: "en" };
   return {
     from(table: string) {
       // No saved score (`scores`): the owner's row keeps its saved score.
@@ -95,7 +96,8 @@ describe("the same rank everywhere", () => {
     const overview = await getLocalBenchmark("jg");
     expect(overview.status).toBe("head_to_head");
     if (overview.status === "head_to_head") {
-      expect(overview.headToHead.owner.name).toBe("J & G Italian Deli");
+      // Day 23 2d-5: the owner's name as Google shows it now too (not confirmed here), never the saved one.
+      expect(overview.headToHead.owner.name).toBe("J & G Italian Deli (live)");
       expect(overview.headToHead.rivals.map((x) => x.name)).toEqual(["Dom's Deli (live)", "Greene County Deli (live)"]);
     }
     vi.mocked(getPlaceLive).mockImplementation(async () => null);

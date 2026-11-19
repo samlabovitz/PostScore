@@ -4,7 +4,7 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { urgentNotificationChanges } from "@/lib/notifications";
-import { businessRowToScoringInput, scoreBusiness, V112_SCORING_COLUMNS, type BusinessScoringRow } from "@/lib/scoring";
+import { businessRowToScoringInput, scoreBusiness, OWNER_SCORING_COLUMNS, type BusinessScoringRow } from "@/lib/scoring";
 import { withSavedScore, type SavedScoreRow } from "@/lib/savedScore";
 import { latestSavedScore } from "@/lib/savedScore.server";
 import { urgentIssues, type UrgentIssue } from "@/lib/urgency";
@@ -80,8 +80,10 @@ export function savedSyncDue(lastSyncAt: Map<string, number>, businessId: string
   return true;
 }
 
-/** The businesses columns the score reads — the same data the Overview scores. */
-export const SAVED_SCORING_SELECT = `id, name, place_id, listing_mode, address, phone, website, rating, review_count, category, categories, primary_type, business_type_override, biz_type_resolved, opening_hours, opening_hours_periods, photo_count, business_status, https_status, website_analysis_json, verified_website_url, website_trust_overrides_json, ${V112_SCORING_COLUMNS}`;
+/** The businesses columns the score reads — the same data the Overview scores:
+ * our own results and the owner's answers; Google's values come from the
+ * live read laid over them (Day 23 2d-5). */
+export const SAVED_SCORING_SELECT = `id, place_id, listing_mode, business_type_override, biz_type_resolved, https_status, website_analysis_json, verified_website_url, website_trust_overrides_json, ${OWNER_SCORING_COLUMNS}`;
 
 /** The same rules as after a scan, from the business's saved data (no
  * Google call, no website fetch). */

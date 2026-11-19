@@ -29,8 +29,10 @@ export interface LiveQueryBusinessRow {
   lng: number | null;
 }
 
-/** The columns liveQueryFromRow reads. */
-export const LIVE_QUERY_COLUMNS = "address, primary_type, categories, business_type_override, website, verified_website_url, lat, lng";
+/** The saved columns liveQueryFromRow reads — our own and the owner's.
+ * The address, types and website are Google's, read live and laid over
+ * them (Day 23 2d-5: lib/placesLive.server.ts withLiveCompetitorValuesFor). */
+export const LIVE_QUERY_COLUMNS = "place_id, listing_mode, business_type_override, verified_website_url, lat, lng";
 
 /** Google place types for the owner's PostScore business type (only used
  * when Google's own listing types are all generic). */

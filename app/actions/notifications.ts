@@ -24,23 +24,24 @@ export async function getMyNotifications(now: Date = new Date()): Promise<MyNoti
   const since = new Date(now.getTime() - RESOLVED_SHOWN_DAYS * 24 * 60 * 60 * 1000).toISOString();
   const { data, error } = await supabase
     .from("notifications")
-    .select("id, business_id, type, key, severity, payload, created_at, read_at, resolved_at, businesses(name)")
+    .select("id, business_id, type, key, severity, payload, created_at, read_at, resolved_at")
     .or(`resolved_at.is.null,resolved_at.gte.${since}`)
     .order("created_at", { ascending: false })
     .limit(MAX_SHOWN);
   if (error) return { status: MISSING.has(error.code ?? "") ? "not_enabled" : "error" };
-  const items = ((data ?? []) as Array<Omit<NotificationRow, "business_name"> & { businesses: { name: string | null } | Array<{ name: string | null }> | null }>).map(({ businesses, ...row }) => ({
+  const items = ((data ?? []) as Array<Omit<NotificationRow, "business_name">>).map((row) => ({
     ...row,
     severity: row.severity as NotificationSeverity,
     payload: row.payload && typeof row.payload === "object" ? row.payload : {},
-    business_name: (Array.isArray(businesses) ? businesses[0]?.name : businesses?.name) ?? null,
   }));
-  // Day 23 2d-3/2d-4: each business's confirmed name, else its listing's
-  // from a read this visit already made (no Google call per business).
+  // Day 23 2d-5: each business's confirmed name, else its listing's as
+  // Google shows it now (the home list's own read, shared for 10 minutes) —
+  // never the saved Google columns.
+  const { namesLiveFor, shownNamesFor } = await import("@/lib/ownerDetails.server");
   const ids = Array.from(new Set(items.map((i) => i.business_id)));
-  const [{ loadOwnerDetailsMany }, { cachedOwnerListing }, { withOwnerDetails }] = await Promise.all([import("@/lib/ownerDetails.server"), import("@/lib/ownerListing.server"), import("@/lib/ownerDetails")]);
-  const owners = await loadOwnerDetailsMany(supabase, ids);
-  return { status: "ok", items: items.map((i) => ({ ...i, business_name: withOwnerDetails({ name: i.business_name }, owners.get(i.business_id)?.details ?? null, cachedOwnerListing(i.business_id)).name ?? null })) };
+  const { count } = await supabase.from("businesses").select("id", { count: "exact", head: true });
+  const names = await shownNamesFor(supabase, ids, { live: namesLiveFor(count ?? ids.length) });
+  return { status: "ok", items: items.map((i) => ({ ...i, business_name: names.get(i.business_id)?.name ?? null })) };
 }
 
 /** The owner clicked this notification (or its fix): just that one is read. */

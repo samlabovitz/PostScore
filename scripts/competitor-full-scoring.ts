@@ -1,7 +1,6 @@
-// ⚠ Day 23 2d-4: this script reads the SAVED Google columns (businesses /
-// competitor_scans) as they were before 2d-5 clears them. Scans stopped
-// writing them in 2d-4, so they're stale — never use what it prints as
-// current data. (Left as is until 2d-5.)
+// Day 23 2d-5: reads only PostScore's own saved results and the owner's
+// confirmed details; Google's values are read live when needed (counted,
+// capped Places reads — Business Profile when connected), never saved.
 // Re-scores saved competitor scans with each competitor's FULL PostScore
 // (lib/competitorScoringJob.ts — the same job a new scan runs in the
 // background). Uses each business's latest finished scan and the saved
@@ -9,13 +8,14 @@
 // PageSpeed (free, budgeted: 80% of PAGESPEED_DAILY_LIMIT incl. owner
 // re-scans), Safe Browsing (free) and plain page fetches only.
 //
-//   --only "Name" [--only "Name2" …]   these businesses
+//   --only <business id> [--only <id> …]   these businesses (by id: Google's
+//                                      names aren't saved — Day 23 2d-5)
 //   --all                              every business with a saved scan
 //   --rescore                          score again even if already done
 //   --report <path>                    write a Markdown report
 // Nothing runs without --only or --all.
 //
-//   npx --no-install tsx --env-file=.env.local scripts/competitor-full-scoring.ts --only "Modern Liquors"
+//   npx --no-install tsx --env-file=.env.local scripts/competitor-full-scoring.ts --only <business id>
 
 /* eslint-disable no-console */
 const Module = require("module");
@@ -54,10 +54,15 @@ const REPORT = argv[argv.indexOf("--report") + 1] && argv.includes("--report") ?
     return;
   }
 
-  let q = db.from("businesses").select("id, name").order("name");
-  if (!ALL) q = q.in("name", ONLY);
-  const { data: businesses, error } = await q;
+  let q = db.from("businesses").select("id").order("created_at");
+  if (!ALL) q = q.in("id", ONLY);
+  const { data, error } = await q;
   if (error) throw error;
+  const ids = (data ?? []) as Array<{ id: string }>;
+  // For the log only: the owner's confirmed name, else the id.
+  const { shownNamesFor } = await import("../lib/ownerDetails.server");
+  const names = await shownNamesFor(db, ids.map((r) => r.id), { live: false });
+  const businesses = ids.map((r) => ({ id: r.id, name: names.get(r.id)?.name ?? r.id }));
 
   // "Before": the comparable score pages showed until now (the same checks
   // for everyone: rating, review count, listing fields, basic website check).

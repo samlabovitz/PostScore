@@ -66,6 +66,12 @@ function client() {
 vi.mock("@/lib/supabase/server", () => ({ createClient: () => client() }));
 vi.mock("@/lib/supabase/admin", () => ({ createAdminClient: () => client() }));
 const rechecks: unknown[] = [];
+// Day 23 2d-5: the listing as Google shows it now — here, the fixture row's own Google values.
+vi.mock("@/lib/ownerListing.server", async (importOriginal) => ({
+  ...(await importOriginal<object>()),
+  withLiveListingFor: async (_db: unknown, _id: string, r: object) => ({ ...row, ...r }),
+  liveListingForRow: async () => ({ status: "ok", source: "places", values: { name: row.name, address: row.address, phone: row.phone, website: row.website }, columns: {} }),
+}));
 vi.mock("@/lib/websiteRecheck.server", () => ({ recheckWebsiteWithClient: async (...args: unknown[]) => (rechecks.push(args[2]), { status: "ok" }) }));
 
 import { businessWebsiteUrl, gradedWebsite, shownWebsite, shownWebsiteUrl } from "@/lib/businessWebsite";
@@ -152,7 +158,7 @@ describe("one source of truth: owner-confirmed > verified > listing", () => {
     expect(src("lib/printStudio/website.ts")).toContain("shownWebsiteUrl(row)");
     expect(src("app/actions/assistant.ts")).toContain("shownWebsiteUrl: shownWebsiteUrl(scored.business)");
     expect(src("lib/websiteRecheck.server.ts")).toContain("gradedWebsite(row)?.url");
-    expect(src("lib/websiteScreenshotRefresh.server.ts")).toContain("businessWebsiteUrl(await withOwnerWebsite(supabase, businessId, row))");
+    expect(src("lib/websiteScreenshotRefresh.server.ts")).toContain("businessWebsiteUrl(await withOwnerWebsite(supabase, businessId, { ...row, website: live.website ?? gradedSiteUrl(row.website_analysis_json) }))");
     // The scan grades the chosen site once — never a second full analysis.
     expect(src("app/actions/businesses.ts")).not.toContain("const real = await analyze(verifiedWebsiteUrl)");
   });

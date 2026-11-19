@@ -318,7 +318,7 @@ describe("Show up for more searches (section 5)", () => {
 
   test("every check passes: Nothing to add right now", () => {
     const html = render({
-      extras: { ...full, description: "x".repeat(300), attributeIds: ["attributes/has_free_parking_lot", "attributes/has_wheelchair_accessible_entrance"], specialPeriods: [{ startDate: { year: 2026, month: 11, day: 26 }, closed: true }, { startDate: { year: 2026, month: 12, day: 24 }, closed: true }, { startDate: { year: 2026, month: 12, day: 25 }, closed: true }] },
+      extras: { ...full, description: "x".repeat(300), attributeIds: ["attributes/has_free_parking_lot", "attributes/has_wheelchair_accessible_entrance"], specialPeriods: [{ startDate: { year: 2026, month: 11, day: 26 }, closed: true }, { startDate: { year: 2026, month: 12, day: 24 }, closed: true }, { startDate: { year: 2026, month: 12, day: 25 }, closed: true }, { startDate: { year: 2026, month: 12, day: 31 }, closed: true }, { startDate: { year: 2027, month: 1, day: 1 }, closed: true }] },
       messagingOn: true,
       media: { photos: { count: 4, newestAt: new Date().toISOString() }, posts: { last30: 3, lastAt: null, lastType: null }, checkedAt: null },
     });

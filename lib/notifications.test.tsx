@@ -333,11 +333,13 @@ describe("sync from saved data — no wait for a new scan", () => {
     expect(rows).toEqual([]);
   });
 
-  test("every business page runs it; the backfill script uses the same rules, no Google, --dry-run", () => {
+  test("every business page runs it; the backfill script uses the same rules on the listing read now, --dry-run", () => {
     expect(readFileSync("app/business/[id]/layout.tsx", "utf8")).toContain("await syncNotificationsForPage(createClient(), params.id);");
     const script = readFileSync("scripts/backfill-notifications.ts", "utf8");
     expect(script).toContain("syncNotificationsFromSavedRow(admin, row, new Date(), dryRun)");
     expect(script).toContain('process.argv.includes("--dry-run")');
-    expect(script).not.toMatch(/googleapis|places|fetchWebsiteHtml/i);
+    // Day 23 2d-5: Google's values as read now (counted, capped), never the saved columns; no website fetch.
+    expect(script).toContain("await liveBusinessRow(admin, saved.id, saved)");
+    expect(script).not.toMatch(/googleapis|fetchWebsiteHtml/i);
   });
 });

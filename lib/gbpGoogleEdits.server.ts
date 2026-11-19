@@ -114,7 +114,7 @@ export async function checkGoogleEdits(admin: SupabaseClient, businessId: string
   // What the listing shows (website, phone): a field Google filled in that
   // matches it is info only — no notification. Day 23 2d-4: read now
   // (Business Profile — connected), never the saved columns.
-  const { data: biz } = await admin.from("businesses").select("place_id, listing_mode, website, phone").eq("id", businessId).maybeSingle();
+  const { data: biz } = await admin.from("businesses").select("place_id, listing_mode").eq("id", businessId).maybeSingle();
   const scan = ((biz ? await withLiveListingFor(admin, businessId, biz) : null) as { website?: string | null; phone?: string | null } | null) ?? {};
   for (const e of plan.create) {
     // 23505: another check just opened the same field — fine.

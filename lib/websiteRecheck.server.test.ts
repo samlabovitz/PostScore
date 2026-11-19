@@ -5,21 +5,28 @@ const saveScoreSnapshotWithClient = vi.fn();
 vi.mock("@/app/actions/scoring", () => ({ saveScoreSnapshotWithClient: (...args: unknown[]) => saveScoreSnapshotWithClient(...args) }));
 vi.mock("@/lib/websiteAnalysisForSave", () => ({ analyzeWebsiteForSave: vi.fn() }));
 
+// Day 23 2d-5: Google's values as read now (the saved columns aren't read).
+// (A test's own `website: null` stands for "Google shows none now".)
+vi.mock("@/lib/ownerListing.server", () => ({ withLiveListingFor: async (_db: unknown, _id: string, row: Record<string, unknown>) => ({ ...LISTING, ...row }) }));
+
 import { recheckWebsiteWithClient } from "./websiteRecheck.server";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 const NOW = new Date("2026-10-19T15:00:00Z");
-const BUSINESS = {
-  id: "b1",
+const LISTING = {
   name: "Modern Liquors",
   website: "https://modernliquors.example",
-  verified_website_url: null,
   phone: "(302) 555-0100",
   address: "1 Main St, Newark, DE",
   opening_hours_periods: null,
   category: "Liquor store",
   primary_type: "liquor_store",
   categories: null,
+};
+const BUSINESS = {
+  id: "b1",
+  place_id: "p1",
+  verified_website_url: null,
   business_type_override: null,
   website_analysis_json: null,
   listing_mode: "google",

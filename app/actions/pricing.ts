@@ -292,7 +292,7 @@ export async function assessPricing(businessId: string): Promise<AssessPricingRe
     supabase
       .from("businesses")
       .select(
-        "place_id, listing_mode, name, address, phone, website, rating, review_count, category, categories, opening_hours, photo_count, business_status, https_status, website_analysis_json, verified_website_url, website_trust_overrides_json, primary_type, business_type_override, biz_type_resolved, price_level, lat, lng, language"
+        "place_id, listing_mode, https_status, website_analysis_json, verified_website_url, website_trust_overrides_json, business_type_override, biz_type_resolved, lat, lng, language"
       )
       .eq("id", businessId)
       .single()

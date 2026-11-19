@@ -89,9 +89,11 @@ describe("pages show the saved score (Day 23 2d-1)", () => {
 });
 
 describe("our own saved business type (Day 23 2d-1)", () => {
-  test("a scan saves our reading of Google's category and types, never the category", () => {
+  test("a scan saves our reading of Google's category, types and name, never the category or name", () => {
     expect(savedBizTypeId("Hair salon", "hair_salon", ["hair_salon"])).toBe(resolveBizProfile("Hair salon", "hair_salon", null, "en", ["hair_salon"], null).id);
-    expect(src("app/actions/businesses.ts")).toContain("biz_type_resolved: savedBizTypeId(place.primaryCategory, place.primaryType, place.categories),");
+    // Day 23 2d-5: the name's reading is part of our saved type, so pages without Google's name show the same type.
+    expect(savedBizTypeId("Point of interest", "point_of_interest", [], "Smith & Jones Law Firm")).toBe(resolveBizProfile("Point of interest", "point_of_interest", null, "en", [], "Smith & Jones Law Firm").id);
+    expect(src("app/actions/businesses.ts")).toContain("biz_type_resolved: savedBizTypeId(place.primaryCategory, place.primaryType, place.categories, place.name),");
   });
 
   test("with Google's category gone, the saved type gives the same answer; the owner's correction and the name still win", () => {

@@ -319,7 +319,7 @@ async function computeFiringGrowthMoves(
 ): Promise<FocusGrowthMove[]> {
   const [businessResult, promoResult, referralResult, photoCounts] = await Promise.all([
     // Day 23 2d-4: photos and the website link as Google shows them now.
-    supabase.from("businesses").select("place_id, listing_mode, photo_count, pricing_assessed_at, website, verified_website_url, lat, lng").eq("id", businessId).single().then(async (r) => (r.data ? { ...r, data: await (await ownerListingServer()).withLiveListingFor(supabase, businessId, r.data) } : r)),
+    supabase.from("businesses").select("place_id, listing_mode, pricing_assessed_at, verified_website_url, lat, lng").eq("id", businessId).single().then(async (r) => (r.data ? { ...r, data: await (await ownerListingServer()).withLiveListingFor(supabase, businessId, r.data) } : r)),
     supabase.from("promos").select("id").eq("business_id", businessId).limit(1),
     supabase.from("referrals").select("id").eq("business_id", businessId).limit(1),
     competitorScanId ? readCompetitorPhotoCountsForScan(businessId, competitorScanId) : Promise.resolve([]),
@@ -396,7 +396,9 @@ async function previewTestingMode() {
 
 /** --live-check: would this business get its report in live mode? */
 async function previewLiveCheck(businessId: string, planArg: string | null) {
-  const { data: b } = await supabase.from("businesses").select("id, name, owner_id, monthly_report_enabled, listing_mode").eq("id", businessId).maybeSingle();
+  const { data: row } = await supabase.from("businesses").select("id, owner_id, monthly_report_enabled, listing_mode").eq("id", businessId).maybeSingle();
+  // For the log only: the owner's confirmed name (Day 23 2d-5), else the id.
+  const b = row ? { ...row, name: ((await (await import("../lib/ownerDetails.server")).loadOwnerDetails(supabase, businessId))?.details.name ?? row.id) as string } : null;
   if (!b) {
     console.error(`Could not find business ${businessId}`);
     process.exit(1);
@@ -453,7 +455,7 @@ async function main() {
   const { data: savedBusiness, error: businessError } = await supabase
     .from("businesses")
     .select(
-      "id, name, place_id, listing_mode, language, category, primary_type, business_type_override, biz_type_resolved, categories, phone, address, opening_hours, website, photo_count, business_status, https_status, website_analysis_json, verified_website_url, website_trust_overrides_json, rating, review_count"
+      "id, place_id, listing_mode, language, business_type_override, biz_type_resolved, https_status, website_analysis_json, verified_website_url, website_trust_overrides_json"
     )
     .eq("id", businessId)
     .single();
@@ -586,7 +588,8 @@ async function main() {
     }
   );
 
-  const businessName = business.name ?? "Your business";
+  // The owner's confirmed name, else the listing's as read now (like the cron route).
+  const businessName = (await (await import("../lib/ownerDetails.server")).withOwnerDetailsFor(supabase, businessId, { name: business.name ?? null }, { live: "cached" })).name ?? business.name ?? "Your business";
   // Obviously fake — this is a preview file, never a real send, so the
   // unsubscribe link must never look like a working one.
   const unsubscribeUrl = TEST_PREVIEW_UNSUBSCRIBE_URL;

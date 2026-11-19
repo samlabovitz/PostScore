@@ -39,7 +39,7 @@ export type OrderLinkBlocked = { ok: false; result: { status: "blocked"; reason:
 async function businessFacts(admin: SupabaseClient, businessId: string) {
   const { data } = await admin
     .from("businesses")
-    .select("place_id, listing_mode, name, website, category, primary_type, business_type_override, biz_type_resolved, categories, language, website_analysis_json")
+    .select("place_id, listing_mode, business_type_override, biz_type_resolved, language, website_analysis_json")
     .eq("id", businessId)
     .maybeSingle();
   // Day 23 2d-4: the listing's link as Google shows it now (Business Profile — connected).

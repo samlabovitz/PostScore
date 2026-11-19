@@ -270,11 +270,6 @@ describe("the 10-competitor cap (the owner's areas included)", () => {
     expect(others.filter((r) => r.placeId.startsWith("salon-"))).toHaveLength(8);
   });
 
-  test("saved lists over 10 are capped from saved data only (scripts/capSavedCompetitors.ts) — no Google or PageSpeed call", () => {
-    const src = fs.readFileSync("scripts/capSavedCompetitors.ts", "utf8").replace(/\/\/.*$/gm, "");
-    expect(src).toContain("selectCompetitors(pool, MAX_COMPETITORS)");
-    expect(src).not.toMatch(/searchNearbyPlaces|runAndSaveCompetitorScan|runCompetitorScoringJob|pagespeed/i);
-  });
 });
 
 describe("after the competitor-picking update", () => {

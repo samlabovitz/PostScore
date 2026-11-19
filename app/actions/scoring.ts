@@ -20,7 +20,7 @@ import {
   type ScanKind,
   type ScoreBreakdown,
   type ScoreWithSuggestions,
-  V112_SCORING_COLUMNS,
+  OWNER_SCORING_COLUMNS,
 } from "@/lib/scoring";
 import { isFullScan } from "@/lib/websiteRecheckPolicy";
 import { reconcileTasks, type TaskRow } from "@/lib/actionPlan";
@@ -199,7 +199,9 @@ export async function scoreBusinessWithClient(
   const { data: business, error } = await supabase
     .from("businesses")
     .select(
-      `id, place_id, listing_mode, name, address, phone, website, rating, review_count, category, categories, primary_type, business_type_override, biz_type_resolved, opening_hours, opening_hours_periods, photo_count, business_status, https_status, website_analysis_json, google_maps_uri, language, google_listing_missing_website_since, google_listing_website_removed_since, google_listing_last_known_website_at, verified_website_url, website_trust_overrides_json, lat, lng, ${V112_SCORING_COLUMNS}`
+      // Day 23 2d-5: our own results and the owner's own answers only —
+      // Google's values come from the scan's read or the live read below.
+      `id, place_id, listing_mode, business_type_override, biz_type_resolved, https_status, website_analysis_json, language, google_listing_missing_website_since, google_listing_website_removed_since, google_listing_last_known_website_at, verified_website_url, website_trust_overrides_json, lat, lng, ${OWNER_SCORING_COLUMNS}`
     )
     .eq("id", businessId)
     .single();
@@ -222,6 +224,8 @@ export async function scoreBusinessWithClient(
     live = liveListing.status;
     row = liveListing.status === "ok" ? { ...business, ...liveListing.columns } : liveListing.status === "unavailable" ? { ...business, ...emptyListingColumns() } : business;
   }
+  // No Google listing (website only): the name, address and site the owner gave.
+  if (live === "none") row = { ...row, ...(await (await import("@/lib/ownerListing.server")).websiteOnlyDetails(supabase, businessId)) };
 
   // The business's own time zone (Day 5 prep) — for DashboardShell and
   // any date inside a check explanation.
@@ -231,9 +235,10 @@ export async function scoreBusinessWithClient(
   const input = businessRowToScoringInput(zoned as unknown as BusinessScoringRow);
   const result = getScoreWithSuggestions(input, locale === "business" ? normalizeLocale(business.language) : locale);
 
-  // Can't be read: the header keeps the name and address (until 2d-5), and the page says so.
-  const shownRow = live === "unavailable" ? { ...zoned, name: business.name, address: business.address, live_unavailable: true } : live === "ok" ? { ...zoned, live_source: liveListing?.status === "ok" ? liveListing.source : undefined } : zoned;
-  return { status: "ok", business: shownRow as BusinessRecord, result, live, ...(liveListing ? { liveListing } : {}) };
+  // Can't be read: no Google values at all (the header shows the owner's
+  // confirmed name, else a neutral label), and the page says so.
+  const shownRow = live === "unavailable" ? { ...zoned, live_unavailable: true } : live === "ok" ? { ...zoned, live_source: liveListing?.status === "ok" ? liveListing.source : undefined } : zoned;
+  return { status: "ok", business: shownRow as unknown as BusinessRecord, result, live, ...(liveListing ? { liveListing } : {}) };
 }
 
 export type SaveScoreSnapshotResult =

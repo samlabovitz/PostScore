@@ -29,10 +29,10 @@ export async function setBusinessNiche(businessId: string, nicheId: string | nul
   if (!supabase) return { status: "unauthenticated" };
   const niche = nicheId === null ? null : nicheById(nicheId);
   if (nicheId !== null && !niche) return { status: "error", message: "Unknown business type." };
-  const { data: row, error } = await supabase.from("businesses").select("name, category, primary_type, categories, biz_type_resolved").eq("id", businessId).maybeSingle();
+  const { data: row, error } = await supabase.from("businesses").select("biz_type_resolved").eq("id", businessId).maybeSingle();
   if (error || !row) return { status: "not_found" };
   const before = await loadBusinessNiche(supabase, businessId);
-  const autoParent = resolveBizProfile(row.category, row.primary_type, null, "en", row.categories, row.name, row.biz_type_resolved).id;
+  const autoParent = resolveBizProfile(null, null, null, "en", null, null, row.biz_type_resolved).id;
   const override = niche && niche.parent !== autoParent ? niche.parent : null;
   const update = await supabase
     .from("businesses")

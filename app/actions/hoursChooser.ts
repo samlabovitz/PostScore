@@ -33,7 +33,7 @@ export async function openHoursCompare(businessId: string): Promise<OpenHoursCom
   const { createClient } = await import("@/lib/supabase/server");
   const db = createClient();
   // RLS: only the owner's own business comes back.
-  const { data: saved } = await db.from("businesses").select("id, place_id, listing_mode, website_analysis_json, opening_hours, website, owner_website_url, verified_website_url").eq("id", businessId).maybeSingle();
+  const { data: saved } = await db.from("businesses").select("id, place_id, listing_mode, website_analysis_json, owner_website_url, verified_website_url").eq("id", businessId).maybeSingle();
   // Day 23 2d-4: the listing's website link as Google shows it now.
   const data = saved ? await withLiveListingFor(db, businessId, saved) : null;
   const row = data as { place_id: string | null; listing_mode: string | null; website_analysis_json: unknown; opening_hours: string[] | null; website: string | null; owner_website_url: string | null; verified_website_url: string | null } | null;

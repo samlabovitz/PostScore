@@ -214,9 +214,10 @@ describe("after the first scan on a new scoring version", () => {
 });
 
 describe("every saved-row scoring read includes the v1.12.0 columns", () => {
-  test("the selects that feed businessRowToScoringInput name V112_SCORING_COLUMNS", () => {
-    for (const file of ["app/actions/scoring.ts", "app/actions/website.ts", "app/actions/actionPlan.ts", "app/actions/reviews.ts", "app/actions/businesses.ts", "app/api/cron/monthly-reports/route.ts"]) {
-      expect(fs.readFileSync(file, "utf-8"), file).toContain("${V112_SCORING_COLUMNS}`");
+  // Day 23 2d-5: our own v1.12.0 columns; Google's come from the live read.
+  test("the selects that feed businessRowToScoringInput name OWNER_SCORING_COLUMNS", () => {
+    for (const file of ["app/actions/scoring.ts", "app/actions/website.ts", "app/actions/actionPlan.ts", "app/actions/reviews.ts", "app/api/cron/monthly-reports/route.ts"]) {
+      expect(fs.readFileSync(file, "utf-8"), file).toContain("${OWNER_SCORING_COLUMNS}`");
     }
   });
 });

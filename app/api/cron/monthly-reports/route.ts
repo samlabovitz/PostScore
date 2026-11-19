@@ -74,7 +74,7 @@ import {
   type BusinessScoringRow,
   type Grade,
   type ScoreBreakdown,
-  V112_SCORING_COLUMNS,
+  OWNER_SCORING_COLUMNS,
 } from "@/lib/scoring";
 import { buildProfileSnapshot } from "@/lib/profileChanges";
 import { scanChangesBetweenScores } from "@/lib/scanChanges.server";
@@ -441,7 +441,7 @@ export async function computeFiringGrowthMoves(
 ): Promise<FocusGrowthMove[]> {
   const [businessResult, promoResult, referralResult, photoCounts] = await Promise.all([
     // Day 23 2d-4: photos and the website link as Google shows them now.
-    supabase.from("businesses").select("place_id, listing_mode, photo_count, pricing_assessed_at, website, verified_website_url, lat, lng").eq("id", businessId).single().then(async (r) => (r.data ? { ...r, data: await withLiveListingFor(supabase, businessId, r.data) } : r)),
+    supabase.from("businesses").select("place_id, listing_mode, pricing_assessed_at, verified_website_url, lat, lng").eq("id", businessId).single().then(async (r) => (r.data ? { ...r, data: await withLiveListingFor(supabase, businessId, r.data) } : r)),
     supabase.from("promos").select("id").eq("business_id", businessId).limit(1),
     supabase.from("referrals").select("id").eq("business_id", businessId).limit(1),
     competitorScanId ? readCompetitorPhotoCountsForScan(supabase, businessId, competitorScanId) : Promise.resolve([]),
@@ -730,7 +730,7 @@ export async function processBusiness(
   const { data: savedBusiness, error: freshBusinessError } = await supabase
     .from("businesses")
     .select(
-      `name, owner_id, unsubscribe_token, language, place_id, listing_mode, category, primary_type, business_type_override, biz_type_resolved, categories, phone, address, opening_hours, website, photo_count, business_status, https_status, website_analysis_json, verified_website_url, website_trust_overrides_json, rating, review_count, ${V112_SCORING_COLUMNS}`
+      `owner_id, unsubscribe_token, language, place_id, listing_mode, business_type_override, biz_type_resolved, https_status, website_analysis_json, verified_website_url, website_trust_overrides_json, ${OWNER_SCORING_COLUMNS}`
     )
     .eq("id", businessId)
     .single();
@@ -828,9 +828,9 @@ export async function processBusiness(
       ...(baselineRow ? { listingChanges: await scanChangesBetweenScores(supabase, businessId, baselineRow.id, currentForDisplay.id) } : {}),
     }
   );
-  // Day 23 2d-3: the owner's confirmed name; else the listing's from a read
-  // already made (no extra Google call), else the row the re-scan just saved.
-  const businessName = (await withOwnerDetailsFor(supabase, businessId, { name: freshBusiness.name as string | null }, { live: "cached" })).name ?? "Your business";
+  // Day 23 2d-3/2d-5: the owner's confirmed name; else the listing's as the
+  // re-scan above just read it (no extra Google call) — never a saved value.
+  const businessName = (await withOwnerDetailsFor(supabase, businessId, { name: freshBusiness.name as string | null }, { live: "cached" })).name ?? freshBusiness.name ?? "Your business";
   // A real, working unsubscribe link — app/unsubscribe/page.tsx validates
   // this exact businessId+token pair (the real per-business
   // unsubscribe_token from supabase/schema.sql, never a guessable id

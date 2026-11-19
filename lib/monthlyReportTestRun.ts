@@ -58,13 +58,13 @@ export async function planTestRun(supabase: SupabaseClient, now: Date, random: (
   const { data: scored } = await supabase.from("scores").select("business_id").limit(100_000);
   const scoredIds = Array.from(new Set(((scored ?? []) as Array<{ business_id: string }>).map((r) => r.business_id)));
   const { data: businesses } = scoredIds.length
-    ? await supabase.from("businesses").select("id, name, listing_mode").in("id", scoredIds)
+    ? await supabase.from("businesses").select("id, listing_mode").in("id", scoredIds)
     : { data: [] };
-  const eligible = ((businesses ?? []) as Array<{ id: string; name: string | null; listing_mode: string | null }>).filter(
-    (b) => b.listing_mode !== "website_only"
-  );
-  const names = new Map(eligible.map((b) => [b.id, b.name]));
+  const eligible = ((businesses ?? []) as Array<{ id: string; listing_mode: string | null }>).filter((b) => b.listing_mode !== "website_only");
   const ids = pickTestBusinesses(eligible.map((b) => b.id), lastMonth, TEST_PICK_COUNT, random);
+  // For the log line only: the owners' confirmed names (no Google call; the id is logged too).
+  const { shownNamesFor } = await import("@/lib/ownerDetails.server");
+  const names = new Map(Array.from(await shownNamesFor(supabase, ids, { live: false })).map(([id, n]) => [id, n.name]));
   return {
     picked: ids.map((id) => ({ id, name: names.get(id) ?? null })),
     lastMonth,

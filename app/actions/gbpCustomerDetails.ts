@@ -105,7 +105,7 @@ export async function loadCustomerDetailsEditorAction(businessId: string): Promi
 async function ownerState(businessId: string): Promise<CustomerDetailsOwnerState> {
   const { data } = await createClient()
     .from("businesses")
-    .select("place_id, listing_mode, name, category, primary_type, categories, business_type_override, biz_type_resolved, pure_service_area_business, owner_no_parking, owner_no_payment")
+    .select("place_id, listing_mode, business_type_override, biz_type_resolved, owner_no_parking, owner_no_payment")
     .eq("id", businessId)
     .maybeSingle();
   if (!data) return { canRemove: [], removed: [] };

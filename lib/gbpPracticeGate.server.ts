@@ -25,8 +25,11 @@ export async function practiceOwnerGate(businessId: string): Promise<PracticeGat
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return blocked("unauthenticated");
-  const { data: business } = await supabase.from("businesses").select("id, name, language").eq("id", businessId).eq("owner_id", user.id).maybeSingle();
-  if (!business) return blocked("not_found");
+  const { data: row } = await supabase.from("businesses").select("id, language").eq("id", businessId).eq("owner_id", user.id).maybeSingle();
+  if (!row) return blocked("not_found");
+  // Day 23 2d-5: the owner's confirmed name, else the listing's as read now.
+  const { withOwnerDetailsFor } = await import("@/lib/ownerDetails.server");
+  const business = await withOwnerDetailsFor(supabase, businessId, row as { id: string; language: string | null; name?: string | null });
   if (!isPremiumPlan(await getPlan())) return blocked("not_premium");
   if (await isBusinessArchived(supabase, businessId)) return blocked("archived");
   return { ok: true, admin: createAdminClient(), userId: user.id, business: business as { id: string; name: string | null; language: string | null } };

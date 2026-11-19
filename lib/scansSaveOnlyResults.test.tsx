@@ -344,10 +344,10 @@ describe("scores are identical to the old save-then-read-back", () => {
 });
 
 describe("pages: live or 'couldn't load', never a saved Google value, never a contradiction", () => {
-  test("Google couldn't be read: every Google column empty (the name and address stay for the header until 2d-5)", () => {
+  test("Google couldn't be read: every Google column empty — the name and address too (Day 23 2d-5)", () => {
     const down = withLiveListing({ ...SAVED, address: "Saved St" } as Row, { status: "unavailable" });
-    for (const k of LISTING_SCORING_COLUMN_NAMES.filter((k) => k !== "name" && k !== "address")) expect((down as Row)[k] ?? null, k).toBeNull();
-    expect(down).toMatchObject({ name: "Old Saved Name", address: "Saved St", live_unavailable: true });
+    for (const k of LISTING_SCORING_COLUMN_NAMES.filter((k) => !["google_service_options", "has_recent_review", "recent_reviews_seen", "listing_has_accessibility", "listing_has_payment", "listing_has_parking", "pure_service_area_business"].includes(k))) expect((down as Row)[k] ?? null, k).toBeNull();
+    expect(down).toMatchObject({ name: null, address: null, live_unavailable: true });
     expect(Object.keys(emptyListingColumns()).sort()).toEqual(LISTING_SCORING_COLUMN_NAMES.filter((k) => !["google_service_options", "has_recent_review", "recent_reviews_seen", "listing_has_accessibility", "listing_has_payment", "listing_has_parking", "pure_service_area_business"].includes(k)).sort());
   });
 
@@ -467,7 +467,8 @@ describe("pages: live or 'couldn't load', never a saved Google value, never a co
       ["lib/gbpOrderLinkContext.server.ts", "await withLiveListingFor(admin, businessId, data)"],
       ["lib/gbpEditGate.server.ts", "await withLiveListingFor(supabase, businessId, saved)"],
       ["lib/websiteRecheck.server.ts", "const live = await withLiveListingFor(supabase, businessId,"],
-      ["app/actions/ownerWebsite.ts", "await withLiveListingFor(supabase, businessId, await withOwnerDetailsFor(supabase, businessId, data))"],
+      // The owner's confirmed name and address over the live listing's.
+      ["app/actions/ownerWebsite.ts", "await withOwnerDetailsFor(supabase, businessId, await withLiveListingFor(supabase, businessId, data))"],
       ["app/api/cron/monthly-reports/route.ts", "const freshBusiness = await withLiveListingFor(supabase, businessId, savedBusiness"],
       ["lib/serviceOptions.server.ts", "live.columns.google_service_options"],
       ["scripts/preview-report.ts", "withLiveListingFor(supabase, businessId, savedBusiness)"],
@@ -475,7 +476,8 @@ describe("pages: live or 'couldn't load', never a saved Google value, never a co
     for (const [file, needle] of reads) expect(src(file), file).toContain(needle);
     // No Google call on every page: the notification sync and the switcher use only a read already made.
     expect(src("lib/notifications.server.ts")).toContain("const live = cachedOwnerListing(businessId, now.getTime());");
-    expect(src("app/actions/businesses.ts")).toContain("cachedOwnerListing(row.id)");
+    // The home list and switcher (Day 23 2d-5): the owner's name, else the listing's read now (shared 10-minute cache).
+    expect(src("app/actions/businesses.ts")).toContain("const names = await shownNamesFor(supabase, data.map((row) => row.id), { live: namesLiveFor(data.length) });");
     // A scan's own read is the visit's read too (not connected): no second call right after it.
     expect(src("app/actions/scoring.ts")).toContain("if (!(await isGbpConnected(supabase, businessId))) rememberOwnerListing(businessId, liveListingFromPlaces(placeToSave));");
   });
@@ -522,9 +524,9 @@ describe("pages: live or 'couldn't load', never a saved Google value, never a co
     expect(src("app/actions/actionPlan.ts")).toContain("const markedMetricValue = encodeReviewGap(weeklyReviewGap(checkId, input));");
   });
 
-  test("dry-run and audit scripts left for 2d-5 say they read pre-2d-5 saved columns", () => {
-    for (const f of ["dry-run-lawyer-detection", "dry-run-website-trust", "live-check-postai", "preview-assistant-context", "competitors-v2-dry-run", "competitorQualityAudit", "rescan-food", "apply-niche-corrections", "detect-business-types", "competitor-audit", "capSavedCompetitors", "backfill-notifications", "save-competitors-v2", "competitor-full-scoring"])
-      expect(src(`scripts/${f}.ts`).slice(0, 400), f).toContain("reads the SAVED Google columns");
-    for (const f of ["scoring-v113-dry-run", "rescore-all", "backfill-first-scores"]) expect(src(`scripts/${f}.ts`).slice(0, 400), f).toContain("now reads each\n// listing LIVE");
+  test("the scripts kept after 2d-5 read only our own results (Google's values live)", () => {
+    for (const f of ["live-check-postai", "preview-assistant-context", "rescan-food", "apply-niche-corrections", "backfill-notifications", "competitor-full-scoring"])
+      expect(src(`scripts/${f}.ts`).slice(0, 400), f).toContain("Day 23 2d-5: reads only PostScore's own saved results");
+    for (const f of ["rescore-all", "backfill-first-scores"]) expect(src(`scripts/${f}.ts`).slice(0, 400), f).toContain("now reads each\n// listing LIVE");
   });
 });
