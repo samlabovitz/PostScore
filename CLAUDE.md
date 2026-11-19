@@ -16,6 +16,11 @@ Next.js 14 + Supabase. These rules are standing: follow them in every session.
 - **Points, grade and total always come from the saved scan.** Live data only changes the wording. When live data disagrees with a Google-side check's saved points, show the saved result with "Changed on Google since your last scan · Re-scan to update your score" — never contradicting words.
 - **Page loads never save scans or re-scores.** Only real scans and deliberate re-score scripts do. A scoring-version bump re-scores only the businesses it changes, from their last scan, labeled "PostScore updated how it scores" (never a gain or loss), after a dry run Sam has OK'd.
 
+## Plans
+- Grow tells you what's wrong and shows you how to fix it yourself. Premium does it for you, with one click.
+- Every plan screen, upgrade prompt, locked preview, fix button, email and PostAI plan answer must make this difference obvious.
+- On Grow, every fix that Premium can do in one click shows a small "Premium does this for you in one click →" line next to its steps.
+
 ## Wording
 - EN + ES for every new string; Spanish uses the formal "usted". Wording must be honest.
 
