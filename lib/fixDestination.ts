@@ -66,6 +66,13 @@ export function canDoForYou(ctx: FixContext): boolean {
   return hasGoogleTab(ctx) && (ctx.practice || ctx.canEdit);
 }
 
+/** Premium (connected, writes on) does this fix for you in one click — hours,
+ * phone, website link, customer details, photos, review replies and the hours
+ * compare. Grow and Free show "Premium does this for you in one click →". */
+export function premiumDoesInOneClick(item: FixItem): boolean {
+  return fixDestination(item, { businessId: "x", premium: true, connected: true, practice: false, canEdit: true }).kind === "do_it";
+}
+
 /** "?from=score": the destination shows "← Back to your score". */
 export function withFromScore(href: string): string {
   const [path, hash] = href.split("#");

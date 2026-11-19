@@ -11,7 +11,8 @@
 import Link from "next/link";
 import { IconWand } from "@tabler/icons-react";
 import { FixButton, FIX_BUTTON_CLASS, useFixContext } from "@/components/scoring/FixButton";
-import { canDoForYou, fixDestination, hasGoogleTab } from "@/lib/fixDestination";
+import { canDoForYou, fixDestination, hasGoogleTab, type FixItem } from "@/lib/fixDestination";
+import { PremiumOneClickLine } from "@/components/scoring/PremiumOneClickLine";
 import { DETAILS_EDITOR_HASH, mergedKind, type DetailsMismatch } from "@/lib/detailsMismatch";
 import { GOOGLE_BUSINESS_URL } from "@/lib/googleProfileTab";
 import { ownHoursKey } from "@/lib/hoursChooser";
@@ -57,6 +58,7 @@ function Task({ businessId, m, owner }: { businessId: string; m: DetailsMismatch
           <a href={GOOGLE_BUSINESS_URL} target="_blank" rel="noopener noreferrer" data-testid="fix-button" data-kind="steps" className={FIX_BUTTON_CLASS}>
             {t(locale, "dashboard.fix.openOnGoogle")} ↗
           </a>
+          {editor !== null && <PremiumOneClickLine businessId={businessId} item={{ checkId: m.field === "hours" ? "completeness.hours" : "completeness.phone" }} />}
           {ctx.premium && !hasGoogleTab(ctx) && editor !== null && (
             <Link href={`/business/${businessId}/connect-gbp`} data-testid="details-mismatch-connect" className={`text-[12.5px] ${LINK}`}>
               {t(locale, K("connect"))}
@@ -138,11 +140,20 @@ export function DetailsVersions({ mismatches }: { mismatches: DetailsMismatch[] 
 /** The merged task's one button: hours → the Hours compare panel (Premium +
  * connected) or the Website page's steps; phone → its Google editor or the
  * steps; address → the Website page's steps (no PostScore address editor). */
-export function MergedFixButton({ businessId, mismatches, fromScore = false }: { businessId: string; mismatches: DetailsMismatch[]; fromScore?: boolean }) {
+/** The one-click fix Premium has for a merged task (the hours compare, the phone editor), or null. */
+export function mergedOneClickItem(mismatches: DetailsMismatch[]): FixItem | null {
+  const fields = mismatches.map((m) => m.field);
+  if (fields.includes("hours")) return { checkId: "website.info_consistency", hoursMismatch: true };
+  if (fields.includes("phone")) return { checkId: "completeness.phone" };
+  return null;
+}
+
+export function MergedFixButton({ businessId, mismatches, fromScore = false, premiumLine = true }: { businessId: string; mismatches: DetailsMismatch[]; fromScore?: boolean; premiumLine?: boolean }) {
   const ctx = useFixContext(businessId);
   const locale = useLocale();
   const fields = mismatches.map((m) => m.field);
-  if (fields.includes("hours")) return <FixButton businessId={businessId} fromScore={fromScore} item={{ checkId: "website.info_consistency", hoursMismatch: true }} />;
+  const oneClick = mergedOneClickItem(mismatches);
+  if (fields.includes("hours")) return <FixButton businessId={businessId} fromScore={fromScore} premiumLine={premiumLine} item={{ checkId: "website.info_consistency", hoursMismatch: true }} />;
   if (fields.includes("phone") && canDoForYou(ctx)) {
     return (
       <Link href={`/business/${businessId}/growth?tab=google#edit-phone`} data-testid="fix-button" data-kind="do_it" className={FIX_BUTTON_CLASS}>
@@ -151,7 +162,12 @@ export function MergedFixButton({ businessId, mismatches, fromScore = false }: {
       </Link>
     );
   }
-  return <FixButton businessId={businessId} fromScore={fromScore} item={{ checkId: "website.info_consistency" }} />;
+  return (
+    <>
+      <FixButton businessId={businessId} fromScore={fromScore} premiumLine={false} item={{ checkId: "website.info_consistency" }} />
+      {premiumLine && oneClick && <PremiumOneClickLine businessId={businessId} item={oneClick} className="w-full" />}
+    </>
+  );
 }
 
 /**
@@ -161,13 +177,13 @@ export function MergedFixButton({ businessId, mismatches, fromScore = false }: {
  * your website". Otherwise: fix Google / the website (MergedFixButton) and
  * "Is Google's version right?".
  */
-export function MergedActions({ businessId, mismatches, fromScore = false, only }: { businessId: string; mismatches: DetailsMismatch[]; fromScore?: boolean; only?: "button" | "link" }) {
+export function MergedActions({ businessId, mismatches, fromScore = false, only, premiumLine = true }: { businessId: string; mismatches: DetailsMismatch[]; fromScore?: boolean; only?: "button" | "link"; premiumLine?: boolean }) {
   const locale = useLocale();
   const ctx = useFixContext(businessId);
   if (mergedKind(mismatches) !== "owner_only") {
     return (
       <>
-        {only !== "link" && <MergedFixButton businessId={businessId} mismatches={mismatches} fromScore={fromScore} />}
+        {only !== "link" && <MergedFixButton businessId={businessId} mismatches={mismatches} fromScore={fromScore} premiumLine={premiumLine} />}
         {only !== "button" && <KeepGoogleLink businessId={businessId} />}
       </>
     );

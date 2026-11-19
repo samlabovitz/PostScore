@@ -7,6 +7,7 @@
 
 import { useParams } from "next/navigation";
 import { FixButton, useFixContext } from "@/components/scoring/FixButton";
+import { PremiumOneClickLine } from "@/components/scoring/PremiumOneClickLine";
 import { canDoForYou } from "@/lib/fixDestination";
 import { GOOGLE_BUSINESS_URL } from "@/lib/googleProfileTab";
 import { t, useLocale } from "@/lib/i18n";
@@ -33,11 +34,14 @@ export function OrUpdateOnGoogle() {
     );
   }
   return (
-    <p data-testid="or-update-on-google" className="mt-2 flex flex-wrap items-center gap-x-2 text-[12.5px] text-ink-soft">
-      {t(locale, "dashboard.fix.orOnGoogle")}
-      <a href={GOOGLE_BUSINESS_URL} target="_blank" rel="noopener noreferrer" className="font-semibold text-ink underline decoration-brass underline-offset-2">
-        {t(locale, "dashboard.fix.openOnGoogle")} ↗
-      </a>
-    </p>
+    <div className="mt-2 flex flex-col gap-1">
+      <p data-testid="or-update-on-google" className="flex flex-wrap items-center gap-x-2 text-[12.5px] text-ink-soft">
+        {t(locale, "dashboard.fix.orOnGoogle")}
+        <a href={GOOGLE_BUSINESS_URL} target="_blank" rel="noopener noreferrer" className="font-semibold text-ink underline decoration-brass underline-offset-2">
+          {t(locale, "dashboard.fix.openOnGoogle")} ↗
+        </a>
+      </p>
+      <PremiumOneClickLine businessId={businessId} item={{ checkId: "website.info_consistency", hoursMismatch: true }} />
+    </div>
   );
 }

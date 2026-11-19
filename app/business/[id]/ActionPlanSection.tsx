@@ -1,6 +1,7 @@
 "use client";
 
-import { DetailsVersions, MergedActions, mergedTitle } from "@/components/overview/DetailsMismatchTasks";
+import { DetailsVersions, MergedActions, mergedOneClickItem, mergedTitle } from "@/components/overview/DetailsMismatchTasks";
+import { PremiumOneClickLine } from "@/components/scoring/PremiumOneClickLine";
 import { mergedKind, mismatchesCoveredBy, type DetailsMismatch } from "@/lib/detailsMismatch";
 import { useEffect, useState, createContext, useContext } from "react";
 import { useRouter } from "next/navigation";
@@ -528,11 +529,12 @@ export function TaskCard({
               )}
               {/* Day 23B: the one dark button — on this page the step-by-step opens right here. */}
               {merged.length > 0 ? (
-                <MergedActions businessId={businessId} mismatches={merged} only="button" />
+                <MergedActions businessId={businessId} mismatches={merged} only="button" premiumLine={false} />
               ) : (
                 <FixButton
                   businessId={businessId}
                   item={fixItem}
+                  premiumLine={false}
                   onSteps={() => {
                     setExpanded(true);
                     requestAnimationFrame(() => document.getElementById(cardId)?.scrollIntoView({ behavior: "smooth", block: "start" }));
@@ -553,6 +555,10 @@ export function TaskCard({
                 <div className="w-full">
                   <MergedActions businessId={businessId} mismatches={merged} only="link" />
                 </div>
+              )}
+              {/* CLAUDE.md "Plans": Grow/Free — under the steps, what Premium does in one click. */}
+              {(merged.length === 0 || mergedKind(merged) !== "owner_only") && (
+                <PremiumOneClickLine businessId={businessId} item={merged.length > 0 ? (mergedOneClickItem(merged) ?? fixItem) : fixItem} className="w-full" />
               )}
               {noChangeYet && (
                 <p data-testid="check-again-note" className="w-full text-[12px] text-ink-mute">

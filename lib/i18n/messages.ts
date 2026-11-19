@@ -2449,6 +2449,7 @@ export type MessageKey =
   | "dashboard.breakdown.action.compareHours"
   | "dashboard.breakdown.action.doItForYou"
   | "dashboard.fix.backToScore"
+  | "dashboard.fix.premiumOneClick"
   | "dashboard.detailsMismatch.heading"
   | "dashboard.detailsMismatch.merged.ownerOnly.hours"
   | "dashboard.detailsMismatch.merged.ownerOnly.phone"
@@ -8516,6 +8517,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.breakdown.action.compareHours": "Compare your hours",
     "dashboard.breakdown.action.doItForYou": "PostScore can do this for you",
     "dashboard.fix.backToScore": "Back to your score",
+    "dashboard.fix.premiumOneClick": "Premium does this for you in one click →",
     "dashboard.detailsMismatch.heading": "Your details don't match",
     "dashboard.detailsMismatch.merged.ownerOnly.hours": "Your confirmed hours differ from Google and your website",
     "dashboard.detailsMismatch.merged.ownerOnly.phone": "Your confirmed phone number differs from Google and your website",
@@ -14709,6 +14711,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.breakdown.action.compareHours": "Comparar sus horarios",
     "dashboard.breakdown.action.doItForYou": "PostScore puede hacerlo por usted",
     "dashboard.fix.backToScore": "Volver a su puntuación",
+    "dashboard.fix.premiumOneClick": "Premium lo hace por usted con un clic →",
     "dashboard.detailsMismatch.heading": "Sus datos no coinciden",
     "dashboard.detailsMismatch.merged.ownerOnly.hours": "Su horario confirmado no coincide con Google ni con su sitio web",
     "dashboard.detailsMismatch.merged.ownerOnly.phone": "Su número de teléfono confirmado no coincide con Google ni con su sitio web",

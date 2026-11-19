@@ -9,6 +9,7 @@ import Link from "next/link";
 import { IconWand } from "@tabler/icons-react";
 import { useGbpEdit } from "@/components/gbp/CustomerDetailsGoogleEdit";
 import { ANCHOR_HIGHLIGHT_EVENT } from "@/components/layout/AnchorHighlight";
+import { PremiumOneClickLine } from "@/components/scoring/PremiumOneClickLine";
 import { fixDestination, withFromScore, type FixContext, type FixDestination, type FixItem } from "@/lib/fixDestination";
 import { t, useLocale, type Locale, type MessageKey } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
@@ -38,6 +39,7 @@ export function FixButton({
   fromScore = false,
   onSteps,
   className,
+  premiumLine = true,
 }: {
   businessId: string;
   item: FixItem;
@@ -46,6 +48,8 @@ export function FixButton({
   /** On the Growth step itself: the step-by-step opens here instead of navigating. */
   onSteps?: () => void;
   className?: string;
+  /** Grow/Free: "Premium does this for you in one click →" under it (off: the caller places it). */
+  premiumLine?: boolean;
 }) {
   const locale = useLocale();
   const ctx = useFixContext(businessId);
@@ -54,14 +58,19 @@ export function FixButton({
   const label = fixLabel(dest, locale);
   const icon = dest.kind === "do_it" ? <IconWand size={14} aria-hidden /> : null;
   const ownSteps = onSteps && dest.kind === "steps" && dest.href.includes("/growth?open=howto#");
+  const line = premiumLine ? <PremiumOneClickLine businessId={businessId} item={item} className="w-full" /> : null;
   if (ownSteps) {
     return (
-      <button type="button" onClick={onSteps} data-testid="fix-button" data-kind="steps" className={cn(FIX_BUTTON_CLASS, className)}>
-        {label} →
-      </button>
+      <>
+        <button type="button" onClick={onSteps} data-testid="fix-button" data-kind="steps" className={cn(FIX_BUTTON_CLASS, className)}>
+          {label} →
+        </button>
+        {line}
+      </>
     );
   }
   return (
+    <>
     <Link
       href={fromScore ? withFromScore(dest.href) : dest.href}
       data-testid="fix-button"
@@ -73,5 +82,7 @@ export function FixButton({
       {icon}
       {label} →
     </Link>
+    {line}
+    </>
   );
 }
