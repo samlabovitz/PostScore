@@ -180,6 +180,30 @@ async function readOwnerListing(businessId: string, listing: { placeId: string; 
   return result;
 }
 
+/**
+ * Google Maps' public listing (one Place Details read) for a CONNECTED owner —
+ * what a scan scores and what customers see. Business Profile can be ahead of
+ * it while Google reviews a change (Day 23B: the hours check names the days
+ * that still differ). Kept 10 minutes, logged and capped like any live read.
+ */
+export async function publicPlacesListing(businessId: string, placeId: string, deps: OwnerListingDeps = defaultDeps()): Promise<LiveListing> {
+  const cache = liveCache();
+  const k = `public-listing:${businessId}`;
+  const hit = cache.get<LiveListing>(k, deps.now());
+  if (hit) return hit;
+  let result: LiveListing;
+  if (!canMakeLiveCall(await deps.used(), placesLiveMonthlyCap("live_read"))) {
+    await deps.log(businessId, "live_read_skipped", 0);
+    result = { status: "unavailable" };
+  } else {
+    const place = await deps.places(placeId).catch(() => null);
+    await deps.log(businessId, "live_read", 1);
+    result = place ? liveListingFromPlaces(place) : { status: "unavailable" };
+  }
+  cache.set(k, result, deps.now());
+  return result;
+}
+
 /** A scan's own Places read, kept as the visit's read (Day 23 2d-4): the
  * pages and the monthly email right after a scan make no second call.
  * Not for connected owners — their pages read Business Profile. */

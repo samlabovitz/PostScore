@@ -1,5 +1,6 @@
 "use client";
 
+import { withoutStaleHours, type HoursCheckState } from "@/lib/hoursCheck";
 import type { DetailsMismatchState } from "@/lib/detailsMismatch.server";
 import type { ComponentProps } from "react";
 import { useState } from "react";
@@ -82,6 +83,7 @@ export function BusinessScoreView({
   gbpReplyCheck = null,
   googleListing = null,
   detailsMismatch = null,
+  hoursCheck = null,
   monthlyReportsLive = false,
   archived = false,
   serviceOptions = null,
@@ -132,6 +134,8 @@ export function BusinessScoreView({
   googleListing?: ComponentProps<typeof GoogleListingCard> | null;
   /** Day 23B: confirmed details that differ from Google or the website (lib/detailsMismatch.ts). */
   detailsMismatch?: DetailsMismatchState | null;
+  /** Day 23B: the scored hours check as it is now (lib/hoursCheck.ts). */
+  hoursCheck?: HoursCheckState | null;
   /** isMonthlyReportsLive() — the Free plan list's monthly email row says
    * "Coming soon" until it's true. */
   monthlyReportsLive?: boolean;
@@ -323,7 +327,7 @@ export function BusinessScoreView({
           // The first Top recommendation — the same source, so the two
           // never disagree; never a decorative number.
           // Points only, from every open recommendation (not just the top 3).
-          biggestBoost={biggestBoostFrom(recommendations, result.suggestions, locale)}
+          biggestBoost={biggestBoostFrom(withoutStaleHours(recommendations, hoursCheck), result.suggestions, locale)}
           onHold={scoreOnHold(business.business_status)}
         />
         <RescanMessages state={rescan.state} />
@@ -335,7 +339,7 @@ export function BusinessScoreView({
           breakdown → "More customers" → the rest. PostAI is the "Ask
           PostAI" button on every page (components/assistant/PostAIDock.tsx). */}
       <div data-testid="overview-recs-row" className="grid grid-cols-1 gap-4 nav:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]">
-        <TopRecommendations businessId={businessId} recommendations={recommendations ?? null} limit={TOP_RECOMMENDATIONS} detailsMismatch={detailsMismatch} />
+        <TopRecommendations businessId={businessId} recommendations={recommendations ?? null} limit={TOP_RECOMMENDATIONS} detailsMismatch={detailsMismatch} hoursCheck={hoursCheck} />
         <SinceLastScanCard businessId={businessId} snapshots={recentSnapshots} liveBreakdown={breakdown} gbpConnected={gbpConnected} now={{ rating: business.rating, reviewCount: business.review_count }} />
       </div>
 

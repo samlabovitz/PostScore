@@ -23,6 +23,7 @@ import { BookingTaskCard } from "@/components/gbp/BookingSteps";
 import { DetailsMismatchTasks } from "@/components/overview/DetailsMismatchTasks";
 import type { DetailsMismatchState } from "@/lib/detailsMismatch.server";
 import { mismatchesCoveredBy, URGENT_DETAILS } from "@/lib/detailsMismatch";
+import type { HoursCheckState } from "@/lib/hoursCheck";
 import { GOOGLE_TAB_PARAM, isGoogleTabParam } from "@/lib/googleProfileTab";
 import type { SearchDemandView } from "@/components/gbp/SearchDemandSection";
 import { growthMoveOverlapsActionPlan } from "@/lib/growthMoveOverlap";
@@ -191,6 +192,7 @@ export function GrowthView({
   googleTab = null,
   bookingTask = null,
   detailsMismatch = null,
+  hoursCheck = null,
   lastScanAt,
   websiteRecheck = null,
   gbpConnected = false,
@@ -209,6 +211,8 @@ export function GrowthView({
   bookingTask?: { provider: string; still: boolean } | null;
   /** Day 23B: confirmed details that differ from Google or the website (no points). */
   detailsMismatch?: DetailsMismatchState | null;
+  /** Day 23B: the scored hours check as it is now (lib/hoursCheck.ts). */
+  hoursCheck?: HoursCheckState | null;
   /** The Google Profile tab's real data (see GoogleProfilePanel). */
   googleProfile: {
     listing: GoogleListingFacts | null;
@@ -472,6 +476,7 @@ export function GrowthView({
                       premium={isPremiumPlan(plan)}
                       tasks={mergedFirst(actionPlan.weeklyTasks)}
                       detailsMismatches={mismatchList}
+                      hoursCheck={hoursCheck}
                       businessId={businessId}
                       context="weekly"
                       lastScanAt={lastScanAt}
@@ -499,6 +504,7 @@ export function GrowthView({
                       <TaskListCard
                         tasks={mergedFirst(actionPlan.laterTasks)}
                         detailsMismatches={mismatchList}
+                        hoursCheck={hoursCheck}
                         businessId={businessId}
                         lastScanAt={lastScanAt}
                         linkOptions={linkOptions}

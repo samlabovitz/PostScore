@@ -3,6 +3,8 @@
 import { DetailsVersions, MergedActions, mergedOneClickItem, mergedTitle } from "@/components/overview/DetailsMismatchTasks";
 import { PremiumOneClickLine } from "@/components/scoring/PremiumOneClickLine";
 import { mergedKind, mismatchesCoveredBy, type DetailsMismatch } from "@/lib/detailsMismatch";
+import { isHoursCheck, type HoursCheckState } from "@/lib/hoursCheck";
+import { HoursDiffLines, RescanNowButton } from "@/components/scoring/HoursCheck";
 import { useEffect, useState, createContext, useContext } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -291,11 +293,14 @@ export function TaskCard({
   websiteRecheck = null,
   premium = false,
   merged = [],
+  hoursCheck = null,
 }: {
   task: ActionPlanTask;
   businessId: string;
   /** Day 23B: the details mismatches this task shows with every version (one task per field). */
   merged?: DetailsMismatch[];
+  /** Day 23B: this hours check as it is now — matching (re-scan) or the exact days that differ. */
+  hoursCheck?: HoursCheckState | null;
   /** Premium: steps PostScore will one day do say "Coming soon". */
   premium?: boolean;
   context?: TaskCardContext;
@@ -372,7 +377,9 @@ export function TaskCard({
   const stepLinks = task.links ?? [];
   // The card title is the action; the check's name is the small label.
   // Merged with the confirmed details: "Your hours don't match everywhere".
-  const title = merged.length > 0 ? mergedTitle(merged, locale) : (task.title ?? task.label);
+  const hours = merged.length === 0 ? hoursCheck : null;
+  const stale = hours?.kind === "stale";
+  const title = merged.length > 0 ? mergedTitle(merged, locale) : stale ? t(locale, "dashboard.hoursCheck.staleTitle") : (task.title ?? task.label);
   // Google and the website agree now: only the confirmed details differ — the
   // scan's "show different hours" line and its points are out of date.
   const ownerOnly = merged.length > 0 && mergedKind(merged) === "owner_only";
@@ -415,10 +422,10 @@ export function TaskCard({
             </p>
           )}
 
-          {!isSetup && !ownerOnly && (
+          {!isSetup && !ownerOnly && !stale && (
             <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1.5">
-              {/* Never the title twice ("Reply to your recent reviews"). */}
-              {headline !== title && <p className="text-[13.5px] font-medium text-ink">{headline}</p>}
+              {/* Never the title twice ("Reply to your recent reviews"); the hours check names the days that differ. */}
+              {hours?.kind === "differs" ? <HoursDiffLines state={hours} /> : headline !== title && <p className="text-[13.5px] font-medium text-ink">{headline}</p>}
               <span className={POINTS_CHIP}>{taskPointsLabel(task, context, locale)}</span>
             </div>
           )}
@@ -434,7 +441,8 @@ export function TaskCard({
 
           {task.timingNote && <p className="text-[12px] italic text-ink-mute">{task.timingNote}</p>}
 
-          {merged.length > 0 ? <DetailsVersions mismatches={merged} /> : <CurrentStatus task={task} pendingStatus={pendingStatus} metricProgress={metricProgress} lastScanAt={lastScanAt} />}
+          {/* The hours check as it is now already names the days; the scan's sentence would repeat (or contradict) them. */}
+          {merged.length > 0 ? <DetailsVersions mismatches={merged} /> : hours ? null : <CurrentStatus task={task} pendingStatus={pendingStatus} metricProgress={metricProgress} lastScanAt={lastScanAt} />}
 
 
           <div>
@@ -528,7 +536,9 @@ export function TaskCard({
                 </Link>
               )}
               {/* Day 23B: the one dark button — on this page the step-by-step opens right here. */}
-              {merged.length > 0 ? (
+              {stale ? (
+                <RescanNowButton businessId={businessId} />
+              ) : merged.length > 0 ? (
                 <MergedActions businessId={businessId} mismatches={merged} only="button" premiumLine={false} />
               ) : (
                 <FixButton
@@ -541,7 +551,7 @@ export function TaskCard({
                   }}
                 />
               )}
-              {(!isPending || canMarkAgain) && (
+              {(!isPending || canMarkAgain) && !stale && (
                 <Button variant="default" size="sm" onClick={handleMarkDone} disabled={state.kind === "saving"}>
                   {state.kind === "saving"
                     ? t(locale, "dashboard.overview.actionPlan.saving")
@@ -557,7 +567,7 @@ export function TaskCard({
                 </div>
               )}
               {/* CLAUDE.md "Plans": Grow/Free — under the steps, what Premium does in one click. */}
-              {(merged.length === 0 || mergedKind(merged) !== "owner_only") && (
+              {(merged.length === 0 || mergedKind(merged) !== "owner_only") && !stale && (
                 <PremiumOneClickLine businessId={businessId} item={merged.length > 0 ? (mergedOneClickItem(merged) ?? fixItem) : fixItem} className="w-full" />
               )}
               {noChangeYet && (
@@ -645,6 +655,7 @@ export function TaskListCard({
   websiteRecheck = null,
   premium = false,
   detailsMismatches = [],
+  hoursCheck = null,
 }: {
   tasks: ActionPlanTask[];
   businessId: string;
@@ -652,6 +663,8 @@ export function TaskListCard({
   premium?: boolean;
   /** Day 23B: confirmed details that differ — merged into "Matches your Google listing". */
   detailsMismatches?: DetailsMismatch[];
+  /** Day 23B: the scored hours check as it is now (lib/hoursCheck.ts). */
+  hoursCheck?: HoursCheckState | null;
   emptyMessage: string;
   footnote?: string;
   context?: TaskCardContext;
@@ -678,6 +691,7 @@ export function TaskListCard({
             websiteRecheck={websiteRecheck}
             premium={premium}
             merged={mismatchesCoveredBy(task, detailsMismatches)}
+            hoursCheck={isHoursCheck(task) ? hoursCheck : null}
           />
         ))}
       </ol>

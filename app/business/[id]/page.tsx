@@ -1,4 +1,5 @@
 import { notFound, redirect } from "next/navigation";
+import { loadHoursCheck } from "@/lib/hoursCheck.server";
 import { loadDetailsMismatches } from "@/lib/detailsMismatch.server";
 import { loadOverviewListing } from "@/lib/overviewListing.server";
 import { canConnectGbp } from "@/lib/premium";
@@ -243,6 +244,7 @@ export default async function BusinessPage({ params, searchParams = {} }: { para
         replyDrafts={replyDrafts}
         freePostai={freePostai}
         monthlyReportsLive={isMonthlyReportsLive()}
+        hoursCheck={actionPlan.status === "ok" ? await loadHoursCheck(params.id, scored.scoringBusiness ?? scored.business, actionPlan.tasks).catch(() => null) : null}
         detailsMismatch={await loadDetailsMismatches(createClient(), params.id, scored.scoringBusiness ?? scored.business).catch(() => null)}
         googleListing={
           isPremiumPlan(upgrade.plan)

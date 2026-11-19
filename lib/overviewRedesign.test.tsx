@@ -576,7 +576,7 @@ describe("Overview layout and scan history (GBP card tweaks)", () => {
     const fs = await import("node:fs");
     const view = fs.readFileSync("app/business/[id]/BusinessScoreView.tsx", "utf8");
     expect(view).toContain(`<div data-testid="overview-recs-row" className="grid grid-cols-1 gap-4 nav:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]">
-        <TopRecommendations businessId={businessId} recommendations={recommendations ?? null} limit={TOP_RECOMMENDATIONS} detailsMismatch={detailsMismatch} />
+        <TopRecommendations businessId={businessId} recommendations={recommendations ?? null} limit={TOP_RECOMMENDATIONS} detailsMismatch={detailsMismatch} hoursCheck={hoursCheck} />
         <SinceLastScanCard businessId={businessId} snapshots={recentSnapshots} liveBreakdown={breakdown} gbpConnected={gbpConnected} now={{ rating: business.rating, reviewCount: business.review_count }} />
       </div>`);
     // PostStudio keeps its own row.

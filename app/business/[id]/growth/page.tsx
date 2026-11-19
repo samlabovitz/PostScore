@@ -1,4 +1,5 @@
 import { GOOGLE_MISMATCH_CHECK_ID } from "@/lib/actionPlan";
+import { loadHoursCheck } from "@/lib/hoursCheck.server";
 import { loadDetailsMismatches, loadNowMatchPrompts } from "@/lib/detailsMismatch.server";
 import { googleWritesAllowed } from "@/lib/gbpReviewPractice";
 import { parseGbpResult } from "@/lib/gbpLanding";
@@ -309,6 +310,7 @@ export default async function GrowthPage({ params, searchParams = {} }: { params
         googleProfile={googleProfile}
         googleTab={googleTab}
         bookingTask={bookingState?.tracking.kind === "turn_on" ? { provider: bookingState.tracking.provider, still: bookingState.tracking.still } : null}
+        hoursCheck={actionPlanResult.status === "ok" ? await loadHoursCheck(params.id, scored.scoringBusiness ?? scored.business, actionPlanResult.tasks).catch(() => null) : null}
         detailsMismatch={await loadDetailsMismatches(createClient(), params.id, scored.scoringBusiness ?? scored.business).catch(() => null)}
         actionPlan={actionPlan}
         growthMoves={growthMoves}

@@ -11,6 +11,8 @@ import { pointsText, recRangeText, websiteRangeText, wholePointRange } from "@/l
 import { FixButton, FIX_BUTTON_CLASS } from "@/components/scoring/FixButton";
 import { DetailsMismatchTasks, DetailsVersions, MergedActions, mergedTitle } from "@/components/overview/DetailsMismatchTasks";
 import { mergedKind, mismatchesCoveredBy, URGENT_DETAILS, type DetailsMismatch } from "@/lib/detailsMismatch";
+import { isHoursCheck, type HoursCheckState } from "@/lib/hoursCheck";
+import { HoursDiffLines, RescanNowButton } from "@/components/scoring/HoursCheck";
 import type { OwnerDetails } from "@/lib/ownerDetails";
 import { withFromScore } from "@/lib/fixDestination";
 import { HIGH_PRIORITY_POINTS, MEDIUM_PRIORITY_POINTS, type Priority, type Recommendation } from "@/lib/overviewTiles";
@@ -91,12 +93,15 @@ export function TopRecommendations({
   businessId,
   recommendations: allRecommendations,
   detailsMismatch = null,
+  hoursCheck = null,
   limit = Infinity,
 }: {
   businessId: string;
   recommendations: Recommendation[] | null;
   /** How many to show (after the merged details task moves first). */
   limit?: number;
+  /** Day 23B: the scored hours check as it is now (lib/hoursCheck.ts). */
+  hoursCheck?: HoursCheckState | null;
   /** Day 23B: confirmed details that differ from Google or the website — tasks first, no points. */
   detailsMismatch?: { mismatches: DetailsMismatch[]; owner: OwnerDetails | null } | null;
 }) {
@@ -146,6 +151,9 @@ export function TopRecommendations({
               const merged = covered(rec);
               // Google and the website agree: only the confirmed details differ — no points to win.
               const ownerOnly = merged.length > 0 && mergedKind(merged) === "owner_only";
+              // The scored hours check, as it is now: matching (re-scan) or the exact days that differ.
+              const hours = merged.length === 0 && rec.source.kind === "task" && isHoursCheck(rec.source.task) ? hoursCheck : null;
+              const stale = hours?.kind === "stale";
               const priority = merged.some((m) => URGENT_DETAILS.includes(m.field)) ? "urgent" : rec.priority;
               return (
               <li key={rec.key} data-merged={merged.length > 0 ? merged.map((m) => m.field).join(",") : undefined} className="flex gap-3 py-3 first:pt-1 last:pb-1">
@@ -155,17 +163,30 @@ export function TopRecommendations({
                       item (stacked, so long text never pushes them around). */}
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-                      {merged.length > 0 ? <span className="text-sm font-semibold text-ink">{mergedTitle(merged, locale)}</span> : <RecText rec={rec} />}
+                      {merged.length > 0 ? (
+                        <span className="text-sm font-semibold text-ink">{mergedTitle(merged, locale)}</span>
+                      ) : stale ? (
+                        <span data-testid="hours-stale" className="text-sm font-semibold text-ink">{t(locale, "dashboard.hoursCheck.staleTitle")}</span>
+                      ) : hours?.kind === "differs" && rec.source.kind === "task" ? (
+                        <>
+                          <span className="text-sm font-semibold text-ink">{rec.source.task.label}</span>
+                          <HoursDiffLines state={hours} />
+                        </>
+                      ) : (
+                        <RecText rec={rec} />
+                      )}
                       {rec.pending && <span className="text-[12px] font-medium text-ink-soft">{t(locale, "dashboard.overview.recs.pending")}</span>}
                     </div>
                     <div className="flex shrink-0 flex-col items-end gap-1">
                       {priority && <PriorityTag priority={priority} />}
-                      {!ownerOnly && <span className="whitespace-nowrap text-[12px] font-semibold tabular-nums text-ink">{recPointsText(locale, rec)}</span>}
+                      {!ownerOnly && !stale && <span className="whitespace-nowrap text-[12px] font-semibold tabular-nums text-ink">{recPointsText(locale, rec)}</span>}
                     </div>
                   </div>
                   {merged.length > 0 && <DetailsVersions mismatches={merged} />}
                   {/* Day 23B: ONE button, straight to where it's fixed (lib/fixDestination.ts). */}
-                  {merged.length > 0 ? (
+                  {stale ? (
+                    <RescanNowButton businessId={businessId} />
+                  ) : merged.length > 0 ? (
                     <MergedActions businessId={businessId} mismatches={merged} fromScore />
                   ) : rec.source.kind === "task" ? (
                     <FixButton
