@@ -1,3 +1,4 @@
+import { Fragment } from "react";
 import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
 import { IconArrowLeft, IconLogout } from "@tabler/icons-react";
@@ -27,6 +28,7 @@ import { ScanningLine } from "@/components/website/ScanningLine";
 import { getWebsiteChoice } from "@/app/actions/ownerWebsite";
 import { getOwnerDetailsCard } from "@/app/actions/ownerDetails";
 import { OwnerDetailsCard } from "@/components/settings/OwnerDetailsCard";
+import { LazyBusinessName, LazyNamesProvider, LoadMoreNames } from "@/components/business/LazyBusinessName";
 
 /**
  * Settings — owner-only (getBusinessSummary, RLS-scoped). Every control
@@ -113,14 +115,22 @@ export default async function SettingsPage({ params }: { params: { id: string } 
             )}
 
             <SettingsSection id="businesses" icon="store" title={k("nav.businesses")} helper={k("businesses.helper")}>
+              <LazyNamesProvider>
               <ul className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
                 {businesses.map((b) => (
-                  <li key={b.id} className="flex flex-col gap-2 rounded-xl border border-paper-deep p-3.5">
+                  <Fragment key={b.id}>
+                  {/* Past the view's live reads: at the first row still waiting for its name. */}
+                  <LoadMoreNames as="li" className="sm:col-span-2" beforeId={b.id} locale={locale} />
+                  <li className="flex flex-col gap-2 rounded-xl border border-paper-deep p-3.5">
                     <div className="flex items-start justify-between gap-2">
-                      <div className="min-w-0">
-                        <p className="truncate text-[14px] font-semibold text-ink">{b.name ?? t(locale, "dashboard.home.untitledBusiness")}</p>
-                        {b.address && <p className="truncate text-[12px] text-ink-mute">{b.address}</p>}
-                      </div>
+                      {/* Day 23 2d-5: read now, or (many businesses) loaded as the row scrolls into view. */}
+                      <LazyBusinessName
+                        businessId={b.id}
+                        initial={{ name: b.name, address: b.address, unavailable: b.nameUnavailable, notRead: b.nameNotRead }}
+                        locale={locale}
+                        nameClassName="truncate text-[14px] font-semibold text-ink"
+                        addressClassName="truncate text-[12px] text-ink-mute"
+                      />
                       <span className="shrink-0 rounded-full border border-paper-deep bg-paper px-2 py-0.5 text-[11px] font-semibold text-ink-soft">{k(`plan.name.${plan}`)}</span>
                     </div>
                     <div className="flex flex-wrap gap-x-3 gap-y-1 text-[12.5px] font-medium">
@@ -137,8 +147,10 @@ export default async function SettingsPage({ params }: { params: { id: string } 
                       </Link>
                     </div>
                   </li>
+                  </Fragment>
                 ))}
               </ul>
+              </LazyNamesProvider>
             </SettingsSection>
 
             <SettingsSection id="plan" icon="card" title={k("nav.plan")} helper={k("plan.helper")}>

@@ -3,6 +3,7 @@
 import { listingScoringRow, type ListingScoringColumns } from "@/lib/listingScoringRow";
 import { namesLiveFor, ownerPrintPhone, shownNamesFor, withOwnerDetailsFor, type OwnerNameLive } from "@/lib/ownerDetails.server";
 import { sanitizeOwnerDetails } from "@/lib/ownerDetails";
+import { liveBatch, type ListName } from "@/lib/lazyNames";
 import { websiteOnlyDetails } from "@/lib/ownerListing.server";
 import { requestCache } from "@/lib/requestCache";
 import { afterBusinessAdded } from "@/lib/businessAdded.server";
@@ -905,8 +906,6 @@ export async function saveWebsiteOnlyBusinessWithClient(
       // details and site (lib/ownerDetails.ts), never in the Google columns.
       owner_details: sanitizeOwnerDetails({ name, address: input.location, phone: "", hours: { kind: "none" } }),
       owner_details_confirmed_at: new Date().toISOString(),
-      owner_website_url: url.toString(),
-      owner_website_confirmed_at: new Date().toISOString(),
       // Our own reading of the type from the name, like a listed business's.
       biz_type_resolved: resolveBizProfile(null, null, null, "en", null, name).id,
       https_status: httpsStatus,
@@ -923,6 +922,15 @@ export async function saveWebsiteOnlyBusinessWithClient(
     if (isMissingColumnError(error) || error?.code === "23502") return { status: "not_enabled" };
     return { status: "error", message: error?.message ?? "Save failed." };
   }
+  // The owner's site: set by the server only (supabase/owner-website.sql's
+  // guard refuses it from an owner's own insert), like "Wrong site?".
+  const { createAdminClient } = await import("@/lib/supabase/admin");
+  const site = await createAdminClient()
+    .from("businesses")
+    .update({ owner_website_url: url.toString(), owner_website_confirmed_at: new Date().toISOString() })
+    .eq("id", data.id)
+    .eq("owner_id", ownerId);
+  if (site.error) return { status: "error", message: site.error.message };
   if (captureScreenshots && websiteAnalysis) await finishAutoScreenshots(supabase, data.id, websiteAnalysis, analysis, url.toString());
   return { status: "saved", businessId: data.id };
 }
@@ -1048,4 +1056,31 @@ export async function unsubscribeFromAllEmails(): Promise<UnsubscribeAllResult> 
   const { data, error } = await supabase.from("businesses").update({ monthly_report_enabled: false }).eq("owner_id", user.id).select("id");
   if (error) return { status: "error", message: error.message };
   return { status: "ok", count: data?.length ?? 0 };
+}
+
+export type LoadBusinessNamesResult = { status: "ok"; names: Record<string, ListName>; liveUsed: number } | { status: "unauthenticated" };
+
+/**
+ * Day 23 2d-5: names for rows scrolled into view (lib/lazyNames.ts). A name
+ * already read (the 10-minute cache) costs nothing; up to `liveLeft` of the
+ * rest (never more than 10 per call) are read live, logged and capped like
+ * any page's read. Only this owner's businesses (RLS).
+ */
+export async function loadBusinessNames(businessIds: string[], liveLeft: number): Promise<LoadBusinessNamesResult> {
+  const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { status: "unauthenticated" };
+  const ids = Array.from(new Set((Array.isArray(businessIds) ? businessIds : []).filter((id): id is string => typeof id === "string"))).slice(0, 50);
+  const cached = await shownNamesFor(supabase, ids, { live: "cached" });
+  const misses = ids.filter((id) => cached.get(id)?.notRead);
+  const { live } = liveBatch(misses, typeof liveLeft === "number" ? liveLeft : 0);
+  const fresh = live.length ? await shownNamesFor(supabase, live, { live: true }) : new Map();
+  const names: Record<string, ListName> = {};
+  for (const id of ids) {
+    const n = fresh.get(id) ?? cached.get(id);
+    if (n) names[id] = n;
+  }
+  return { status: "ok", names, liveUsed: live.length };
 }

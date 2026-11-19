@@ -17,6 +17,20 @@ vi.mock("@/lib/screenshotBudgetServer", () => ({
 }));
 vi.mock("@/lib/websiteScreenshotUpload", () => ({ uploadWebsiteScreenshots: async () => ({ screenshotUrl: null, additionalPages: [] }) }));
 vi.mock("@/lib/supabase/server", () => ({ createClient: vi.fn() }));
+// The owner's site is written by the server (supabase/owner-website.sql refuses it from an owner's insert).
+const adminUpdates: Array<{ patch: Record<string, unknown>; filters: Record<string, unknown> }> = [];
+vi.mock("@/lib/supabase/admin", () => ({
+  createAdminClient: () => ({
+    from: () => ({
+      update: (patch: Record<string, unknown>) => {
+        const entry = { patch, filters: {} as Record<string, unknown> };
+        adminUpdates.push(entry);
+        const c = { eq: (col: string, v: unknown) => ((entry.filters[col] = v), c), then: (resolve: (v: unknown) => void) => resolve({ error: null }) };
+        return c;
+      },
+    }),
+  }),
+}));
 vi.mock("@/lib/google/places", async () => {
   const actual = await vi.importActual<typeof import("@/lib/google/places")>("@/lib/google/places");
   return { ...actual, lookupBusinessByPlaceId: (...args: unknown[]) => placesSpy(...args) };
@@ -106,10 +120,11 @@ describe("saving a website-only business", () => {
       // Day 23 2d-5: what the owner typed is saved as theirs — confirmed details and site.
       owner_details: { name: "Jane's English Tutoring", address: "Dobbs Ferry, NY", phone: "", hours: { kind: "none" } },
       owner_details_confirmed_at: expect.any(String),
-      owner_website_url: "https://janeenglish.com/",
-      owner_website_confirmed_at: expect.any(String),
       language: "es",
     });
+    // The site: never in the owner's own insert; set by the server for this owner's new row.
+    expect(inserted[0]).not.toHaveProperty("owner_website_url");
+    expect(adminUpdates.at(-1)).toEqual({ patch: { owner_website_url: "https://janeenglish.com/", owner_website_confirmed_at: expect.any(String) }, filters: { id: "new-biz", owner_id: "owner-1" } });
     // Never in the Google columns, and no listing facts are ever invented for it.
     for (const field of ["name", "address", "website", "rating", "review_count", "photo_count", "opening_hours", "category"]) {
       expect(inserted[0]).not.toHaveProperty(field);

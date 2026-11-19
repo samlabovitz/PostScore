@@ -4,6 +4,7 @@
 //
 //   npx --no-install tsx --env-file=.env.local scripts/devShot.ts <path> [<path>…] [--lang=es] [--plan=premium] [--width=390] [--out=<dir>]
 //
+// --scroll=N takes N+1 screens while scrolling (lists that load as rows come into view).
 // --lang=en|es shows a business's pages in that language: it sets that
 // business's saved language (from /business/<id>/… in the path) for the
 // screenshot and puts the owner's own setting back afterwards, even on a
@@ -30,7 +31,7 @@ function arg(name: string): string | null {
 async function main() {
   const paths = process.argv.slice(2).filter((a) => !a.startsWith("--"));
   if (paths.length === 0 || !paths.every((p) => p.startsWith("/"))) {
-    console.error("usage: devShot.ts </path> [</path>…] [--lang=en|es] [--plan=free|grow|premium|multi] [--width=390] [--out=<dir>]");
+    console.error("usage: devShot.ts </path> [</path>…] [--lang=en|es] [--plan=free|grow|premium|multi] [--width=390] [--out=<dir>] [--scroll=N]");
     process.exit(1);
   }
   const lang = arg("lang");
@@ -63,6 +64,21 @@ async function main() {
     for (const p of paths) {
       await page.goto(`${BASE}${p}`, { waitUntil: "networkidle", timeout: 90_000 });
       const file = path.join(out, `${p.replace(/[^a-z0-9]+/gi, "_").replace(/^_|_$/g, "") || "home"}${lang ? `.${lang}` : ""}${plan ? `.${plan}` : ""}.${width}.png`);
+      const steps = Number(arg("scroll") ?? 0);
+      if (steps > 0) {
+        // --scroll=N: what the owner sees while scrolling — one screen per step,
+        // with how many names are still loading ("business-name-loading").
+        for (let i = 0; i <= steps; i++) {
+          await page.waitForTimeout(2500);
+          const shot = file.replace(/\.png$/, `.scroll${i}.png`);
+          await page.screenshot({ path: shot });
+          const loading = await page.locator('[data-testid="business-name-loading"]').count();
+          const fallback = await page.getByText(/^(Your business|Su negocio)$/).count();
+          console.log(`${p} step ${i} → ${shot} (still loading: ${loading}, "Your business": ${fallback})`);
+          await page.mouse.wheel(0, 800);
+        }
+        continue;
+      }
       await page.screenshot({ path: file, fullPage: true });
       console.log(`${p} → ${file}`);
     }

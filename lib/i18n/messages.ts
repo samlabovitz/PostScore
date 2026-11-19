@@ -3469,6 +3469,7 @@ export type MessageKey =
   | "dashboard.home.addBusinessButton"
   | "dashboard.home.untitledBusiness"
   | "dashboard.home.noAddressOnFile"
+  | "dashboard.home.loadMoreNames"
   | "dashboard.home.emptyStateHeading"
   | "dashboard.home.emptyStateBody"
   | "dashboard.home.addFirstBusinessButton"
@@ -5203,13 +5204,6 @@ export type MessageKey =
   | "dashboard.settings.details.nameRequired"
   | "dashboard.settings.details.notSaved"
   | "dashboard.settings.details.notEnabled"
-  | "dashboard.overview.confirmDetails"
-  | "dashboard.overview.confirmCard.body"
-  | "dashboard.overview.confirmCard.fromGoogle"
-  | "dashboard.overview.confirmCard.confirm"
-  | "dashboard.overview.confirmCard.edit"
-  | "dashboard.overview.confirmCard.notNow"
-  | "dashboard.overview.confirmCard.saved"
   | "dashboard.settings.nav.account"
   | "dashboard.settings.profile.helper"
   | "dashboard.settings.profile.emailHelp"
@@ -9650,6 +9644,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.home.addBusinessButton": "Add a business",
     "dashboard.home.untitledBusiness": "Your business",
     "dashboard.home.noAddressOnFile": "No address on file",
+    "dashboard.home.loadMoreNames": "Load more names",
     "dashboard.home.emptyStateHeading": "You haven't added a business yet",
     "dashboard.home.emptyStateBody":
       "Search for your real Google Business Profile listing to get its first PostScore.",
@@ -11555,13 +11550,6 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.settings.details.nameRequired": "Add your business name first.",
     "dashboard.settings.details.notSaved": "Couldn't save your details right now. Please try again.",
     "dashboard.settings.details.notEnabled": "Saving your details isn't available yet.",
-    "dashboard.overview.confirmDetails": "Confirm your business details",
-    "dashboard.overview.confirmCard.body": "PostScore will show these details in your account and emails, even when Google can't be reached. Your score still comes from your Google listing.",
-    "dashboard.overview.confirmCard.fromGoogle": "Filled in from your Google listing as it shows right now.",
-    "dashboard.overview.confirmCard.confirm": "Confirm",
-    "dashboard.overview.confirmCard.edit": "Edit",
-    "dashboard.overview.confirmCard.notNow": "Not now",
-    "dashboard.overview.confirmCard.saved": "Confirmed · provided by you. You can change them anytime in Settings.",
     "dashboard.settings.nav.account": "Account",
     "dashboard.settings.profile.helper": "Your login and the language PostScore uses for this business.",
     "dashboard.settings.profile.emailHelp": "This is your login email.",
@@ -15689,6 +15677,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.home.addBusinessButton": "Agregar un negocio",
     "dashboard.home.untitledBusiness": "Su negocio",
     "dashboard.home.noAddressOnFile": "Sin dirección registrada",
+    "dashboard.home.loadMoreNames": "Cargar más nombres",
     "dashboard.home.emptyStateHeading": "Aún no ha agregado un negocio",
     "dashboard.home.emptyStateBody":
       "Busque su ficha real del Perfil de Empresa en Google para obtener su primer PostScore.",
@@ -17914,13 +17903,6 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.settings.details.nameRequired": "Primero agregue el nombre de su negocio.",
     "dashboard.settings.details.notSaved": "No se pudieron guardar sus datos en este momento. Inténtelo de nuevo.",
     "dashboard.settings.details.notEnabled": "Guardar sus datos aún no está disponible.",
-    "dashboard.overview.confirmDetails": "Confirme los datos de su negocio",
-    "dashboard.overview.confirmCard.body": "PostScore mostrará estos datos en su cuenta y en sus correos, incluso cuando no se pueda acceder a Google. Su puntuación sigue basándose en su ficha de Google.",
-    "dashboard.overview.confirmCard.fromGoogle": "Completados con su ficha de Google tal como aparece ahora.",
-    "dashboard.overview.confirmCard.confirm": "Confirmar",
-    "dashboard.overview.confirmCard.edit": "Editar",
-    "dashboard.overview.confirmCard.notNow": "Ahora no",
-    "dashboard.overview.confirmCard.saved": "Confirmados · proporcionados por usted. Puede cambiarlos cuando quiera en Configuración.",
     "dashboard.settings.nav.account": "Cuenta",
     "dashboard.settings.profile.helper": "Su inicio de sesión y el idioma que PostScore usa para este negocio.",
     "dashboard.settings.profile.emailHelp": "Este es el correo con el que inicia sesión.",

@@ -301,12 +301,10 @@ describe("owner-confirmed business details (Day 23 2d-3)", () => {
     expect(card({ details: CONFIRMED, confirmedAt: "2026-11-17T17:00:00Z", liveUnavailable: false, noListing: false, noGoogleHours: true })).not.toContain("no-google-hours");
   });
 
-  test("the Overview's card until confirmed (Day 23 2d-5 — lib/confirmDetailsCard.test.tsx has its rules)", () => {
+  test("no confirm prompt on the dashboard: confirming lives in the signup funnel (docs/plans/business-details-flow.md); Settings keeps the editor", () => {
     const overview = src("app/business/[id]/page.tsx");
-    expect(overview).toContain("const confirmCard = await getConfirmDetailsCardWithClient(createClient(), params.id);");
-    expect(overview).toContain("{confirmCard.shown && (");
-    // Only the listing Overview: the website-only one returns before it.
-    expect(overview.indexOf('listingMode === "website_only"')).toBeLessThan(overview.indexOf("<ConfirmDetailsCard"));
+    expect(overview).not.toMatch(/ConfirmDetails|confirmCard|detailsConfirmed/);
+    expect(src("app/business/[id]/settings/page.tsx")).toContain("<OwnerDetailsCard businessId={params.id} card={ownerDetails.card} />");
   });
 
   test("where they show: header (every page's record), switcher, emails, Print studio and the starter site; Free's showroom makes no Google call", () => {

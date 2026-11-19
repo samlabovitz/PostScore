@@ -112,6 +112,11 @@ export function savedGoogleReads(repo: string): SavedGoogleRead[] {
       const rest = src.slice(m.index! + m[0].length, m.index! + m[0].length + 1500);
       const end = rest.search(/;\s*\n|\bfrom\(\s*["'`]/);
       const chain = end >= 0 ? rest.slice(0, end) : rest;
+      // Filtered or ordered by a Google column (`.order("name")`, `.ilike("name", …)`).
+      const filtered = Array.from(chain.matchAll(/\.(?:order|eq|neq|ilike|like|in|is|not|gt|gte|lt|lte)\(\s*["'`](\w+)["'`]/g))
+        .map((f) => f[1])
+        .filter((c) => GOOGLE_BUSINESS_COLUMNS.has(c));
+      if (filtered.length) out.push({ file: relative(repo, file), line: src.slice(0, m.index!).split("\n").length, columns: Array.from(new Set(filtered)) });
       const at = chain.indexOf(".select(");
       if (at < 0) continue;
       // `.update(...).select("id")` reads back what it wrote, not saved values.

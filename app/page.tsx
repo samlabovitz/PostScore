@@ -1,3 +1,4 @@
+import { Fragment } from "react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { IconBuildingStore, IconPlus } from "@tabler/icons-react";
@@ -7,6 +8,7 @@ import { Button } from "@/components/ui/Button";
 import { GradeBadge } from "@/components/ui/GradeBadge";
 import { createClient } from "@/lib/supabase/server";
 import { listMyBusinesses, type MyBusinessRow } from "@/app/actions/businesses";
+import { LazyBusinessName, LazyNamesProvider, LoadMoreNames } from "@/components/business/LazyBusinessName";
 import { DEFAULT_LOCALE, normalizeLocale, t, tPlural, type Locale } from "@/lib/i18n";
 
 /**
@@ -29,16 +31,16 @@ function BusinessCard({ business, locale }: { business: MyBusinessRow; locale: L
       <Card className="flex items-center gap-4 p-5 transition-colors hover:border-ink-soft">
         <GradeBadge grade={business.score?.grade ?? null} />
         <div className="min-w-0 flex-1">
-          <div className="truncate font-serif text-base font-semibold text-ink">
-            {business.name ?? t(locale, "dashboard.home.untitledBusiness")}
-          </div>
-          {/* Day 23 2d-5: never a saved Google value — when Google can't be read, say so;
-              not read this time (many businesses, nothing cached), no line. */}
-          {!(business.nameNotRead && !business.address) && (
-            <div className="truncate text-sm text-ink-soft">
-              {business.address ?? t(locale, business.nameUnavailable ? "dashboard.live.unavailable" : "dashboard.home.noAddressOnFile")}
-            </div>
-          )}
+          {/* Day 23 2d-5: never a saved Google value — read now, or (many
+              businesses) loaded as the row scrolls into view. */}
+          <LazyBusinessName
+            businessId={business.id}
+            initial={{ name: business.name, address: business.address, unavailable: business.nameUnavailable, notRead: business.nameNotRead }}
+            locale={locale}
+            nameClassName="truncate font-serif text-base font-semibold text-ink"
+            addressClassName="truncate text-sm text-ink-soft"
+            noAddressLine={t(locale, "dashboard.home.noAddressOnFile")}
+          />
         </div>
         {business.websiteOnly ? (
           // Day 2b: no Google listing, so no PostScore to show.
@@ -113,11 +115,17 @@ export default async function Home() {
             </Link>
           </Card>
         ) : (
-          <div className="flex flex-col gap-3">
-            {businesses.map((business) => (
-              <BusinessCard key={business.id} business={business} locale={locale} />
-            ))}
-          </div>
+          <LazyNamesProvider>
+            <div className="flex flex-col gap-3">
+              {businesses.map((business) => (
+                <Fragment key={business.id}>
+                  {/* Past the view's live reads: at the first row still waiting for its name. */}
+                  <LoadMoreNames beforeId={business.id} locale={locale} />
+                  <BusinessCard business={business} locale={locale} />
+                </Fragment>
+              ))}
+            </div>
+          </LazyNamesProvider>
         )}
       </div>
     </DashboardShell>

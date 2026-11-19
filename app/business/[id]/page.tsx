@@ -1,6 +1,4 @@
 import { notFound, redirect } from "next/navigation";
-import { ConfirmDetailsCard } from "@/components/overview/ConfirmDetailsCard";
-import { getConfirmDetailsCardWithClient } from "@/app/actions/ownerDetails";
 import { getListingModeForPage } from "@/components/scoring/websiteOnlyGuard";
 import { DashboardShell } from "@/components/layout/DashboardShell";
 import { loadUpgradeContext } from "@/lib/upgradePromos.server";
@@ -147,8 +145,6 @@ export default async function BusinessPage({ params, searchParams = {} }: { para
     (await getPlan()) === "free" ? freeAiAllowance(params.id, "postai") : Promise.resolve(null),
   ]);
   const bannerKind = niche ? nicheBannerKind(niche.resolved) : null;
-  // Day 23 2d-5: after the first scan, until the owner confirms (or "Not now").
-  const confirmCard = await getConfirmDetailsCardWithClient(createClient(), params.id);
   const freeGate = rescanGate(upgrade.plan === "free", null, lastOwnerRescan, new Date());
   const freeRescanNextAt = freeGate.limit === "weekly" ? freeGate.nextAvailableAt : null;
 
@@ -183,12 +179,6 @@ export default async function BusinessPage({ params, searchParams = {} }: { para
     // no Grow/Premium promo cards under it (they stay on Website and
     // Competitors, and on every page for Grow).
     <DashboardShell upgrade={free ? { ...upgrade, cards: [] } : upgrade} business={scored.business}>
-      {/* Day 23 2d-5: until the owner confirms their name, address, phone and hours. */}
-      {confirmCard.shown && (
-        <div className="mb-6">
-          <ConfirmDetailsCard businessId={params.id} card={confirmCard.card} />
-        </div>
-      )}
       {niche && bannerKind && (
         <div className="mb-6">
           <NicheBanner
