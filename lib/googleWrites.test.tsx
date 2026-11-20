@@ -266,7 +266,7 @@ describe("every write to Google is behind the switch", () => {
   // (the OAuth token / revoke calls and the Places / PageSpeed / Safe
   // Browsing searches change nothing on a listing). A new one fails here
   // until it's behind GOOGLE_WRITES_LIVE_PLACES and added to this list.
-  const WRITERS = ["lib/gbpReviewInbox.server.ts", "lib/gbpProfileEdits.server.ts", "lib/gbpOrderLink.server.ts", "lib/gbpWebsiteLink.server.ts", "lib/gbpAttributes.server.ts", "lib/gbpFieldWrite.server.ts", "lib/gbpPhotos.server.ts"];
+  const WRITERS = ["lib/gbpReviewInbox.server.ts", "lib/gbpProfileEdits.server.ts", "lib/gbpOrderLink.server.ts", "lib/gbpWebsiteLink.server.ts", "lib/gbpAttributes.server.ts", "lib/gbpFieldWrite.server.ts", "lib/gbpPhotos.server.ts", "lib/gbpPosts.server.ts"];
   const files = (dir: string): string[] =>
     readdirSync(dir).flatMap((f) => {
       const p = join(dir, f);
@@ -274,7 +274,7 @@ describe("every write to Google is behind the switch", () => {
       return /\.(ts|tsx)$/.test(f) && !/\.test\./.test(f) ? [p] : [];
     });
 
-  test("only the seven known writers send PATCH / PUT / POST / DELETE to a Business Profile API", () => {
+  test("only the eight known writers send PATCH / PUT / POST / DELETE to a Business Profile API", () => {
     const google = /mybusiness[a-z]*\.googleapis\.com|PLACE_ACTIONS_BASE|reviewUrl\(|from "@\/lib\/gbpAttributes\.server"|from "@\/lib\/gbpPlaceActions\.server"/;
     const write = /method: ?["'](PATCH|PUT|POST|DELETE)["']/;
     const found = ["lib", "app", "components"].flatMap(files).filter((p) => {
@@ -298,6 +298,10 @@ describe("every write to Google is behind the switch", () => {
       // lib/gbpPhotos.server.ts: uploads (one photo per request) and Undo.
       "app/api/gbp/photos/route.ts": "if (!c.canEdit) return NextResponse.json({ status: \"editing_off\" })",
       "app/actions/gbpPhotos.ts": "if (!c.canEdit) return { status: \"editing_off\" }",
+      // Day 23E: lib/gbpPosts.server.ts (posts and Undo), the answers and Approve all.
+      "app/actions/gbpPosts.ts": "if (!c.canEdit) return { status: \"editing_off\" }",
+      "app/actions/googleAnswers.ts": "if (!c.canEdit) return { status: \"editing_off\" }",
+      "app/actions/approveAll.ts": "if (!c.canEdit) return { status: \"editing_off\" }",
     };
     for (const [file, check] of Object.entries(actions)) expect([file, readFileSync(file, "utf8").includes(check)]).toEqual([file, true]);
     // Every real-mode context reads the one list.

@@ -2,7 +2,9 @@ import "server-only";
 
 // Day 23C: what the owner did from PostScore, by day — review replies
 // (gbp_review_reply_log), photos and listing edits (gbp_changes), coupons
-// and referral cards started — for the action markers on section 1's chart
+// and referral cards started; Day 23E: Google posts (gbp_changes kind
+// local_post) and the answers (listing edits with origin 'answers') — for
+// the action markers on section 1's chart
 // and "Since you did this". Reads only, RLS-scoped, no Google calls; a
 // failed read leaves its part out, never a guess.
 
@@ -35,8 +37,19 @@ export function groupActions(
   const batches = new Set<string>();
   for (const r of rows.changes) {
     if (isPracticeRow(r) !== opts.practice || r.undo_of || r.undone_at || (r.status !== "sent" && r.status !== "pending_review")) continue;
+    if (r.kind.replace(/_practice$/, "") === "local_post") {
+      if (r.status === "sent") add(dateIn(r.approved_at, opts.timeZone), "posts");
+      continue;
+    }
     const k = listingChangeKind(r.kind, r.field);
     if (!k) continue;
+    if (r.origin === "answers") {
+      // "Answered customers' questions": once per sitting, whatever it changed.
+      if (batches.has(`answers|${r.approved_at.slice(0, 16)}`)) continue;
+      batches.add(`answers|${r.approved_at.slice(0, 16)}`);
+      add(dateIn(r.approved_at, opts.timeZone), "answers");
+      continue;
+    }
     if (k === "photos") add(dateIn(r.approved_at, opts.timeZone), "photos");
     else {
       // One listing edit per batch (a batch can carry several fields).
@@ -56,13 +69,15 @@ export function groupActions(
 export async function loadActionEvents(db: SupabaseClient, businessId: string, opts: { timeZone: string; practice: boolean; now?: Date }): Promise<ActionEvent[]> {
   const since = new Date((opts.now ?? new Date()).getTime() - SINCE_DAYS * 86_400_000).toISOString();
   const changeCols = "batch_id, kind, field, status, approved_at, undone_at, undo_of, location_name";
-  const [replies, withFlag, promos, referrals] = await Promise.all([
+  const [replies, withOrigin, promos, referrals] = await Promise.all([
     db.from("gbp_review_reply_log").select("action, status, created_at").eq("business_id", businessId).gte("created_at", since).limit(2000),
-    db.from("gbp_changes").select(`${changeCols}, practice`).eq("business_id", businessId).gte("approved_at", since).limit(1000),
+    db.from("gbp_changes").select(`${changeCols}, practice, origin`).eq("business_id", businessId).gte("approved_at", since).limit(1000),
     db.from("promos").select("created_at").eq("business_id", businessId).gte("created_at", since).limit(500),
     db.from("referrals").select("created_at").eq("business_id", businessId).gte("created_at", since).limit(500),
   ]);
-  // Before supabase/gbp-changes-practice.sql: the old practice markers.
+  // Before supabase/day23e-posts-answers.sql: no origin; before
+  // supabase/gbp-changes-practice.sql: the old practice markers.
+  const withFlag = withOrigin.error ? await db.from("gbp_changes").select(`${changeCols}, practice`).eq("business_id", businessId).gte("approved_at", since).limit(1000) : withOrigin;
   const changes = withFlag.error ? await db.from("gbp_changes").select(changeCols).eq("business_id", businessId).gte("approved_at", since).limit(1000) : withFlag;
   const list = <T,>(r: { data: unknown; error: unknown }) => ((r.error ? [] : r.data) ?? []) as T[];
   return groupActions(

@@ -11,6 +11,7 @@ import { addMonths, callsByDays, type CallDays, type InsightsMonth } from "@/lib
 import { isFresh } from "@/lib/gbpMediaPosts";
 import { specialFor, upcomingHolidays, type HolidayId, type SpecialHourPeriod } from "@/lib/gbpListingFields";
 import type { IdeaType } from "@/lib/listingIdeas";
+import type { AnswersPlan } from "@/lib/googleAnswers";
 
 const DAY_MS = 86_400_000;
 
@@ -184,10 +185,11 @@ export function servicesPlan(names: string[]): { names: string[]; count: number;
 // The one button: Premium does it, Grow gets the steps
 // ---------------------------------------------------------------------------
 
-export type RecKind = "photos" | "replies" | "posts" | "holiday" | "description" | "details" | "services";
+export type RecKind = "photos" | "replies" | "posts" | "holiday" | "description" | "details" | "services" | "answers";
 
-/** What PostScore can change on Google for you (an editor or the reply inbox). Posts: never. */
-export const DOES_FOR_YOU: readonly RecKind[] = ["photos", "replies", "holiday", "description", "details", "services"];
+/** What PostScore can change on Google for you (an editor, the reply inbox,
+ * Day 23E's post preview and answers preview) — everything. */
+export const DOES_FOR_YOU: readonly RecKind[] = ["photos", "replies", "posts", "holiday", "description", "details", "services", "answers"];
 
 export type RecButton = { kind: "do_it" } | { kind: "verb" } | { kind: "steps"; premiumLine: boolean };
 
@@ -204,7 +206,7 @@ export function recButton(kind: RecKind, ctx: { premium: boolean; canEdit: boole
 // Actions on the chart, and "Since you did this"
 // ---------------------------------------------------------------------------
 
-export type ActionKind = "replies" | "photos" | "listing" | "campaign";
+export type ActionKind = "replies" | "photos" | "listing" | "campaign" | "posts" | "answers";
 
 /** One day's actions of one kind (lib/googleActions.server.ts). */
 export interface ActionEvent {
@@ -403,7 +405,8 @@ export type Rec =
   | { kind: "posts"; plan: PostPlan }
   | { kind: "description"; plan: NonNullable<ReturnType<typeof descriptionPlan>> }
   | { kind: "details"; plan: NonNullable<ReturnType<typeof detailsPlan>> }
-  | { kind: "services"; plan: NonNullable<ReturnType<typeof servicesPlan>> };
+  | { kind: "services"; plan: NonNullable<ReturnType<typeof servicesPlan>> }
+  | { kind: "answers"; plan: AnswersPlan & { suggest: string[] } };
 
 export interface RecInputs {
   type: IdeaType | null;
@@ -419,6 +422,11 @@ export interface RecInputs {
   description?: string | null;
   missingDetails?: Array<"parking" | "accessibility">;
   missingServices?: string[];
+  /** Day 23E: what's missing for Google to answer customers' questions
+   * (lib/googleAnswers.ts answersPlan). Given and not null: one "Answer your
+   * customers' common questions" item takes the place of the description,
+   * customer details and services items. */
+  answers?: AnswersPlan | null;
 }
 
 /** A holiday within 14 days goes first; then replies, photos, posts, and the listing's targets. */
@@ -433,7 +441,9 @@ export function recommendations(i: RecInputs): Rec[] {
   if (photos) out.push({ kind: "photos", plan: photos });
   const posts = postPlan(i.posts, i.months, i.type, i.now, i.timeZone);
   if (posts) out.push({ kind: "posts", plan: posts });
+  if (i.answers) out.push({ kind: "answers", plan: { ...i.answers, suggest: i.missingServices ?? [] } });
   if (holiday && !soon) out.push({ kind: "holiday", plan: holiday });
+  if (i.answers) return out;
   const description = descriptionPlan(i.description);
   if (description) out.push({ kind: "description", plan: description });
   const details = detailsPlan(i.missingDetails ?? []);

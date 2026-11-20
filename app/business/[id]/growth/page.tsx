@@ -193,6 +193,7 @@ export default async function GrowthPage({ params, searchParams = {} }: { params
     !hasPremium(plan) && isGoogleTabParam(searchParams.tab)
       ? await (async () => {
           const { recommendations } = await import("@/lib/googleRecommendations");
+          const { answersPlan } = await import("@/lib/googleAnswers");
           const { ideaTypeOf, listingIdeas } = await import("@/lib/listingIdeas");
           const db = createClient();
           const timeZone = business.time_zone ?? DEFAULT_BUSINESS_TIMEZONE;
@@ -223,6 +224,8 @@ export default async function GrowthPage({ params, searchParams = {} }: { params
             description: extras && extras.description !== undefined ? extras.description : undefined,
             missingDetails: details?.id === "details" ? details.missing : [],
             missingServices: services?.id === "services" ? services.missing.map((m) => m.service) : [],
+            // Day 23E, Grow: "Answer your customers' common questions" (Free keeps the separate items).
+            answers: plan === "grow" && extras ? answersPlan({ description: extras.description, services: extras.services, pricedServices: extras.pricedServices, details: extras.details ?? null }) : null,
           });
           return { list, type, connected: gbpConnected };
         })().catch(() => null)

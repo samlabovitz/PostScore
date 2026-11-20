@@ -11,6 +11,7 @@ import { setWeeklyCheckItem } from "@/app/actions/weeklyChecklist";
 import { resolveToggleOutcome, type WeeklyChecklistItem, type WeeklyChecklistItemId } from "@/lib/weeklyChecklist";
 import { t, tPlural, useLocale } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
+import { WeekPost } from "@/components/gbp/WeekPost";
 
 /**
  * "Your weekly routine" — five real Google habits PostScore has no way
@@ -75,8 +76,11 @@ export function WeeklyChecklist({
   initialCheckedItemIds,
   initialStreakWeeks,
   weekStart,
+  postFlow = null,
 }: {
   businessId: string;
+  /** Day 23E: "Post an update or offer to Google" opens the same post flow as the Google Profile tab (Premium: publish in one click; Grow: the draft to copy). Null: Free. */
+  postFlow?: { premium: boolean } | null;
   items: WeeklyChecklistItem[];
   initialCheckedItemIds: WeeklyChecklistItemId[];
   initialStreakWeeks: number;
@@ -88,6 +92,7 @@ export function WeeklyChecklist({
   const [streakWeeks, setStreakWeeks] = useState(initialStreakWeeks);
   const [pendingId, setPendingId] = useState<WeeklyChecklistItemId | null>(null);
   const [errorItemId, setErrorItemId] = useState<WeeklyChecklistItemId | null>(null);
+  const [postOpen, setPostOpen] = useState(false);
   const [pop, setPop] = useState(false);
   const ringRef = useRef<HTMLDivElement>(null);
 
@@ -163,7 +168,7 @@ export function WeeklyChecklist({
             const Icon = ITEM_ICON[item.id] ?? IconCheck;
             const link = itemLink(item.id, businessId);
             return (
-              <li key={item.id} className="flex items-start gap-3 py-3 last:pb-0">
+              <li key={item.id} className="flex flex-col gap-2 py-3 last:pb-0" data-testid={`routine-${item.id}`}>
                 {/* A large, easy-to-tap checkbox (the whole row label toggles it). */}
                 <label className="flex min-w-0 flex-1 cursor-pointer items-start gap-3">
                   <input
@@ -198,6 +203,24 @@ export function WeeklyChecklist({
                     )}
                   </span>
                 </label>
+                {item.id === "post_update" && postFlow && (
+                  <div className="flex flex-col gap-2 pl-[84px]">
+                    <button
+                      type="button"
+                      onClick={() => setPostOpen(!postOpen)}
+                      aria-expanded={postOpen}
+                      className="inline-flex h-[30px] w-fit items-center whitespace-nowrap rounded-lg border border-ink bg-ink px-3 text-[12.5px] font-semibold text-paper"
+                      data-testid="routine-post-open"
+                    >
+                      {postOpen ? t(locale, "dashboard.googleTab.w.hide") : postFlow.premium ? t(locale, "dashboard.breakdown.action.doItForYou") : t(locale, "dashboard.googleTab.w.more.getDraft")}
+                    </button>
+                    {postOpen && (
+                      <div className="rounded-lg border border-paper-line bg-white px-3 py-2.5" data-testid="routine-post-panel">
+                        <WeekPost businessId={businessId} premium={postFlow.premium} />
+                      </div>
+                    )}
+                  </div>
+                )}
               </li>
             );
           })}

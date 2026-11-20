@@ -215,6 +215,22 @@ export function approvalAllowed(approvedAts: string[], now: number): "ok" | "wai
   return "ok";
 }
 
+/** Day 23E, Approve all: one approval for the whole sitting. The limits
+ * (one a minute, the daily cap) are checked once, before the first write,
+ * against the approvals made BEFORE the sitting; every write in it then
+ * counts the earlier approvals only — so the second write isn't held back
+ * by the first one's minute. Each write still counts toward the daily cap
+ * afterwards. */
+export function inSitting<S extends { approvalsSince(businessId: string, since: string): Promise<string[] | null> }>(store: S, startedAt: number): S {
+  return {
+    ...store,
+    approvalsSince: async (businessId: string, since: string) => {
+      const list = await store.approvalsSince(businessId, since);
+      return list === null ? null : list.filter((a) => Date.parse(a) < startedAt);
+    },
+  };
+}
+
 /** A gbp_changes row (the fields read). */
 export interface GbpChangeRow {
   batch_id: string;

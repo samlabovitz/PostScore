@@ -229,8 +229,8 @@ export const PROFILE_DESCRIPTION_MAX = 750;
 
 export type DescriptionProblem = "empty" | "too_long" | "link" | "phone" | "price" | "caps";
 
-const LINK = /\bhttps?:\/\/|\bwww\.|\b[a-z0-9-]+\.(?:com|net|org|biz|info|us|io|co|shop|store|site|online|app)\b/i;
-const PHONE = /(?:\+?1[\s.-]?)?\(?\b[2-9]\d{2}\)?[\s.-]?\d{3}[\s.-]?\d{4}\b/;
+export const LINK = /\bhttps?:\/\/|\bwww\.|\b[a-z0-9-]+\.(?:com|net|org|biz|info|us|io|co|shop|store|site|online|app)\b/i;
+export const PHONE = /(?:\+?1[\s.-]?)?\(?\b[2-9]\d{2}\)?[\s.-]?\d{3}[\s.-]?\d{4}\b/;
 const PRICE =
   /[$€£]\s?\d|\b\d+\s?%|\b\d+\s?(?:percent|por ciento)\b|\b(?:sale|discount|discounts|coupon|coupons|promo|promos|promotion|promotions|deal|deals|special offer|limited time|buy one get one|bogo|cheapest|lowest prices?|free (?:consultation|estimate|shipping|delivery|gift)|descuento|descuentos|oferta|ofertas|cup[oó]n|cupones|promoci[oó]n|promociones|rebaja|rebajas|gratis)\b/i;
 

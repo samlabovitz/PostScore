@@ -5,15 +5,18 @@
 //   - Premium: "PostScore can do this for you" (opens the editor or the
 //     reply inbox) when Google writes are allowed for the place
 //     (GOOGLE_WRITES_LIVE_PLACES); otherwise the editor's own verb — it
-//     opens read only and says so. Posts: "See post ideas" (PostScore
-//     doesn't post for you).
+//     opens read only and says so. Day 23E: the post and the answers have
+//     their own previews in This week (components/gbp/ThisWeekList.tsx).
 //   - Grow/Free: "How to do it" (the steps, here) and "Open on Google ↗",
 //     plus "Premium does this for you in one click →" where Premium does.
+//     Day 23E, Grow: the post's and the answers' drafts to copy, with the steps.
 
 import Link from "next/link";
 import { useState } from "react";
 import { GOOGLE_LINKS, googleHelpUrl } from "@/lib/googleHelpLinks";
 import { photoTypeKey, recButton, type Rec } from "@/lib/googleRecommendations";
+import { PostDraftCopy, usePostDraft } from "@/components/gbp/PostPreview";
+import { AnswersCopy, useAnswers } from "@/components/gbp/AnswersPreview";
 import type { IdeaType } from "@/lib/listingIdeas";
 import { formatShortDate, t, type Locale, type MessageKey, useLocale } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
@@ -53,6 +56,10 @@ export function recText(rec: Rec, locale: Locale, type: IdeaType | null): { text
       return { text: t(locale, K(`rec.details.${rec.plan.missing.length === 2 ? "both" : rec.plan.missing[0]}`), { minutes: rec.plan.minutes }), sub: null };
     case "services":
       return { text: t(locale, K(rec.plan.count === 1 ? "rec.servicesOne" : "rec.services"), { count: rec.plan.count, list: rec.plan.names.join(", "), minutes: rec.plan.minutes }), sub: null };
+    case "answers": {
+      const parts = rec.plan.missing.flatMap((p) => (p === "details" ? rec.plan.details.map((d) => t(locale, K(`rec.answers.part.${d}`))) : p === "services" ? [t(locale, K(`rec.answers.part.services.${rec.plan.services ?? "none"}`))] : [t(locale, K("rec.answers.part.description"))]));
+      return { text: t(locale, K("rec.answers"), { minutes: rec.plan.minutes }), sub: t(locale, K("rec.answers.sub"), { list: parts.join(", ") }) };
+    }
   }
 }
 
@@ -73,7 +80,7 @@ export function recHref(rec: Rec, businessId: string): string {
     case "replies":
       return `/business/${businessId}/website-reviews#google-reviews`;
     case "posts":
-      return `/business/${businessId}/growth#ways-to-grow`;
+      return "#google-tab-this-week";
     case "holiday":
       return "#edit-holiday";
     case "description":
@@ -82,6 +89,8 @@ export function recHref(rec: Rec, businessId: string): string {
       return "#edit-customer-details";
     case "services":
       return `#edit-services?add=${rec.plan.names.map(encodeURIComponent).join(",")}`;
+    case "answers":
+      return "#google-tab-this-week";
   }
 }
 
@@ -89,15 +98,18 @@ export function recHref(rec: Rec, businessId: string): string {
 const VERB: Record<Rec["kind"], string> = {
   photos: "ideas.photos.button",
   replies: "rec.openInbox",
-  posts: "ideas.posts.button",
+  posts: "w.post.open",
   holiday: "ideas.holiday.button",
   description: "ideas.description.button",
   details: "ideas.details.button",
   services: "ideas.services.button",
+  answers: "w.ans.open",
 };
 
 export function recButtonLabel(rec: Rec, locale: Locale, ctx: { premium: boolean; canEdit: boolean }): string {
   const b = recButton(rec.kind, ctx);
+  // The owner's own photos: the owner uploads them — never "PostScore can do this for you".
+  if (rec.kind === "photos" && b.kind === "do_it") return t(locale, K("w.photos.upload"));
   return b.kind === "do_it" ? t(locale, "dashboard.breakdown.action.doItForYou") : t(locale, K(VERB[rec.kind]));
 }
 
@@ -122,7 +134,7 @@ export function RecPremiumButton({ rec, businessId, canEdit, className }: { rec:
 }
 
 /** Grow/Free: the steps (one button that opens them), "Open on Google ↗" and the Premium line. */
-export function RecSteps({ rec, businessId }: { rec: Rec; businessId: string }) {
+export function RecSteps({ rec, businessId, drafts = false }: { rec: Rec; businessId: string; drafts?: boolean }) {
   const locale = useLocale();
   const [open, setOpen] = useState(false);
   const b = recButton(rec.kind, { premium: false, canEdit: false });
@@ -139,6 +151,8 @@ export function RecSteps({ rec, businessId }: { rec: Rec; businessId: string }) 
           </Link>
         )}
       </div>
+      {open && drafts && rec.kind === "posts" && <GrowPostDraft businessId={businessId} rec={rec} />}
+      {open && drafts && rec.kind === "answers" && <GrowAnswers businessId={businessId} suggest={rec.plan.suggest} />}
       {open && (
         <div className="rounded-lg bg-paper px-3 py-2 text-[12.5px] text-ink-soft" data-testid={`rec-steps-body-${rec.kind}`}>
           <ol className="list-decimal pl-4">
@@ -155,8 +169,22 @@ export function RecSteps({ rec, businessId }: { rec: Rec; businessId: string }) 
   );
 }
 
+/** Grow: this week's post draft to copy (made once a week; 3 "Write another"). */
+function GrowPostDraft({ businessId, rec }: { businessId: string; rec: Extract<Rec, { kind: "posts" }> }) {
+  const day = rec.plan.weekday !== null && rec.plan.date ? `${weekdayName(rec.plan.weekday, "en")}, ${shortDate(rec.plan.date, "en")}` : null;
+  const state = usePostDraft(businessId, { day, auto: false });
+  return <PostDraftCopy state={state} />;
+}
+
+/** Grow: the answers' drafts to copy. */
+function GrowAnswers({ businessId, suggest }: { businessId: string; suggest: string[] }) {
+  const state = useAnswers(businessId, { auto: false, suggest });
+  return <AnswersCopy businessId={businessId} state={state} />;
+}
+
 /** One recommendation: the sentence, its second line, and the plan's one button. */
-export function RecItem({ rec, businessId, premium, canEdit, type }: { rec: Rec; businessId: string; premium: boolean; canEdit: boolean; type: IdeaType | null }) {
+/** `drafts`: Grow — the post's and the answers' drafts to copy come with their steps (Free: the steps only). */
+export function RecItem({ rec, businessId, premium, canEdit, type, drafts = false }: { rec: Rec; businessId: string; premium: boolean; canEdit: boolean; type: IdeaType | null; drafts?: boolean }) {
   const locale = useLocale();
   const x = recText(rec, locale, type);
   return (
@@ -165,7 +193,7 @@ export function RecItem({ rec, businessId, premium, canEdit, type }: { rec: Rec;
         <p className="text-[13px] font-semibold leading-snug text-ink">{x.text}</p>
         {x.sub && <p className="text-[12px] leading-snug text-ink-mute">{x.sub}</p>}
       </div>
-      {premium ? <RecPremiumButton rec={rec} businessId={businessId} canEdit={canEdit} /> : <RecSteps rec={rec} businessId={businessId} />}
+      {premium ? <RecPremiumButton rec={rec} businessId={businessId} canEdit={canEdit} /> : <RecSteps rec={rec} businessId={businessId} drafts={drafts} />}
     </li>
   );
 }

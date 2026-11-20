@@ -145,35 +145,43 @@ describe("one button: Premium does it, Grow gets the steps", () => {
   test("the rule", () => {
     expect(recButton("photos", { premium: true, canEdit: true })).toEqual({ kind: "do_it" });
     expect(recButton("photos", { premium: true, canEdit: false })).toEqual({ kind: "verb" });
-    expect(recButton("posts", { premium: true, canEdit: true })).toEqual({ kind: "verb" });
+    // Day 23E: PostScore publishes the post (and applies the answers) for Premium.
+    expect(recButton("posts", { premium: true, canEdit: true })).toEqual({ kind: "do_it" });
+    expect(recButton("answers", { premium: true, canEdit: true })).toEqual({ kind: "do_it" });
+    expect(recButton("posts", { premium: true, canEdit: false })).toEqual({ kind: "verb" });
     expect(recButton("photos", { premium: false, canEdit: true })).toEqual({ kind: "steps", premiumLine: true });
-    expect(recButton("posts", { premium: false, canEdit: false })).toEqual({ kind: "steps", premiumLine: false });
+    expect(recButton("posts", { premium: false, canEdit: false })).toEqual({ kind: "steps", premiumLine: true });
   });
-  test("Premium, writes allowed: one 'PostScore can do this for you' to the editor; no steps, no Premium line", () => {
+  test("Premium, writes allowed: one button to the editor; no steps, no Premium line — photos: 'Upload your photos' (Day 23E)", () => {
     const h = html(photos, true, true);
-    expect(h).toContain("PostScore can do this for you");
+    expect(h).toContain(">Upload your photos<");
+    expect(h).not.toContain("PostScore can do this for you");
+    expect(html(posts, true, true)).toContain("PostScore can do this for you");
+    expect(html(photos, true, true, "es")).toContain(">Suba sus fotos<");
     expect(h).toContain('href="#edit-photos"');
     expect((h.match(/data-testid="rec-button-/g) ?? []).length).toBe(1);
     expect(h).not.toContain("premium-one-click");
     expect(h).not.toContain("How to do it");
     expect(html(replies, true, true)).toContain('href="/business/b1/website-reviews#google-reviews"');
-    expect(html(photos, true, true, "es")).toContain("PostScore puede hacerlo por usted");
+    expect(html(posts, true, true, "es")).toContain("PostScore puede hacerlo por usted");
   });
   test("Premium, writes off for the place: the editor's own verb (it opens read only)", () => {
     const h = html(photos, true, false);
     expect(h).not.toContain("PostScore can do this for you");
     expect(h).toContain(">Add photos<");
   });
-  test("Premium posts: 'See post ideas' — PostScore doesn't post for you", () => {
-    expect(html(posts, true, true)).toContain(">See post ideas<");
+  test("Premium posts: no more 'See post ideas' — the post's own preview in This week", () => {
+    expect(html(posts, true, true)).not.toContain("See post ideas");
+    expect(html(posts, true, true)).toContain('href="#google-tab-this-week"');
+    expect(html(posts, true, false)).toContain(">Preview this week&#x27;s post<");
   });
-  test("Grow: 'How to do it' + the Premium line where Premium does it; never on posts", () => {
+  test("Grow: 'How to do it' + the Premium line where Premium does it — posts too (Day 23E)", () => {
     const h = html(photos, false, false);
     expect(h).toContain("How to do it");
     expect(h).toContain('data-testid="premium-one-click"');
     expect(h).toContain("Premium does this for you in one click →");
     expect(h).not.toContain("PostScore can do this for you");
-    expect(html(posts, false, false)).not.toContain("premium-one-click");
+    expect(html(posts, false, false)).toContain("premium-one-click");
     expect(html(photos, false, false, "es")).toContain("Premium lo hace por usted con un clic →");
   });
 });

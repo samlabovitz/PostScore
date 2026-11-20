@@ -152,13 +152,14 @@ export function forgetRealListing(businessId: string) {
 export async function listingExtras(admin: SupabaseClient, businessId: string): Promise<import("@/lib/googleProfileTab").ListingExtras | null> {
   const read = await readRealListingCached(admin, businessId).catch(() => null);
   if (!read?.ok) return null;
-  const { serviceNames } = await import("@/lib/gbpListingFields");
+  const { pricedServiceCount, serviceNames } = await import("@/lib/gbpListingFields");
   type Cat = { displayName?: string; serviceTypes?: Array<{ serviceTypeId?: string; displayName?: string }> };
   const cats = read.listing.location.categories as { primaryCategory?: Cat; additionalCategories?: Cat[] } | undefined;
   const types = [...(cats?.primaryCategory?.serviceTypes ?? []), ...(cats?.additionalCategories ?? []).flatMap((c) => c.serviceTypes ?? [])];
   return {
     specialPeriods: (read.listing.location.specialHours?.specialHourPeriods ?? []) as import("@/lib/gbpListingFields").SpecialHourPeriod[],
     services: serviceNames((read.listing.location.serviceItems ?? []) as import("@/lib/gbpListingFields").ServiceItem[], types),
+    pricedServices: pricedServiceCount((read.listing.location.serviceItems ?? []) as import("@/lib/gbpListingFields").ServiceItem[]),
     categories: [cats?.primaryCategory?.displayName, ...(cats?.additionalCategories ?? []).map((c) => c.displayName)].filter((x): x is string => !!x),
     verified: typeof read.listing.location.metadata?.hasVoiceOfMerchant === "boolean" ? read.listing.location.metadata.hasVoiceOfMerchant : null,
     description: read.listing.location.profile?.description ?? null,

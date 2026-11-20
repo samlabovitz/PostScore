@@ -124,6 +124,46 @@ function prettyId(id: string): string {
 
 const norm = (s: string) => s.trim().toLowerCase().replace(/\s+/g, " ");
 
+/** How many of the listing's services have a price on Google. */
+export function pricedServiceCount(items: ServiceItem[]): number {
+  return items.filter((i) => i.price && typeof i.price === "object" && Object.keys(i.price as object).length > 0).length;
+}
+
+/** Day 23E ("Answer your customers' common questions"): services with the
+ * owner's prices. A service already listed gets the price only when it
+ * has none on Google (never overwritten); a new one is added at the end as
+ * a free-form service with its price. Every other service stays untouched. */
+export function addServicesWithPrices(
+  items: ServiceItem[],
+  types: ServiceType[],
+  category: string,
+  entries: Array<{ name: string; price: { currencyCode: string; units: string; nanos?: number } | null }>,
+  languageCode = "en"
+): ServiceItem[] {
+  const names = items.map((i) => serviceNames([i], types)[0] ?? null);
+  const out = items.map((i) => ({ ...i }));
+  const fresh: Array<{ name: string; description?: string }> = [];
+  const priced = new Map<string, { currencyCode: string; units: string; nanos?: number }>();
+  for (const e of entries) {
+    const name = e.name.trim().slice(0, 140);
+    if (!name) continue;
+    const at = names.findIndex((n) => n !== null && norm(n) === norm(name));
+    if (at >= 0) {
+      if (e.price && !out[at].price) out[at].price = e.price;
+    } else {
+      fresh.push({ name });
+      if (e.price) priced.set(norm(name), e.price);
+    }
+  }
+  const added = addFreeFormServices([], types, category, fresh, languageCode).map((i) => {
+    const p = priced.get(norm(i.freeFormServiceItem?.label?.displayName ?? ""));
+    return p ? { ...i, price: p } : i;
+  });
+  // A new name can't repeat one already listed (addFreeFormServices on [] only dedupes the new ones).
+  const have = new Set(names.filter((n): n is string => !!n).map(norm));
+  return [...out, ...added.filter((i) => !have.has(norm(i.freeFormServiceItem?.label?.displayName ?? "")))];
+}
+
 /** The services with new free-form ones added at the end; every existing
  * service is kept untouched, and a name already listed is skipped. */
 export function addFreeFormServices(items: ServiceItem[], types: ServiceType[], category: string, entries: Array<{ name: string; description?: string }>, languageCode = "en"): ServiceItem[] {

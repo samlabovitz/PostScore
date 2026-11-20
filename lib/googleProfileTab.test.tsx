@@ -297,27 +297,28 @@ describe("description and photos rows", () => {
 describe("Show up for more searches (section 5)", () => {
   const full = { specialPeriods: [], services: ["Haircut"], categories: ["Hair salon"], description: "Hair salon", attributeIds: [], verified: true };
   const section = (html: string) => text(html).slice(text(html).indexOf("5 Show up for more searches"), text(html).indexOf("6 Protection & changes"));
-  test("real ideas with a pill, a reason with real numbers and one button; max 5, then Show N more", () => {
+  test("real ideas with a pill, a reason with real numbers and one button; nothing This week already lists", () => {
     const html = render({
       nicheId: "hair_salon",
       extras: full,
       messagingOn: false,
       media: { photos: { count: 4, newestAt: "2026-09-09T00:00:00Z" }, posts: { last30: 0, lastAt: null, lastType: null }, checkedAt: "2026-11-15T00:00:00Z" },
-      // "barber near me" → a second category: a 6th idea, so "Show 1 more".
+      // "barber near me" → a second category idea.
       insights: [{ ...SAMPLE_INSIGHTS[SAMPLE_INSIGHTS.length - 1], topKeywords: [{ term: "keratin tarrytown", count: 12 }, { term: "barber near me", count: 20 }] }],
     });
     const s5 = section(html);
     // Day 23C: the photos and the post are in section 1's "This week", not repeated here.
     expect(html).not.toContain('data-testid="google-tab-idea-photos"');
     expect(html).not.toContain('data-testid="google-tab-idea-posts"');
-    expect(s5).toContain("Add Keratin treatment to your services");
-    expect(s5).toContain("Reach: 12 searches/mo");
-    expect(s5).toContain("Your description is only 10 characters (“Hair salon”)");
+    // Day 23E: the short description and the missing service are "Answer your customers' common questions" in This week.
+    expect(html).toContain('data-testid="week-answers"');
+    expect(html).toContain("Answer your customers&#x27; common questions");
+    expect(s5).not.toContain("Add Keratin treatment to your services");
+    expect(s5).not.toContain("Your description is only 10 characters");
     expect(s5).not.toContain("Coming soon");
     expect(s5).not.toContain("Sample");
-    expect((html.match(/data-testid="google-tab-idea-[a-z]+"/g) ?? []).length).toBe(5);
-    expect(s5).toMatch(/Show \d more/);
-    expect(html).toContain('href="#edit-services?add=Keratin%20treatment"');
+    expect((html.match(/data-testid="google-tab-idea-[a-z]+"/g) ?? []).length).toBeGreaterThan(0);
+    expect(s5).toContain("Turn on messaging");
   });
 
   test("every check passes: Nothing to add right now", () => {

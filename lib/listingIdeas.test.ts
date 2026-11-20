@@ -62,8 +62,8 @@ describe("each rule", () => {
     expect(idea).toMatchObject({ id: "holiday", holiday: "thanksgiving", date: "2026-11-26", daysAway: 11, action: { hash: "#edit-holiday" } });
   });
 
-  test("no posts in 30 days → post ideas with a topic for the type", () => {
-    expect(listingIdeas(base({ posts: { last30: 0 } }))).toEqual([expect.objectContaining({ id: "posts", topic: "hair", action: { kind: "link", href: "/business/b1/growth#ways-to-grow" } })]);
+  test("no posts in 30 days → this week's post (Day 23E: its preview in This week)", () => {
+    expect(listingIdeas(base({ posts: { last30: 0 } }))).toEqual([expect.objectContaining({ id: "posts", topic: "hair", action: { kind: "editor", hash: "#google-tab-this-week" } })]);
   });
 
   test("photos older than 30 days (or none) → the Add photos panel", () => {

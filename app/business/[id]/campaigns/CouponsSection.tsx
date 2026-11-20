@@ -1,7 +1,11 @@
 "use client";
 
 import { CouponBuilder } from "./CouponBuilder";
-import { MoreWaysToBringPeopleIn } from "./MoreWaysToBringPeopleIn";
+import { useState } from "react";
+import { Modal } from "@/components/ui/Modal";
+import { WeekPost } from "@/components/gbp/WeekPost";
+import { isPremiumPlan } from "@/lib/plan";
+import { t, useLocale } from "@/lib/i18n";
 import { startPromo } from "@/app/actions/promos";
 import { MAX_ACTIVE_PROMOS, type PromoRow } from "@/lib/promos";
 import type { BizProfile } from "@/config/bizProfiles";
@@ -31,6 +35,8 @@ export function CouponsSection({
   /** Saved: CampaignsView adds it to All campaigns and goes there. */
   onStarted?: (promo: PromoRow) => void;
 }) {
+  const locale = useLocale();
+  const [posting, setPosting] = useState(false);
   async function handleStart(input: Parameters<typeof startPromo>[1]) {
     const result = await startPromo(businessId, input);
     if (result.status === "ok") onStarted?.(result.promo);
@@ -78,7 +84,15 @@ export function CouponsSection({
         onStart={handleStart}
       />
 
-      <MoreWaysToBringPeopleIn promos={promos} businessName={businessName} />
+      {/* Day 23E: the running offer goes on Google through the same post flow as the Growth page (a Google Offer post on Premium). */}
+      {promos[0] && (
+        <button type="button" onClick={() => setPosting(true)} className="w-fit text-[13px] font-semibold text-ink underline decoration-brass underline-offset-2" data-testid="post-offer-link">
+          {t(locale, "dashboard.googleTab.w.offerLink")}
+        </button>
+      )}
+      <Modal open={posting} onClose={() => setPosting(false)} title={t(locale, "dashboard.googleTab.w.offerModalTitle")}>
+        {posting && promos[0] && <WeekPost businessId={businessId} premium={isPremiumPlan(plan)} promoId={promos[0].id} />}
+      </Modal>
     </div>
   );
 }

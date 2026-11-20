@@ -95,9 +95,11 @@ import { actions, addMonths, audience, type InsightsState, callsByDays, isSmallM
 import type { GbpReplyCounts } from "@/lib/gbpReviewReplies";
 import { cn } from "@/lib/utils";
 import { change, chartMarkers, DOES_FOR_YOU, leftMoney, recommendations, revenueMath, SAMPLE_SINCE, SHARE_PRESETS, shareChoice, parseSharePercent, sharePercent, sinceActions, sinceStatus, localToday, within, type ActionEvent, type Rec, type RecInputs, type VisitShare, type WindowTotals } from "@/lib/googleRecommendations";
-import { ideaPlanLine, RecItem, shortDate } from "@/components/gbp/GoogleRecs";
+import { ideaPlanLine, shortDate } from "@/components/gbp/GoogleRecs";
 import { loadMonthSoFar, loadSinceNumbers, saveVisitShare, type MonthSoFarResult, type SinceResult } from "@/app/actions/googleSince";
 import { saveAverageVisitValue } from "@/app/actions/averageVisit";
+import { ThisWeekList, thisWeekKinds } from "@/components/gbp/ThisWeekList";
+import { answersPlan } from "@/lib/googleAnswers";
 
 const K = (key: string) => `dashboard.googleTab.${key}` as MessageKey;
 
@@ -1096,22 +1098,11 @@ function SoFarLine({ businessId, last }: { businessId: string; last: string }) {
   );
 }
 
-/** Under the levers: the levers' to-dos in exact numbers (replies, photos, posts), each with one button. */
+/** Under the levers: the levers' to-dos in exact numbers (replies, photos,
+ * the post) and the answers, with Approve all (components/gbp/ThisWeekList.tsx). */
 function ThisWeek({ props }: { props: GoogleProfileTabProps }) {
-  const locale = useLocale();
   const { recs, type } = useTabIdeas(props);
-  const list = thisWeekRecs(recs);
-  if (list.length === 0) return null;
-  return (
-    <div className="mt-2" data-testid="google-tab-this-week">
-      <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-brass">{t(locale, K("rec.thisWeek"))}</p>
-      <ul className="mt-0.5">
-        {list.map((rec) => (
-          <RecItem key={rec.kind} rec={rec} businessId={props.businessId} premium canEdit={props.canEditGoogle === true} type={type} />
-        ))}
-      </ul>
-    </div>
-  );
+  return <ThisWeekList businessId={props.businessId} recs={thisWeekRecs(recs)} type={type} canEdit={props.canEditGoogle === true} practice={props.practice} />;
 }
 
 /** "Nov 3: replied to 10 reviews". */
@@ -1649,7 +1640,7 @@ function IdeaCard({ idea, n, rec = null, type = null, canEdit = false }: { idea:
   const locale = useLocale();
   const base = ideaText(idea, locale);
   // Day 23C: Premium's one button says PostScore does it, when it can write for this place.
-  const x = rec && canEdit && DOES_FOR_YOU.includes(rec.kind) ? { ...base, button: t(locale, "dashboard.breakdown.action.doItForYou") } : base;
+  const x = rec && canEdit && DOES_FOR_YOU.includes(rec.kind) ? { ...base, button: t(locale, rec.kind === "photos" ? "dashboard.googleTab.w.photos.upload" : "dashboard.breakdown.action.doItForYou") } : base;
   const a = idea.action;
   const cls = "inline-flex h-[30px] items-center whitespace-nowrap rounded-lg border border-ink bg-ink px-3 text-[12.5px] font-semibold text-paper";
   return (
@@ -1715,13 +1706,15 @@ function useTabIdeas(props: GoogleProfileTabProps): { ideas: Idea[]; recs: Rec[]
     description: extras && extras.description !== undefined ? extras.description : undefined,
     missingDetails: details?.missing ?? [],
     missingServices: services?.missing.map((m) => m.service) ?? [],
+    // Day 23E: what Google needs to answer customers' questions (unread parts are skipped).
+    answers: extras ? answersPlan({ description: extras.description, services: extras.services, pricedServices: extras.pricedServices, details: extras.details ?? null }) : null,
   };
   return { ideas, recs: recommendations(input), type };
 }
 
-/** Section 1's "This week": the levers' to-dos (replies, photos, the post). */
+/** Section 1's "This week": the levers' to-dos (replies, photos, the post) and the answers. */
 export function thisWeekRecs(recs: Rec[]): Rec[] {
-  return recs.filter((r) => r.kind === "replies" || r.kind === "photos" || r.kind === "posts");
+  return thisWeekKinds(recs);
 }
 
 /** Section 5's idea → its Day 23C recommendation (the "how many / when" line). */
@@ -1736,7 +1729,9 @@ function NextSection(props: GoogleProfileTabProps & { sample: boolean }) {
   const done = doneSinceScan(props.saved?.made ?? [], props.lastScanAt);
   // Already in section 1's "This week" (photos, the post): not repeated here.
   const thisWeek = new Set(thisWeekRecs(recs).map((r) => r.kind));
-  const open = ideas.filter((i) => !done.includes(i.id) && !(IDEA_REC[i.id] && thisWeek.has(IDEA_REC[i.id]!)));
+  // The answers item covers the description, customer details and services.
+  const answered = (id: Idea["id"]) => thisWeek.has("answers") && (id === "description" || id === "details" || id === "services");
+  const open = ideas.filter((i) => !done.includes(i.id) && !(IDEA_REC[i.id] && thisWeek.has(IDEA_REC[i.id]!)) && !answered(i.id));
   const shown = more ? open : open.slice(0, MAX_IDEAS);
   // Practice mode with no real numbers yet: the labelled samples.
   const sample = props.sample && !extras && open.length === 0;

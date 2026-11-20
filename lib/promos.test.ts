@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { buildFaqDraft, buildGooglePostDraft, buildShareCaption, redemptionLabel } from "./promos";
+import { buildShareCaption, redemptionLabel } from "./promos";
 
 describe("redemptionLabel", () => {
   test("is honest about zero rather than hiding it", () => {
@@ -46,46 +46,5 @@ describe("buildShareCaption", () => {
       expiryLabel: "Expires Dec 31, 2026",
     });
     expect(withoutPhone).not.toContain("Call");
-  });
-});
-
-describe("buildGooglePostDraft", () => {
-  test("is draft text, not a claim that it was posted", () => {
-    const draft = buildGooglePostDraft({
-      businessName: "Rosa's Cafe",
-      offer: "10% off your next visit",
-      code: "ABCD-1234",
-      expiryLabel: "Expires Dec 31, 2026",
-    });
-    expect(draft).toContain("Rosa's Cafe");
-    expect(draft).toContain("ABCD-1234");
-    expect(draft).toContain("Expires Dec 31, 2026");
-  });
-});
-
-describe("buildFaqDraft", () => {
-  test("includes offer, code, and expiry in Q&A form", () => {
-    const draft = buildFaqDraft({
-      businessName: "Rosa's Cafe",
-      offer: "10% off your next visit",
-      code: "ABCD-1234",
-      expiryLabel: "Expires Dec 31, 2026",
-    });
-    expect(draft).toContain("Q:");
-    expect(draft).toContain("ABCD-1234");
-    expect(draft).toContain("Expires Dec 31, 2026");
-    expect(draft).not.toContain("Are there any restrictions?");
-  });
-
-  test("adds a restrictions Q&A only when terms are given", () => {
-    const draft = buildFaqDraft({
-      businessName: "Rosa's Cafe",
-      offer: "10% off",
-      code: "ABCD-1234",
-      expiryLabel: "Expires Dec 31, 2026",
-      terms: "One per customer.",
-    });
-    expect(draft).toContain("Are there any restrictions?");
-    expect(draft).toContain("One per customer.");
   });
 });

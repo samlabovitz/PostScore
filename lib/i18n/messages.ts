@@ -2086,6 +2086,175 @@ export type MessageKey =
   | "dashboard.googleTab.ev.campaign"
   | "dashboard.googleTab.ev.campaignOne"
   | "dashboard.googleTab.ev.line"
+  | "dashboard.googleTab.w.photos.upload"
+  | "dashboard.googleTab.w.tomorrow.posted"
+  | "dashboard.googleTab.w.tomorrow.cap"
+  | "dashboard.googleTab.w.failed.badge"
+  | "dashboard.googleTab.w.failed.row"
+  | "dashboard.googleTab.w.retry"
+  | "dashboard.googleTab.w.failed.offer_ended"
+  | "dashboard.googleTab.w.replies.failedOne"
+  | "dashboard.googleTab.w.replies.failedMany"
+  | "dashboard.googleTab.w.approveAll.failedRows"
+  | "dashboard.googleTab.w.spelling.didYouMean"
+  | "dashboard.googleTab.w.spelling.fix"
+  | "dashboard.googleTab.w.spelling.keep"
+  | "dashboard.googleTab.w.spelling.blocked"
+  | "dashboard.googleTab.w.post.offer.premium"
+  | "dashboard.googleTab.w.post.offer.grow"
+  | "dashboard.googleTab.w.post.facts.open.hair"
+  | "dashboard.googleTab.w.post.facts.open.home"
+  | "dashboard.googleTab.w.post.facts.open.restaurant"
+  | "dashboard.googleTab.w.post.facts.open.art"
+  | "dashboard.googleTab.w.post.facts.open.default"
+  | "dashboard.googleTab.w.post.facts.note"
+  | "dashboard.googleTab.w.post.facts.placeholder.hair"
+  | "dashboard.googleTab.w.post.facts.placeholder.home"
+  | "dashboard.googleTab.w.post.facts.placeholder.restaurant"
+  | "dashboard.googleTab.w.post.facts.placeholder.art"
+  | "dashboard.googleTab.w.post.facts.placeholder.default"
+  | "dashboard.googleTab.w.post.facts.write"
+  | "dashboard.googleTab.w.post.problem.invented_story"
+  | "dashboard.googleTab.w.ans.answerToInclude"
+  | "dashboard.googleTab.w.ans.answerToIncludeOnly"
+  | "dashboard.googleTab.w.more.getDraft"
+  | "dashboard.googleTab.w.more.post.title"
+  | "dashboard.googleTab.w.more.post.body.premium"
+  | "dashboard.googleTab.w.more.post.body.grow"
+  | "dashboard.googleTab.w.more.answers.title"
+  | "dashboard.googleTab.w.more.answers.body.premium"
+  | "dashboard.googleTab.w.more.answers.body.grow"
+  | "dashboard.googleTab.w.offerLink"
+  | "dashboard.googleTab.w.offerModalTitle"
+  | "dashboard.googleTab.rec.answers"
+  | "dashboard.googleTab.rec.answers.sub"
+  | "dashboard.googleTab.rec.answers.part.description"
+  | "dashboard.googleTab.rec.answers.part.services.none"
+  | "dashboard.googleTab.rec.answers.part.services.no_prices"
+  | "dashboard.googleTab.rec.answers.part.parking"
+  | "dashboard.googleTab.rec.answers.part.accessibility"
+  | "dashboard.googleTab.rec.answers.part.payment"
+  | "dashboard.googleTab.rec.steps.answers.1"
+  | "dashboard.googleTab.rec.steps.answers.2"
+  | "dashboard.googleTab.rec.steps.answers.3"
+  | "dashboard.googleTab.ev.posts"
+  | "dashboard.googleTab.ev.postsOne"
+  | "dashboard.googleTab.ev.answers"
+  | "dashboard.googleTab.ev.answersOne"
+  | "dashboard.googleTab.w.post.open"
+  | "dashboard.googleTab.w.ans.open"
+  | "dashboard.googleTab.w.allDone"
+  | "dashboard.googleTab.w.stillNeedsYou"
+  | "dashboard.googleTab.w.approveAll"
+  | "dashboard.googleTab.w.approveAll.sending"
+  | "dashboard.googleTab.w.approveAll.note"
+  | "dashboard.googleTab.w.approveAll.sent"
+  | "dashboard.googleTab.w.approveAll.failed"
+  | "dashboard.googleTab.w.practice"
+  | "dashboard.googleTab.w.readOnly"
+  | "dashboard.googleTab.w.preparing"
+  | "dashboard.googleTab.w.ready"
+  | "dashboard.googleTab.w.doneMark"
+  | "dashboard.googleTab.w.needsYou"
+  | "dashboard.googleTab.w.time.min"
+  | "dashboard.googleTab.w.preview"
+  | "dashboard.googleTab.w.hide"
+  | "dashboard.googleTab.w.include"
+  | "dashboard.googleTab.w.sending"
+  | "dashboard.googleTab.w.grow.premiumAll"
+  | "dashboard.googleTab.w.failed.generic"
+  | "dashboard.googleTab.w.failed.wait_minute"
+  | "dashboard.googleTab.w.failed.daily_cap"
+  | "dashboard.googleTab.w.failed.reconnect"
+  | "dashboard.googleTab.w.failed.photo_gone"
+  | "dashboard.googleTab.w.failed.rejected"
+  | "dashboard.googleTab.w.post.item.day"
+  | "dashboard.googleTab.w.post.item.week"
+  | "dashboard.googleTab.w.post.loading"
+  | "dashboard.googleTab.w.post.failed"
+  | "dashboard.googleTab.w.post.fallback"
+  | "dashboard.googleTab.w.post.textLabel"
+  | "dashboard.googleTab.w.post.count"
+  | "dashboard.googleTab.w.post.photo"
+  | "dashboard.googleTab.w.post.photo.none"
+  | "dashboard.googleTab.w.post.photo.tip"
+  | "dashboard.googleTab.w.post.button"
+  | "dashboard.googleTab.w.post.cta.BOOK"
+  | "dashboard.googleTab.w.post.cta.LEARN_MORE"
+  | "dashboard.googleTab.w.post.cta.CALL"
+  | "dashboard.googleTab.w.post.cta.NONE"
+  | "dashboard.googleTab.w.post.ctaNote.CALL"
+  | "dashboard.googleTab.w.post.another"
+  | "dashboard.googleTab.w.post.anotherLeft"
+  | "dashboard.googleTab.w.post.writing"
+  | "dashboard.googleTab.w.post.limit"
+  | "dashboard.googleTab.w.post.publish"
+  | "dashboard.googleTab.w.post.publishing"
+  | "dashboard.googleTab.w.post.waiting"
+  | "dashboard.googleTab.w.post.live"
+  | "dashboard.googleTab.w.post.view"
+  | "dashboard.googleTab.w.post.rejected"
+  | "dashboard.googleTab.w.post.remove"
+  | "dashboard.googleTab.w.post.removeUntil"
+  | "dashboard.googleTab.w.post.removed"
+  | "dashboard.googleTab.w.post.postedToday"
+  | "dashboard.googleTab.w.post.problemShort"
+  | "dashboard.googleTab.w.post.problem.too_long"
+  | "dashboard.googleTab.w.post.problem.phone"
+  | "dashboard.googleTab.w.post.problem.link"
+  | "dashboard.googleTab.w.post.problem.caps"
+  | "dashboard.googleTab.w.post.problem.incentive"
+  | "dashboard.googleTab.w.post.grow.note"
+  | "dashboard.googleTab.w.replies.loading"
+  | "dashboard.googleTab.w.replies.failed"
+  | "dashboard.googleTab.w.replies.none"
+  | "dashboard.googleTab.w.replies.anonymous"
+  | "dashboard.googleTab.w.replies.noText"
+  | "dashboard.googleTab.w.replies.noDraft"
+  | "dashboard.googleTab.w.replies.postOne"
+  | "dashboard.googleTab.w.replies.sent"
+  | "dashboard.googleTab.w.replies.more"
+  | "dashboard.googleTab.w.ans.why"
+  | "dashboard.googleTab.w.ans.loading"
+  | "dashboard.googleTab.w.ans.failed"
+  | "dashboard.googleTab.w.ans.none"
+  | "dashboard.googleTab.w.ans.desc.title"
+  | "dashboard.googleTab.w.ans.desc.now"
+  | "dashboard.googleTab.w.ans.desc.count"
+  | "dashboard.googleTab.w.ans.desc.noDraft"
+  | "dashboard.googleTab.w.ans.services.title"
+  | "dashboard.googleTab.w.ans.services.note"
+  | "dashboard.googleTab.w.ans.services.new"
+  | "dashboard.googleTab.w.ans.services.onGoogle"
+  | "dashboard.googleTab.w.ans.services.include"
+  | "dashboard.googleTab.w.ans.services.name"
+  | "dashboard.googleTab.w.ans.services.add"
+  | "dashboard.googleTab.w.ans.price"
+  | "dashboard.googleTab.w.ans.details.title"
+  | "dashboard.googleTab.w.ans.details.needsYou"
+  | "dashboard.googleTab.w.ans.details.notOffered"
+  | "dashboard.googleTab.w.ans.details.part.parking"
+  | "dashboard.googleTab.w.ans.details.part.accessibility"
+  | "dashboard.googleTab.w.ans.details.part.payment"
+  | "dashboard.googleTab.w.ans.yes"
+  | "dashboard.googleTab.w.ans.no"
+  | "dashboard.googleTab.w.ans.skip"
+  | "dashboard.googleTab.w.ans.part.description"
+  | "dashboard.googleTab.w.ans.part.services"
+  | "dashboard.googleTab.w.ans.part.details"
+  | "dashboard.googleTab.w.ans.apply"
+  | "dashboard.googleTab.w.ans.applying"
+  | "dashboard.googleTab.w.ans.applied"
+  | "dashboard.googleTab.w.ans.pending"
+  | "dashboard.googleTab.w.ans.noChange"
+  | "dashboard.googleTab.w.ans.undo"
+  | "dashboard.googleTab.w.ans.undone"
+  | "dashboard.googleTab.w.ans.skipped"
+  | "dashboard.googleTab.w.ans.gtk.open"
+  | "dashboard.googleTab.w.ans.faq.open"
+  | "dashboard.googleTab.w.ans.faq.note"
+  | "dashboard.googleTab.w.ans.faq.none"
+  | "dashboard.googleTab.w.ans.grow.note"
   | "dashboard.googleTab.rate.markers"
   | "dashboard.googleTab.notConnected.since"
   | "dashboard.googleTab.worth.howOpen"
@@ -3016,15 +3185,6 @@ export type MessageKey =
   | "dashboard.growth.howCouponsWork.modalStaffBody"
   | "dashboard.growth.howCouponsWork.modalHonestNote"
   | "dashboard.growth.moreWays.heading"
-  | "dashboard.growth.moreWays.googlePostTitle"
-  | "dashboard.growth.moreWays.googlePostBody"
-  | "dashboard.growth.moreWays.faqTitle"
-  | "dashboard.growth.moreWays.faqBody"
-  | "dashboard.growth.moreWays.startCouponFirst"
-  | "dashboard.growth.moreWays.generateDraft"
-  | "dashboard.growth.moreWays.modalTitleGooglePost"
-  | "dashboard.growth.moreWays.modalTitleFaq"
-  | "dashboard.growth.moreWays.modalIntro"
   | "dashboard.growth.referral.referralCodeLabel"
   | "dashboard.growth.referral.eyebrow"
   | "dashboard.growth.referral.heading"
@@ -8129,6 +8289,175 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.googleTab.ev.campaign": "started {count} coupons or referral cards",
     "dashboard.googleTab.ev.campaignOne": "started 1 coupon or referral card",
     "dashboard.googleTab.ev.line": "{date}: {what}",
+    "dashboard.googleTab.w.photos.upload": "Upload your photos",
+    "dashboard.googleTab.w.tomorrow.posted": "Posted today · next post tomorrow",
+    "dashboard.googleTab.w.tomorrow.cap": "Today's limit for Google changes is used · tomorrow",
+    "dashboard.googleTab.w.failed.badge": "Didn't go through",
+    "dashboard.googleTab.w.failed.row": "Didn't go through: {reason}",
+    "dashboard.googleTab.w.retry": "Try again",
+    "dashboard.googleTab.w.failed.offer_ended": "This coupon has already ended. Start a new one, or post an update instead.",
+    "dashboard.googleTab.w.replies.failedOne": "Google didn't accept 1 reply.",
+    "dashboard.googleTab.w.replies.failedMany": "Google didn't accept {count} replies.",
+    "dashboard.googleTab.w.approveAll.failedRows": "{count} didn't go through (see below)",
+    "dashboard.googleTab.w.spelling.didYouMean": "“{word}”: did you mean “{suggestion}”?",
+    "dashboard.googleTab.w.spelling.fix": "Use “{suggestion}”",
+    "dashboard.googleTab.w.spelling.keep": "Keep “{word}”",
+    "dashboard.googleTab.w.spelling.blocked": "Check the spelling above first.",
+    "dashboard.googleTab.w.post.offer.premium": "About your coupon “{offer}” (code {code}): it goes on Google as an offer, with its code and dates.",
+    "dashboard.googleTab.w.post.offer.grow": "About your coupon “{offer}” (code {code}). On Google, add it as an offer.",
+    "dashboard.googleTab.w.post.facts.open.hair": "Have a real before-and-after? Tell PostScore 1–2 facts →",
+    "dashboard.googleTab.w.post.facts.open.home": "Have a recent job to show? Tell PostScore 1–2 facts →",
+    "dashboard.googleTab.w.post.facts.open.restaurant": "Have a special this week? Tell PostScore what it is →",
+    "dashboard.googleTab.w.post.facts.open.art": "Have a class coming up? Tell PostScore the details →",
+    "dashboard.googleTab.w.post.facts.open.default": "Want it about something real? Tell PostScore 1–2 facts →",
+    "dashboard.googleTab.w.post.facts.note": "PostScore writes only from what you type here and adds nothing else.",
+    "dashboard.googleTab.w.post.facts.placeholder.hair": "e.g. Balayage with soft highlights, done this Tuesday",
+    "dashboard.googleTab.w.post.facts.placeholder.home": "e.g. New kitchen backsplash installed in Tarrytown this week",
+    "dashboard.googleTab.w.post.facts.placeholder.restaurant": "e.g. Butternut squash soup, $9, through Sunday",
+    "dashboard.googleTab.w.post.facts.placeholder.art": "e.g. Watercolor class Saturday Dec 6, 10 am, $40",
+    "dashboard.googleTab.w.post.facts.placeholder.default": "e.g. Open on Sundays starting Dec 1",
+    "dashboard.googleTab.w.post.facts.write": "Write from my facts",
+    "dashboard.googleTab.w.post.problem.invented_story": "This tells a specific story PostScore can't know. Give it the facts, or edit it.",
+    "dashboard.googleTab.w.ans.answerToInclude": "Answer {count} questions above to include customer details — or apply the rest now.",
+    "dashboard.googleTab.w.ans.answerToIncludeOnly": "Answer {count} questions above to include customer details.",
+    "dashboard.googleTab.w.more.getDraft": "Get this week's draft",
+    "dashboard.googleTab.w.more.post.title": "This week's Google post",
+    "dashboard.googleTab.w.more.post.body.premium": "PostScore writes it from your business, or about your running coupon. Edit it and publish in one click.",
+    "dashboard.googleTab.w.more.post.body.grow": "PostScore writes it from your business, or about your running coupon. Copy it and post it yourself.",
+    "dashboard.googleTab.w.more.answers.title": "Answer your customers' common questions",
+    "dashboard.googleTab.w.more.answers.body.premium": "Fill in what Google uses to answer customers (description, services with prices, parking, payments) in one click, plus an FAQ for your website.",
+    "dashboard.googleTab.w.more.answers.body.grow": "Your description, services with prices and an FAQ for your website, ready to copy.",
+    "dashboard.googleTab.w.offerLink": "Post this offer on Google →",
+    "dashboard.googleTab.w.offerModalTitle": "Post this offer on Google",
+    "dashboard.googleTab.rec.answers": "Answer your customers' common questions (about {minutes} min)",
+    "dashboard.googleTab.rec.answers.sub": "Google answers many customers' questions from your listing's own details. Missing: {list}.",
+    "dashboard.googleTab.rec.answers.part.description": "a description of 250+ characters",
+    "dashboard.googleTab.rec.answers.part.services.none": "your services with prices",
+    "dashboard.googleTab.rec.answers.part.services.no_prices": "prices for your services",
+    "dashboard.googleTab.rec.answers.part.parking": "parking",
+    "dashboard.googleTab.rec.answers.part.accessibility": "accessibility",
+    "dashboard.googleTab.rec.answers.part.payment": "payment methods",
+    "dashboard.googleTab.rec.steps.answers.1": "Open your Business Profile and choose Edit profile.",
+    "dashboard.googleTab.rec.steps.answers.2": "Add a description of 250+ characters, your services with prices, and your parking, accessibility and payment details.",
+    "dashboard.googleTab.rec.steps.answers.3": "Save. Google uses these details to answer customers' questions about your business.",
+    "dashboard.googleTab.ev.posts": "published {count} Google posts",
+    "dashboard.googleTab.ev.postsOne": "published a Google post",
+    "dashboard.googleTab.ev.answers": "answered customers' questions on your listing",
+    "dashboard.googleTab.ev.answersOne": "answered customers' questions on your listing",
+    "dashboard.googleTab.w.post.open": "Preview this week's post",
+    "dashboard.googleTab.w.ans.open": "Preview the answers",
+    "dashboard.googleTab.w.allDone": "All done this week ✓",
+    "dashboard.googleTab.w.stillNeedsYou": "Still needs you · tomorrow",
+    "dashboard.googleTab.w.approveAll": "Approve all ({count})",
+    "dashboard.googleTab.w.approveAll.sending": "Sending {done} of {count}…",
+    "dashboard.googleTab.w.approveAll.note": "Nothing goes to Google until you approve. Open any item to read or edit it first.",
+    "dashboard.googleTab.w.approveAll.sent": "{count} sent to Google",
+    "dashboard.googleTab.w.approveAll.failed": "{count} didn't go through",
+    "dashboard.googleTab.w.practice": "Practice mode: Approve all sends to practice Google only, never to your real listing.",
+    "dashboard.googleTab.w.readOnly": "Read only for now: PostScore can't change this listing on Google yet.",
+    "dashboard.googleTab.w.preparing": "Getting drafts ready…",
+    "dashboard.googleTab.w.ready": "Ready",
+    "dashboard.googleTab.w.doneMark": "Done ✓",
+    "dashboard.googleTab.w.needsYou": "Needs you · {time}",
+    "dashboard.googleTab.w.time.min": "{count} min",
+    "dashboard.googleTab.w.preview": "Preview / edit",
+    "dashboard.googleTab.w.hide": "Hide",
+    "dashboard.googleTab.w.include": "Include in Approve all",
+    "dashboard.googleTab.w.sending": "Sending…",
+    "dashboard.googleTab.w.grow.premiumAll": "Premium approves all of these in one click →",
+    "dashboard.googleTab.w.failed.generic": "Couldn't send this to Google right now. Try again in a moment.",
+    "dashboard.googleTab.w.failed.wait_minute": "Google changes are limited to one approval a minute. Try again in a minute.",
+    "dashboard.googleTab.w.failed.daily_cap": "You've reached today's limit for Google changes. Try again tomorrow.",
+    "dashboard.googleTab.w.failed.reconnect": "Google asked to reconnect. Reconnect Google, then try again.",
+    "dashboard.googleTab.w.failed.photo_gone": "That photo isn't on your listing anymore. Choose another one or no photo.",
+    "dashboard.googleTab.w.failed.rejected": "Google didn't accept this. Check the text and try again.",
+    "dashboard.googleTab.w.post.item.day": "Post on {day} ({date}), the day before your busiest call days ({busiest})",
+    "dashboard.googleTab.w.post.item.week": "Post 1 update on Google this week",
+    "dashboard.googleTab.w.post.loading": "Writing this week's post…",
+    "dashboard.googleTab.w.post.failed": "Couldn't write the post right now.",
+    "dashboard.googleTab.w.post.fallback": "PostAI couldn't write one right now, so this is a simple starter draft. Edit it to make it yours.",
+    "dashboard.googleTab.w.post.textLabel": "Post text",
+    "dashboard.googleTab.w.post.count": "{count} / 1,500 characters",
+    "dashboard.googleTab.w.post.photo": "Photo (from your listing)",
+    "dashboard.googleTab.w.post.photo.none": "No photo",
+    "dashboard.googleTab.w.post.photo.tip": "Posts with a photo get more views.",
+    "dashboard.googleTab.w.post.button": "Button",
+    "dashboard.googleTab.w.post.cta.BOOK": "Book",
+    "dashboard.googleTab.w.post.cta.LEARN_MORE": "Learn more (your website)",
+    "dashboard.googleTab.w.post.cta.CALL": "Call",
+    "dashboard.googleTab.w.post.cta.NONE": "No button",
+    "dashboard.googleTab.w.post.ctaNote.CALL": "Uses your listing's phone number.",
+    "dashboard.googleTab.w.post.another": "Write another",
+    "dashboard.googleTab.w.post.anotherLeft": "Write another ({count} left this week)",
+    "dashboard.googleTab.w.post.writing": "Writing…",
+    "dashboard.googleTab.w.post.limit": "No more new drafts this week. You can still edit this one.",
+    "dashboard.googleTab.w.post.publish": "Publish to Google",
+    "dashboard.googleTab.w.post.publishing": "Publishing…",
+    "dashboard.googleTab.w.post.waiting": "Waiting for Google. Posts usually go live within a few minutes.",
+    "dashboard.googleTab.w.post.live": "Live on Google ✓",
+    "dashboard.googleTab.w.post.view": "View post ↗",
+    "dashboard.googleTab.w.post.rejected": "Google didn't accept this post. Edit it and try again.",
+    "dashboard.googleTab.w.post.remove": "Remove from Google",
+    "dashboard.googleTab.w.post.removeUntil": "You can remove it until {date}.",
+    "dashboard.googleTab.w.post.removed": "Removed from Google.",
+    "dashboard.googleTab.w.post.postedToday": "You've already posted on Google today from PostScore. Try again tomorrow.",
+    "dashboard.googleTab.w.post.problemShort": "The post breaks one of Google's rules. Open it to fix it.",
+    "dashboard.googleTab.w.post.problem.too_long": "Keep it under 1,500 characters.",
+    "dashboard.googleTab.w.post.problem.phone": "Take out the phone number: Google doesn't allow them in posts. The Call button uses your listing's number.",
+    "dashboard.googleTab.w.post.problem.link": "Take out the link: it goes in the button instead.",
+    "dashboard.googleTab.w.post.problem.caps": "Avoid ALL CAPS and \"!!!\": Google may not accept the post.",
+    "dashboard.googleTab.w.post.problem.incentive": "Don't offer anything in exchange for reviews: Google forbids it.",
+    "dashboard.googleTab.w.post.grow.note": "Copy this, then add it on Google as an update:",
+    "dashboard.googleTab.w.replies.loading": "Writing reply drafts…",
+    "dashboard.googleTab.w.replies.failed": "Couldn't read your reviews from Google right now.",
+    "dashboard.googleTab.w.replies.none": "No unanswered reviews right now.",
+    "dashboard.googleTab.w.replies.anonymous": "A Google user",
+    "dashboard.googleTab.w.replies.noText": "(Star rating only, no words)",
+    "dashboard.googleTab.w.replies.noDraft": "PostScore couldn't draft this one. Reply to it in the reviews inbox.",
+    "dashboard.googleTab.w.replies.postOne": "Post this reply",
+    "dashboard.googleTab.w.replies.sent": "Posted ✓",
+    "dashboard.googleTab.w.replies.more": "{count} more in the reviews inbox",
+    "dashboard.googleTab.w.ans.why": "Google now answers many customers' questions from your listing's own details. Fill in what's missing:",
+    "dashboard.googleTab.w.ans.loading": "Reading your listing…",
+    "dashboard.googleTab.w.ans.failed": "Couldn't load from Google right now.",
+    "dashboard.googleTab.w.ans.none": "Your listing already has what Google needs to answer customers' questions.",
+    "dashboard.googleTab.w.ans.desc.title": "Description",
+    "dashboard.googleTab.w.ans.desc.now": "On Google now: {count} characters",
+    "dashboard.googleTab.w.ans.desc.count": "{count} characters (aim for 250+)",
+    "dashboard.googleTab.w.ans.desc.noDraft": "PostScore couldn't draft one right now. Write a few sentences about what you do and the area you serve.",
+    "dashboard.googleTab.w.ans.services.title": "Services and prices",
+    "dashboard.googleTab.w.ans.services.note": "Prices come only from your own prices in PostScore, or what you type here. Leave a price empty to skip it.",
+    "dashboard.googleTab.w.ans.services.new": "New",
+    "dashboard.googleTab.w.ans.services.onGoogle": "On Google: {price}",
+    "dashboard.googleTab.w.ans.services.include": "Add this service",
+    "dashboard.googleTab.w.ans.services.name": "Service name",
+    "dashboard.googleTab.w.ans.services.add": "Add a service",
+    "dashboard.googleTab.w.ans.price": "Price (optional)",
+    "dashboard.googleTab.w.ans.details.title": "Customer details",
+    "dashboard.googleTab.w.ans.details.needsYou": "Only you know these: choose Yes or No, or skip.",
+    "dashboard.googleTab.w.ans.details.notOffered": "Google doesn't offer this for your category.",
+    "dashboard.googleTab.w.ans.details.part.parking": "Parking",
+    "dashboard.googleTab.w.ans.details.part.accessibility": "Accessibility",
+    "dashboard.googleTab.w.ans.details.part.payment": "Payments",
+    "dashboard.googleTab.w.ans.yes": "Yes",
+    "dashboard.googleTab.w.ans.no": "No",
+    "dashboard.googleTab.w.ans.skip": "Skip",
+    "dashboard.googleTab.w.ans.part.description": "description",
+    "dashboard.googleTab.w.ans.part.services": "services and prices",
+    "dashboard.googleTab.w.ans.part.details": "customer details",
+    "dashboard.googleTab.w.ans.apply": "Apply to Google",
+    "dashboard.googleTab.w.ans.applying": "Applying…",
+    "dashboard.googleTab.w.ans.applied": "On Google ✓",
+    "dashboard.googleTab.w.ans.pending": "Sent. Google is reviewing it.",
+    "dashboard.googleTab.w.ans.noChange": "Already on Google ✓",
+    "dashboard.googleTab.w.ans.undo": "Undo",
+    "dashboard.googleTab.w.ans.undone": "Undone.",
+    "dashboard.googleTab.w.ans.skipped": "Not included yet: {list}",
+    "dashboard.googleTab.w.ans.gtk.open": "Optional: a \"Good to know\" Google post",
+    "dashboard.googleTab.w.ans.faq.open": "FAQ for your website",
+    "dashboard.googleTab.w.ans.faq.note": "Copy this into a page on your own website. It includes FAQ markup (schema.org) so search engines can read it. PostScore never posts it anywhere.",
+    "dashboard.googleTab.w.ans.faq.none": "Add your answers first, then the FAQ fills in.",
+    "dashboard.googleTab.w.ans.grow.note": "Copy these into your Business Profile:",
     "dashboard.googleTab.rate.markers": "What you did",
     "dashboard.googleTab.notConnected.since": "What happened to your calls, clicks and directions after each thing you did",
     "dashboard.googleTab.worth.howOpen": "How we calculated this",
@@ -8440,7 +8769,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.googleTab.ideas.posts.title": "Post this week",
     "dashboard.googleTab.ideas.posts.pill": "Gives searchers a reason to act now",
     "dashboard.googleTab.ideas.posts.reason": "No Google posts in the last 30 days. Try {topic}.",
-    "dashboard.googleTab.ideas.posts.button": "See post ideas",
+    "dashboard.googleTab.ideas.posts.button": "Preview this week's post",
     "dashboard.googleTab.ideas.posts.topic.hair": "a before-and-after of a recent color",
     "dashboard.googleTab.ideas.posts.topic.barber": "a fresh fade with its price",
     "dashboard.googleTab.ideas.posts.topic.nails": "this month's nail art",
@@ -8951,7 +9280,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "content.actionPlan.completeness.customer_details.fix": "On Google: Google Business Profile → Edit profile → {path}. Add only what's true.",
     "content.actionPlan.connectGoogle.title": "Connect Google",
     "content.actionPlan.connectGoogle.why": "Unlocks your reply rate (\"Replying to reviews\") and an exact count of your recent reviews — Google otherwise shows PostScore only a few.",
-    "content.actionPlan.connectGoogle.fix": "Sign in with the Google account that manages your Business Profile. PostScore only reads review counts — it never posts or changes anything.",
+    "content.actionPlan.connectGoogle.fix": "Sign in with the Google account that manages your Business Profile. PostScore never posts or changes anything on Google unless you approve it.",
     "content.actionPlan.connectGoogle.link": "Connect Google",
     "dashboard.website.partlyCheckedPill": "Partly checked",
     "dashboard.website.blockedNote": "Your website's security blocks automated checks, so we could only check part of it. Ask your web person to allow PostScoreBot to see your full score.",
@@ -9312,7 +9641,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.growth.howCouponsWork.modalBuildBody": "Write your offer (or start from a quick pick), set an expiry, and design a printable coupon with your code — and, if you want, a QR to your Google listing, review link or website.",
     "dashboard.growth.howCouponsWork.modalShareLabel": "Print or share it.",
     "dashboard.growth.howCouponsWork.modalShareBody":
-      "Download it and post it yourself — to your Google Business Profile, Instagram, Facebook, a text to regulars, or print it for the counter. PostScore never posts or sends anything on your behalf.",
+      "Download it and post it yourself — to your Google Business Profile, Instagram, Facebook, a text to regulars, or print it for the counter. PostScore doesn't post or send this coupon for you.",
     "dashboard.growth.howCouponsWork.modalCustomerLabel": "Customer shows it.",
     "dashboard.growth.howCouponsWork.modalCustomerBody":
       "They bring the image or code in — on their phone or printed — and show it at checkout.",
@@ -9323,18 +9652,6 @@ export const messages: Record<Locale, LocaleMessages> = {
       "Be honest with yourself about what this is: the redemption count is a simple stored tally that a human increments by hand. It is not a POS integration and nothing detects a redemption automatically — if staff forgets to tap it, that redemption isn't counted.",
 
     "dashboard.growth.moreWays.heading": "More ways to bring people in",
-    "dashboard.growth.moreWays.googlePostTitle": "Draft a Google Post",
-    "dashboard.growth.moreWays.googlePostBody":
-      "Generates text about your active offer for a Google Business Profile update — you copy it and post it yourself.",
-    "dashboard.growth.moreWays.faqTitle": "Write an FAQ",
-    "dashboard.growth.moreWays.faqBody":
-      "Generates a Q&A about your active offer for your Google profile's Q&A section or your website — you post it yourself.",
-    "dashboard.growth.moreWays.startCouponFirst": "Start a coupon first",
-    "dashboard.growth.moreWays.generateDraft": "Generate draft",
-    "dashboard.growth.moreWays.modalTitleGooglePost": "Draft Google post",
-    "dashboard.growth.moreWays.modalTitleFaq": "Draft FAQ",
-    "dashboard.growth.moreWays.modalIntro":
-      'This is draft text based on your active "{offer}" coupon. Copy it and post it yourself — PostScore doesn\'t post to Google or anywhere else on your behalf.',
 
     "dashboard.growth.referral.referralCodeLabel": "Referral code",
     "dashboard.growth.referral.eyebrow": "Referral program builder",
@@ -9378,7 +9695,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.growth.activeReferral.shareModalTitle": "How to share your referral offer",
 
     "dashboard.growth.shareModal.disclaimer":
-      "PostScore doesn't post to Google, Instagram, or text anyone automatically — download the image, then use any of these to post or send it yourself.",
+      "PostScore doesn't post this image to Google or Instagram, or text anyone, for you — download the image, then use any of these to post or send it yourself.",
     "dashboard.growth.shareModal.optionGoogleTitle": "Post to your Google Business Profile",
     "dashboard.growth.shareModal.optionGoogleHowTo":
       "Open your Business Profile, go to Posts → Add update, paste the caption below, and attach the image you downloaded.",
@@ -14459,6 +14776,175 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.googleTab.ev.campaign": "inició {count} cupones o tarjetas de referidos",
     "dashboard.googleTab.ev.campaignOne": "inició 1 cupón o tarjeta de referidos",
     "dashboard.googleTab.ev.line": "{date}: {what}",
+    "dashboard.googleTab.w.photos.upload": "Suba sus fotos",
+    "dashboard.googleTab.w.tomorrow.posted": "Publicado hoy · la próxima, mañana",
+    "dashboard.googleTab.w.tomorrow.cap": "Se usó el límite de cambios en Google de hoy · mañana",
+    "dashboard.googleTab.w.failed.badge": "No se envió",
+    "dashboard.googleTab.w.failed.row": "No se envió: {reason}",
+    "dashboard.googleTab.w.retry": "Intentar de nuevo",
+    "dashboard.googleTab.w.failed.offer_ended": "Este cupón ya terminó. Inicie uno nuevo o publique una novedad.",
+    "dashboard.googleTab.w.replies.failedOne": "Google no aceptó 1 respuesta.",
+    "dashboard.googleTab.w.replies.failedMany": "Google no aceptó {count} respuestas.",
+    "dashboard.googleTab.w.approveAll.failedRows": "{count} no se enviaron (vea abajo)",
+    "dashboard.googleTab.w.spelling.didYouMean": "“{word}”: ¿quiso decir “{suggestion}”?",
+    "dashboard.googleTab.w.spelling.fix": "Usar “{suggestion}”",
+    "dashboard.googleTab.w.spelling.keep": "Dejar “{word}”",
+    "dashboard.googleTab.w.spelling.blocked": "Revise primero la ortografía de arriba.",
+    "dashboard.googleTab.w.post.offer.premium": "Sobre su cupón “{offer}” (código {code}): se publica en Google como oferta, con su código y fechas.",
+    "dashboard.googleTab.w.post.offer.grow": "Sobre su cupón “{offer}” (código {code}). En Google, agréguelo como oferta.",
+    "dashboard.googleTab.w.post.facts.open.hair": "¿Tiene un antes y después real? Cuéntele a PostScore 1 o 2 datos →",
+    "dashboard.googleTab.w.post.facts.open.home": "¿Tiene un trabajo reciente para mostrar? Cuéntele a PostScore 1 o 2 datos →",
+    "dashboard.googleTab.w.post.facts.open.restaurant": "¿Tiene un especial esta semana? Cuéntele a PostScore cuál es →",
+    "dashboard.googleTab.w.post.facts.open.art": "¿Tiene una clase próxima? Cuéntele a PostScore los detalles →",
+    "dashboard.googleTab.w.post.facts.open.default": "¿Quiere que trate de algo real? Cuéntele a PostScore 1 o 2 datos →",
+    "dashboard.googleTab.w.post.facts.note": "PostScore escribe solo con lo que usted escriba aquí y no agrega nada más.",
+    "dashboard.googleTab.w.post.facts.placeholder.hair": "p. ej., balayage con reflejos suaves, hecho este martes",
+    "dashboard.googleTab.w.post.facts.placeholder.home": "p. ej., nuevo salpicadero de cocina instalado en Tarrytown esta semana",
+    "dashboard.googleTab.w.post.facts.placeholder.restaurant": "p. ej., sopa de calabaza, $9, hasta el domingo",
+    "dashboard.googleTab.w.post.facts.placeholder.art": "p. ej., clase de acuarela el sábado 6 de dic., 10 am, $40",
+    "dashboard.googleTab.w.post.facts.placeholder.default": "p. ej., abierto los domingos desde el 1 de dic.",
+    "dashboard.googleTab.w.post.facts.write": "Escribir con mis datos",
+    "dashboard.googleTab.w.post.problem.invented_story": "Esto cuenta una historia concreta que PostScore no puede saber. Dele los datos o edítelo.",
+    "dashboard.googleTab.w.ans.answerToInclude": "Responda las {count} preguntas de arriba para incluir los datos para clientes, o aplique el resto ahora.",
+    "dashboard.googleTab.w.ans.answerToIncludeOnly": "Responda las {count} preguntas de arriba para incluir los datos para clientes.",
+    "dashboard.googleTab.w.more.getDraft": "Ver el borrador de esta semana",
+    "dashboard.googleTab.w.more.post.title": "La publicación de esta semana en Google",
+    "dashboard.googleTab.w.more.post.body.premium": "PostScore la escribe con los datos de su negocio, o sobre su cupón activo. Edítela y publíquela con un clic.",
+    "dashboard.googleTab.w.more.post.body.grow": "PostScore la escribe con los datos de su negocio, o sobre su cupón activo. Cópiela y publíquela usted.",
+    "dashboard.googleTab.w.more.answers.title": "Responda las preguntas frecuentes de sus clientes",
+    "dashboard.googleTab.w.more.answers.body.premium": "Complete lo que Google usa para responder a los clientes (descripción, servicios con precios, estacionamiento, pagos) con un clic, más preguntas frecuentes para su sitio web.",
+    "dashboard.googleTab.w.more.answers.body.grow": "Su descripción, servicios con precios y preguntas frecuentes para su sitio web, listos para copiar.",
+    "dashboard.googleTab.w.offerLink": "Publicar esta oferta en Google →",
+    "dashboard.googleTab.w.offerModalTitle": "Publicar esta oferta en Google",
+    "dashboard.googleTab.rec.answers": "Responda las preguntas frecuentes de sus clientes (unos {minutes} min)",
+    "dashboard.googleTab.rec.answers.sub": "Google responde muchas preguntas de los clientes con los datos de su ficha. Falta: {list}.",
+    "dashboard.googleTab.rec.answers.part.description": "una descripción de 250+ caracteres",
+    "dashboard.googleTab.rec.answers.part.services.none": "sus servicios con precios",
+    "dashboard.googleTab.rec.answers.part.services.no_prices": "los precios de sus servicios",
+    "dashboard.googleTab.rec.answers.part.parking": "estacionamiento",
+    "dashboard.googleTab.rec.answers.part.accessibility": "accesibilidad",
+    "dashboard.googleTab.rec.answers.part.payment": "formas de pago",
+    "dashboard.googleTab.rec.steps.answers.1": "Abra su Perfil de Negocio y elija Editar perfil.",
+    "dashboard.googleTab.rec.steps.answers.2": "Agregue una descripción de 250+ caracteres, sus servicios con precios y los datos de estacionamiento, accesibilidad y pagos.",
+    "dashboard.googleTab.rec.steps.answers.3": "Guarde. Google usa estos datos para responder las preguntas de los clientes sobre su negocio.",
+    "dashboard.googleTab.ev.posts": "publicó {count} publicaciones en Google",
+    "dashboard.googleTab.ev.postsOne": "publicó una publicación en Google",
+    "dashboard.googleTab.ev.answers": "respondió las preguntas de los clientes en su ficha",
+    "dashboard.googleTab.ev.answersOne": "respondió las preguntas de los clientes en su ficha",
+    "dashboard.googleTab.w.post.open": "Ver la publicación de esta semana",
+    "dashboard.googleTab.w.ans.open": "Ver las respuestas",
+    "dashboard.googleTab.w.allDone": "Todo listo esta semana ✓",
+    "dashboard.googleTab.w.stillNeedsYou": "Todavía le toca a usted · mañana",
+    "dashboard.googleTab.w.approveAll": "Aprobar todo ({count})",
+    "dashboard.googleTab.w.approveAll.sending": "Enviando {done} de {count}…",
+    "dashboard.googleTab.w.approveAll.note": "Nada se envía a Google hasta que usted lo apruebe. Abra cualquier punto para leerlo o editarlo antes.",
+    "dashboard.googleTab.w.approveAll.sent": "{count} enviados a Google",
+    "dashboard.googleTab.w.approveAll.failed": "{count} no se enviaron",
+    "dashboard.googleTab.w.practice": "Modo de práctica: Aprobar todo envía solo a la práctica de Google, nunca a su ficha real.",
+    "dashboard.googleTab.w.readOnly": "Solo lectura por ahora: PostScore todavía no puede cambiar esta ficha en Google.",
+    "dashboard.googleTab.w.preparing": "Preparando los borradores…",
+    "dashboard.googleTab.w.ready": "Listo",
+    "dashboard.googleTab.w.doneMark": "Hecho ✓",
+    "dashboard.googleTab.w.needsYou": "Le toca a usted · {time}",
+    "dashboard.googleTab.w.time.min": "{count} min",
+    "dashboard.googleTab.w.preview": "Ver / editar",
+    "dashboard.googleTab.w.hide": "Ocultar",
+    "dashboard.googleTab.w.include": "Incluir en Aprobar todo",
+    "dashboard.googleTab.w.sending": "Enviando…",
+    "dashboard.googleTab.w.grow.premiumAll": "Premium aprueba todo esto con un clic →",
+    "dashboard.googleTab.w.failed.generic": "No se pudo enviar a Google en este momento. Inténtelo de nuevo en un momento.",
+    "dashboard.googleTab.w.failed.wait_minute": "Los cambios en Google se limitan a una aprobación por minuto. Inténtelo de nuevo en un minuto.",
+    "dashboard.googleTab.w.failed.daily_cap": "Llegó al límite de cambios en Google de hoy. Inténtelo de nuevo mañana.",
+    "dashboard.googleTab.w.failed.reconnect": "Google pidió volver a conectar. Vuelva a conectar Google y luego inténtelo de nuevo.",
+    "dashboard.googleTab.w.failed.photo_gone": "Esa foto ya no está en su ficha. Elija otra o ninguna foto.",
+    "dashboard.googleTab.w.failed.rejected": "Google no lo aceptó. Revise el texto e inténtelo de nuevo.",
+    "dashboard.googleTab.w.post.item.day": "Publique el {day} ({date}), el día antes de sus días con más llamadas ({busiest})",
+    "dashboard.googleTab.w.post.item.week": "Publique 1 novedad en Google esta semana",
+    "dashboard.googleTab.w.post.loading": "Escribiendo la publicación de esta semana…",
+    "dashboard.googleTab.w.post.failed": "No se pudo escribir la publicación en este momento.",
+    "dashboard.googleTab.w.post.fallback": "PostAI no pudo escribir una ahora, así que este es un borrador sencillo. Edítelo a su gusto.",
+    "dashboard.googleTab.w.post.textLabel": "Texto de la publicación",
+    "dashboard.googleTab.w.post.count": "{count} / 1.500 caracteres",
+    "dashboard.googleTab.w.post.photo": "Foto (de su ficha)",
+    "dashboard.googleTab.w.post.photo.none": "Sin foto",
+    "dashboard.googleTab.w.post.photo.tip": "Las publicaciones con foto reciben más vistas.",
+    "dashboard.googleTab.w.post.button": "Botón",
+    "dashboard.googleTab.w.post.cta.BOOK": "Reservar",
+    "dashboard.googleTab.w.post.cta.LEARN_MORE": "Más información (su sitio web)",
+    "dashboard.googleTab.w.post.cta.CALL": "Llamar",
+    "dashboard.googleTab.w.post.cta.NONE": "Sin botón",
+    "dashboard.googleTab.w.post.ctaNote.CALL": "Usa el teléfono de su ficha.",
+    "dashboard.googleTab.w.post.another": "Escribir otra",
+    "dashboard.googleTab.w.post.anotherLeft": "Escribir otra (le quedan {count} esta semana)",
+    "dashboard.googleTab.w.post.writing": "Escribiendo…",
+    "dashboard.googleTab.w.post.limit": "No hay más borradores nuevos esta semana. Todavía puede editar este.",
+    "dashboard.googleTab.w.post.publish": "Publicar en Google",
+    "dashboard.googleTab.w.post.publishing": "Publicando…",
+    "dashboard.googleTab.w.post.waiting": "Esperando a Google. Las publicaciones suelen aparecer en unos minutos.",
+    "dashboard.googleTab.w.post.live": "Publicada en Google ✓",
+    "dashboard.googleTab.w.post.view": "Ver publicación ↗",
+    "dashboard.googleTab.w.post.rejected": "Google no aceptó esta publicación. Edítela e inténtelo de nuevo.",
+    "dashboard.googleTab.w.post.remove": "Quitar de Google",
+    "dashboard.googleTab.w.post.removeUntil": "Puede quitarla hasta el {date}.",
+    "dashboard.googleTab.w.post.removed": "Se quitó de Google.",
+    "dashboard.googleTab.w.post.postedToday": "Ya publicó hoy en Google desde PostScore. Inténtelo de nuevo mañana.",
+    "dashboard.googleTab.w.post.problemShort": "La publicación no cumple una regla de Google. Ábrala para corregirla.",
+    "dashboard.googleTab.w.post.problem.too_long": "Manténgala por debajo de 1.500 caracteres.",
+    "dashboard.googleTab.w.post.problem.phone": "Quite el número de teléfono: Google no los permite en las publicaciones. El botón Llamar usa el número de su ficha.",
+    "dashboard.googleTab.w.post.problem.link": "Quite el enlace: va en el botón.",
+    "dashboard.googleTab.w.post.problem.caps": "Evite las MAYÚSCULAS y \"!!!\": Google puede no aceptar la publicación.",
+    "dashboard.googleTab.w.post.problem.incentive": "No ofrezca nada a cambio de reseñas: Google lo prohíbe.",
+    "dashboard.googleTab.w.post.grow.note": "Copie esto y agréguelo en Google como novedad:",
+    "dashboard.googleTab.w.replies.loading": "Escribiendo borradores de respuesta…",
+    "dashboard.googleTab.w.replies.failed": "No se pudieron leer sus reseñas de Google en este momento.",
+    "dashboard.googleTab.w.replies.none": "No hay reseñas sin responder en este momento.",
+    "dashboard.googleTab.w.replies.anonymous": "Un usuario de Google",
+    "dashboard.googleTab.w.replies.noText": "(Solo estrellas, sin texto)",
+    "dashboard.googleTab.w.replies.noDraft": "PostScore no pudo redactar esta. Respóndala en la bandeja de reseñas.",
+    "dashboard.googleTab.w.replies.postOne": "Publicar esta respuesta",
+    "dashboard.googleTab.w.replies.sent": "Publicada ✓",
+    "dashboard.googleTab.w.replies.more": "{count} más en la bandeja de reseñas",
+    "dashboard.googleTab.w.ans.why": "Google ahora responde muchas preguntas de los clientes con los datos de su ficha. Complete lo que falta:",
+    "dashboard.googleTab.w.ans.loading": "Leyendo su ficha…",
+    "dashboard.googleTab.w.ans.failed": "No se pudo cargar desde Google en este momento.",
+    "dashboard.googleTab.w.ans.none": "Su ficha ya tiene lo que Google necesita para responder las preguntas de los clientes.",
+    "dashboard.googleTab.w.ans.desc.title": "Descripción",
+    "dashboard.googleTab.w.ans.desc.now": "En Google ahora: {count} caracteres",
+    "dashboard.googleTab.w.ans.desc.count": "{count} caracteres (busque 250+)",
+    "dashboard.googleTab.w.ans.desc.noDraft": "PostScore no pudo redactar una en este momento. Escriba unas frases sobre lo que hace y la zona que atiende.",
+    "dashboard.googleTab.w.ans.services.title": "Servicios y precios",
+    "dashboard.googleTab.w.ans.services.note": "Los precios vienen solo de sus propios precios en PostScore, o de lo que escriba aquí. Deje un precio vacío para omitirlo.",
+    "dashboard.googleTab.w.ans.services.new": "Nuevo",
+    "dashboard.googleTab.w.ans.services.onGoogle": "En Google: {price}",
+    "dashboard.googleTab.w.ans.services.include": "Agregar este servicio",
+    "dashboard.googleTab.w.ans.services.name": "Nombre del servicio",
+    "dashboard.googleTab.w.ans.services.add": "Agregar un servicio",
+    "dashboard.googleTab.w.ans.price": "Precio (opcional)",
+    "dashboard.googleTab.w.ans.details.title": "Datos para clientes",
+    "dashboard.googleTab.w.ans.details.needsYou": "Solo usted sabe esto: elija Sí o No, u omítalo.",
+    "dashboard.googleTab.w.ans.details.notOffered": "Google no lo ofrece para su categoría.",
+    "dashboard.googleTab.w.ans.details.part.parking": "Estacionamiento",
+    "dashboard.googleTab.w.ans.details.part.accessibility": "Accesibilidad",
+    "dashboard.googleTab.w.ans.details.part.payment": "Pagos",
+    "dashboard.googleTab.w.ans.yes": "Sí",
+    "dashboard.googleTab.w.ans.no": "No",
+    "dashboard.googleTab.w.ans.skip": "Omitir",
+    "dashboard.googleTab.w.ans.part.description": "descripción",
+    "dashboard.googleTab.w.ans.part.services": "servicios y precios",
+    "dashboard.googleTab.w.ans.part.details": "datos para clientes",
+    "dashboard.googleTab.w.ans.apply": "Aplicar en Google",
+    "dashboard.googleTab.w.ans.applying": "Aplicando…",
+    "dashboard.googleTab.w.ans.applied": "En Google ✓",
+    "dashboard.googleTab.w.ans.pending": "Enviado. Google lo está revisando.",
+    "dashboard.googleTab.w.ans.noChange": "Ya está en Google ✓",
+    "dashboard.googleTab.w.ans.undo": "Deshacer",
+    "dashboard.googleTab.w.ans.undone": "Se deshizo.",
+    "dashboard.googleTab.w.ans.skipped": "Todavía no incluido: {list}",
+    "dashboard.googleTab.w.ans.gtk.open": "Opcional: una publicación \"Bueno saber\" en Google",
+    "dashboard.googleTab.w.ans.faq.open": "Preguntas frecuentes para su sitio web",
+    "dashboard.googleTab.w.ans.faq.note": "Copie esto en una página de su propio sitio web. Incluye el marcado de preguntas frecuentes (schema.org) para que los buscadores lo lean. PostScore nunca lo publica en ningún lugar.",
+    "dashboard.googleTab.w.ans.faq.none": "Agregue sus respuestas primero y las preguntas frecuentes se completan.",
+    "dashboard.googleTab.w.ans.grow.note": "Copie esto en su Perfil de Negocio:",
     "dashboard.googleTab.rate.markers": "Lo que hizo",
     "dashboard.googleTab.notConnected.since": "Qué pasó con sus llamadas, clics e indicaciones después de cada cosa que hizo",
     "dashboard.googleTab.worth.howOpen": "Cómo lo calculamos",
@@ -14770,7 +15256,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.googleTab.ideas.posts.title": "Publique esta semana",
     "dashboard.googleTab.ideas.posts.pill": "Da a quienes buscan un motivo para actuar ya",
     "dashboard.googleTab.ideas.posts.reason": "Ninguna publicación en Google en los últimos 30 días. Pruebe con {topic}.",
-    "dashboard.googleTab.ideas.posts.button": "Ver ideas para publicar",
+    "dashboard.googleTab.ideas.posts.button": "Ver la publicación de esta semana",
     "dashboard.googleTab.ideas.posts.topic.hair": "un antes y después de un color reciente",
     "dashboard.googleTab.ideas.posts.topic.barber": "un fade reciente con su precio",
     "dashboard.googleTab.ideas.posts.topic.nails": "el diseño de uñas de este mes",
@@ -15278,7 +15764,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "content.actionPlan.completeness.customer_details.fix": "En Google: Perfil de Empresa en Google → Editar perfil → {path}. Agregue solo lo que sea cierto.",
     "content.actionPlan.connectGoogle.title": "Conecte Google",
     "content.actionPlan.connectGoogle.why": "Habilita su tasa de respuesta (\"Respuestas a reseñas\") y un conteo exacto de sus reseñas recientes — sin la conexión, Google le muestra a PostScore solo unas pocas.",
-    "content.actionPlan.connectGoogle.fix": "Inicie sesión con la cuenta de Google que administra su Perfil de Empresa en Google. PostScore solo lee el número de reseñas — nunca publica ni cambia nada.",
+    "content.actionPlan.connectGoogle.fix": "Inicie sesión con la cuenta de Google que administra su Perfil de Empresa en Google. PostScore nunca publica ni cambia nada en Google sin su aprobación.",
     "content.actionPlan.connectGoogle.link": "Conectar Google",
     "dashboard.website.partlyCheckedPill": "Revisado en parte",
     "dashboard.website.blockedNote": "La seguridad de su sitio web bloquea las revisiones automáticas, así que solo pudimos revisar una parte. Pídale a la persona que administra su sitio web que permita el acceso a PostScoreBot para ver su puntuación completa.",
@@ -15615,22 +16101,13 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.growth.howCouponsWork.modalBuildLabel": "Cree.",
     "dashboard.growth.howCouponsWork.modalBuildBody": "Escriba su oferta (o parta de una sugerencia rápida), fije un vencimiento y diseñe un cupón para imprimir con su código — y, si quiere, un QR a su ficha de Google, enlace de reseña o sitio web.",
     "dashboard.growth.howCouponsWork.modalShareLabel": "Imprímalo o compártalo.",
-    "dashboard.growth.howCouponsWork.modalShareBody": "Descárguela y publíquela usted mismo — en su Perfil de Empresa en Google, Instagram, Facebook, un mensaje a sus clientes habituales, o imprímala para el mostrador. PostScore nunca publica ni envía nada en su nombre.",
+    "dashboard.growth.howCouponsWork.modalShareBody": "Descárguela y publíquela usted mismo — en su Perfil de Empresa en Google, Instagram, Facebook, un mensaje a sus clientes habituales, o imprímala para el mostrador. PostScore no publica ni envía este cupón por usted.",
     "dashboard.growth.howCouponsWork.modalCustomerLabel": "El cliente lo muestra.",
     "dashboard.growth.howCouponsWork.modalCustomerBody": "Traen la imagen o el código — en su teléfono o impreso — y lo muestran al pagar.",
     "dashboard.growth.howCouponsWork.modalStaffLabel": "El personal pulsa +1.",
     "dashboard.growth.howCouponsWork.modalStaffBody": "Quien esté en la caja pulsa \"+1 Canjeado\" en ese cupón en Todas las campañas.",
     "dashboard.growth.howCouponsWork.modalHonestNote": "Sea honesto consigo mismo sobre lo que es esto: el conteo de canjes es un simple registro almacenado que una persona incrementa a mano. No es una integración con el punto de venta y nada detecta un canje automáticamente — si el personal olvida marcarlo, ese canje no se cuenta.",
     "dashboard.growth.moreWays.heading": "Más formas de atraer gente",
-    "dashboard.growth.moreWays.googlePostTitle": "Redacte una publicación de Google",
-    "dashboard.growth.moreWays.googlePostBody": "Genera texto sobre su oferta activa para una actualización del Perfil de Empresa en Google — usted lo copia y lo publica.",
-    "dashboard.growth.moreWays.faqTitle": "Escriba una sección de preguntas frecuentes",
-    "dashboard.growth.moreWays.faqBody": "Genera una pregunta y respuesta sobre su oferta activa para la sección de preguntas y respuestas de su perfil de Google o su sitio web — usted la publica.",
-    "dashboard.growth.moreWays.startCouponFirst": "Primero inicie un cupón",
-    "dashboard.growth.moreWays.generateDraft": "Generar borrador",
-    "dashboard.growth.moreWays.modalTitleGooglePost": "Borrador de publicación de Google",
-    "dashboard.growth.moreWays.modalTitleFaq": "Borrador de preguntas frecuentes",
-    "dashboard.growth.moreWays.modalIntro": "Este es un texto de borrador basado en su cupón activo \"{offer}\". Cópielo y publíquelo usted mismo — PostScore no publica en Google ni en ningún otro lugar en su nombre.",
     "dashboard.growth.referral.referralCodeLabel": "Código de referido",
     "dashboard.growth.referral.eyebrow": "Generador de programa de referidos",
     "dashboard.growth.referral.heading": "Deje que los clientes satisfechos le traigan nuevos",
@@ -15667,7 +16144,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.growth.activeReferral.cancel": "Cancelar",
     "dashboard.growth.activeReferral.endButton": "Finalizar",
     "dashboard.growth.activeReferral.shareModalTitle": "Cómo compartir su oferta de referido",
-    "dashboard.growth.shareModal.disclaimer": "PostScore no publica en Google, Instagram ni envía mensajes a nadie automáticamente — descargue la imagen y luego use cualquiera de estas opciones para publicarla o enviarla usted mismo.",
+    "dashboard.growth.shareModal.disclaimer": "PostScore no publica esta imagen en Google ni en Instagram, ni envía mensajes por usted — descargue la imagen y luego use cualquiera de estas opciones para publicarla o enviarla usted mismo.",
     "dashboard.growth.shareModal.optionGoogleTitle": "Publicar en su Perfil de Empresa en Google",
     "dashboard.growth.shareModal.optionGoogleHowTo": "Abra su Perfil de Empresa en Google, vaya a Publicaciones → Agregar novedad, pegue el texto de abajo y adjunte la imagen que descargó.",
     "dashboard.growth.shareModal.optionSocialTitle": "Publicar en Instagram o Facebook",

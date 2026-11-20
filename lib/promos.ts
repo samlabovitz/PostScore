@@ -59,47 +59,7 @@ export function buildShareCaption({ businessName, offer, code, expiryLabel, phon
   return lines.join(" ");
 }
 
-interface GooglePostInput {
-  businessName: string;
-  offer: string;
-  code: string;
-  expiryLabel: string;
-}
-
-/** Draft text for a Google Business Profile "Update" post. This is
- * copy-and-paste text for the owner to post themselves on their own
- * Google Business Profile — PostScore never posts to Google. */
-export function buildGooglePostDraft({ businessName, offer, code, expiryLabel }: GooglePostInput): string {
-  return [
-    `${offer}`,
-    "",
-    `Come see us at ${businessName} — show this post or mention code ${code} to redeem in-store. ${expiryLabel}.`,
-    "",
-    "No app or sign-up needed, just show it at checkout.",
-  ].join("\n");
-}
-
-interface FaqInput {
-  businessName: string;
-  offer: string;
-  code: string;
-  expiryLabel: string;
-  terms?: string | null;
-}
-
-/** Draft Q&A text for a Google Business Profile "Questions & answers"
- * section or a website FAQ page. Copy-and-paste for the owner to post
- * themselves — PostScore never posts this to Google or anywhere else. */
-export function buildFaqDraft({ businessName, offer, code, expiryLabel, terms }: FaqInput): string {
-  const pairs = [
-    ["Do you have any current offers?", `Yes — ${offer}. Just show code ${code} at checkout.`],
-    [
-      "How do I redeem the offer?",
-      `Show the coupon — printed, texted, or from our Google/Instagram post — to our staff at ${businessName}. They'll apply it right there. No app or account needed.`,
-    ],
-    ["When does it expire?", `${expiryLabel}.`],
-  ];
-  if (terms) pairs.push(["Are there any restrictions?", terms]);
-
-  return pairs.map(([q, a]) => `Q: ${q}\nA: ${a}`).join("\n\n");
-}
+// Day 23E: the copy-it-yourself Google post and FAQ drafts are gone — a
+// coupon is posted on Google through the post flow (components/gbp/WeekPost.tsx,
+// a Google Offer post on Premium), and the FAQ is the answers preview's
+// website FAQ (lib/googleAnswers.ts faqHtml).

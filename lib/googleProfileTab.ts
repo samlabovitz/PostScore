@@ -391,6 +391,8 @@ export interface ChangeRow {
   practice?: boolean | null;
   location_name?: string | null;
   error_reason?: string | null;
+  /** Day 23E (supabase/day23e-posts-answers.sql): 'answers' / 'approve_all'; absent before it runs. */
+  origin?: string | null;
 }
 
 /** "2026-10": the month before `now`, in the business's time zone. */
@@ -561,6 +563,8 @@ export interface ListingInput {
 export interface ListingExtras {
   specialPeriods: SpecialHourPeriod[];
   services: string[];
+  /** Day 23E: how many of those services have a price on Google. */
+  pricedServices?: number | null;
   categories: string[];
   /** Customer details: the 3 scored groups set?, how many extras can be added, the ones to suggest. */
   details?: { payment: boolean; parking: boolean; accessibility: boolean; open: number; suggest: Array<{ id: string; label: string }> } | null;

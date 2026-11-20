@@ -129,10 +129,15 @@ export function GoogleProfilePanel({
           <SectionTitle>{t(locale, "dashboard.googleTab.grow.title")}</SectionTitle>
           <Card className="p-4 sm:p-5">
             <p className="text-[12.5px] text-ink-mute">{t(locale, "dashboard.googleTab.grow.sub")}</p>
+            {plan === "grow" && recs.list.length > 0 && (
+              <Link href={`/business/${businessId}/settings#compare-plans`} className="mt-1 inline-block text-[12px] font-medium text-ink-mute underline decoration-brass/60 underline-offset-2 hover:text-ink" data-testid="premium-approve-all-line">
+                {t(locale, "dashboard.googleTab.w.grow.premiumAll")}
+              </Link>
+            )}
             {recs.list.length > 0 ? (
               <ul className="mt-1">
                 {recs.list.map((rec) => (
-                  <RecItem key={rec.kind} rec={rec} businessId={businessId} premium={false} canEdit={false} type={recs.type} />
+                  <RecItem key={rec.kind} rec={rec} businessId={businessId} premium={false} canEdit={false} type={recs.type} drafts={plan === "grow"} />
                 ))}
               </ul>
             ) : (

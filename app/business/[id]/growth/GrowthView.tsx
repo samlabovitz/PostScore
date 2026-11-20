@@ -9,6 +9,7 @@ import { SectionHeading } from "@/components/ui/SectionHeading";
 import { SegmentedControl, type SegmentedControlOption } from "@/components/ui/SegmentedControl";
 import { TaskListCard, GrowthMoveCard, CompletedTasksCard, ReviewGoalLinesContext, type WebsiteRecheckProps } from "../ActionPlanSection";
 import { WeeklyChecklist } from "./WeeklyChecklist";
+import { MoreWaysCards } from "@/components/gbp/MoreWaysCards";
 import { WeeklyGoalCelebration } from "./WeeklyGoalCelebration";
 import { WeeklyPlanCelebration } from "./WeeklyPlanCelebration";
 import { FreeGrowthMoves, FreeGrowthPlan } from "./FreeGrowthPlan";
@@ -450,7 +451,11 @@ export function GrowthView({
                     initialCheckedItemIds={weeklyChecklist.checkedItemIds}
                     initialStreakWeeks={weeklyChecklist.streakWeeks}
                     weekStart={weeklyChecklist.weekStart}
+                    postFlow={{ premium: isPremiumPlan(plan) }}
                   />
+                </div>
+                <div id="more-ways" className="scroll-mt-20">
+                  <MoreWaysCards businessId={businessId} premium={isPremiumPlan(plan)} connected={gbpConnected} />
                 </div>
 
                 {actionPlan.error ? (

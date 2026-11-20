@@ -524,11 +524,13 @@ describe("the tab: real numbers replace the empty states", () => {
       media: { photos: { count: 4, newestAt: "2026-09-01T00:00:00Z" }, posts: { last30: 0, lastAt: null, lastType: null }, checkedAt: "2026-11-19T00:00:00Z" },
       extras: { specialPeriods: [], services: ["Haircut"], categories: ["Hair salon"], description: "Hair salon", attributeIds: [], details: null },
     });
-    expect(html).toContain('data-testid="rec-photos"');
-    expect(html).toContain('data-testid="rec-posts"');
+    expect(html).toContain('data-testid="week-photos"');
+    expect(html).toContain('data-testid="week-posts"');
     expect(html).not.toContain('data-testid="google-tab-idea-photos"');
     expect(html).not.toContain('data-testid="google-tab-idea-posts"');
-    expect(html).toContain('data-testid="google-tab-idea-description"');
+    // Day 23E: the short description is part of "Answer your customers' common questions" in This week.
+    expect(html).toContain('data-testid="week-answers"');
+    expect(html).not.toContain('data-testid="google-tab-idea-description"');
   });
 
   test("Day 23C: lever tiles never cut their words off (no line-clamp or truncate), five across from lg", () => {

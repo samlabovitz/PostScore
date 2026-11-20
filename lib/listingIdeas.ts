@@ -248,7 +248,7 @@ export function listingIdeas(input: IdeaInputs): Idea[] {
     const cat = relatedCategory(input.type, terms, l.categories);
     if (cat) ideas.push({ id: "category", ...cat, action: { kind: "link", href: "https://business.google.com/", external: true } });
   }
-  if (input.posts && input.posts.last30 === 0) ideas.push({ id: "posts", topic: POST_TOPIC[input.type ?? "default"], action: { kind: "link", href: `/business/${input.businessId}/growth#ways-to-grow` } });
+  if (input.posts && input.posts.last30 === 0) ideas.push({ id: "posts", topic: POST_TOPIC[input.type ?? "default"], action: { kind: "editor", hash: "#google-tab-this-week" } });
   if (input.photos && (input.photos.count === 0 || !input.photos.newestAt || !isFresh(input.photos.newestAt, input.now)))
     ideas.push({ id: "photos", monthsOld: input.photos.newestAt ? monthsAgo(input.photos.newestAt, input.now) : null, action: { kind: "editor", hash: "#edit-photos" } });
   if (input.messagingOn === false) ideas.push({ id: "messaging", action: { kind: "editor", hash: "#edit-messaging" } });
