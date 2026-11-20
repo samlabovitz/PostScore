@@ -108,7 +108,8 @@ describe("hero: How it's calculated", () => {
       </LocaleProvider>
     ).replace(/<[^>]+>/g, " ").replace(/&#x27;/g, "'").replace(/\s+/g, " ");
   test("the real month's numbers, with the ⓘ", () => {
-    expect(tab("en")).toContain("How it's calculated: 83 people who called, asked for directions, visited your site, booked or messaged ÷ 704 people who saw your listing on Google. ⓘ");
+    // In the hero's ⓘ panel.
+    expect(tab("en")).toContain("ⓘ How it's calculated: 83 people who called, asked for directions, visited your site, booked or messaged ÷ 704 people who saw your listing on Google.");
     expect(tab("es")).toContain("Cómo se calcula: 83 personas que llamaron, pidieron indicaciones, visitaron su sitio, reservaron o enviaron un mensaje ÷ 704 personas que vieron su ficha en Google.");
   });
 });

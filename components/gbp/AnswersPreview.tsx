@@ -196,10 +196,10 @@ function PartResultLine({ businessId, part, result, onUndone }: { businessId: st
   const [busy, setBusy] = useState(false);
   const [undone, setUndone] = useState(false);
   const [error, setError] = useState(false);
-  if (undone) return <p className="text-[12px] text-ink-soft">{t(locale, W("ans.undone"))}</p>;
-  if (result.status === "invalid") return <p className="text-[12px] text-red">{t(locale, W("failed.generic"))}</p>;
-  if (result.status === "spelling") return <p className="text-[12px] text-red" data-testid={`answers-spelling-${part}`}>{t(locale, W("spelling.blocked"))}</p>;
-  if (result.status === "error") return <p className="text-[12px] text-red" data-testid={`answers-failed-${part}`}>{failedText(result.error, locale)}</p>;
+  if (undone) return <p className="text-[13px] text-ink-soft">{t(locale, W("ans.undone"))}</p>;
+  if (result.status === "invalid") return <p className="text-[13px] text-red">{t(locale, W("failed.generic"))}</p>;
+  if (result.status === "spelling") return <p className="text-[13px] text-red" data-testid={`answers-spelling-${part}`}>{t(locale, W("spelling.blocked"))}</p>;
+  if (result.status === "error") return <p className="text-[13px] text-red" data-testid={`answers-failed-${part}`}>{failedText(result.error, locale)}</p>;
   const undo = async () => {
     if (!result.undoBatchId) return;
     setBusy(true);
@@ -212,7 +212,7 @@ function PartResultLine({ businessId, part, result, onUndone }: { businessId: st
     } else setError(true);
   };
   return (
-    <p className="text-[12px] font-semibold text-green" data-testid={`answers-sent-${part}`}>
+    <p className="text-[13px] font-semibold text-green" data-testid={`answers-sent-${part}`}>
       {t(locale, W(result.status === "pending_review" ? "ans.pending" : result.status === "no_change" ? "ans.noChange" : "ans.applied"))}
       {result.undoBatchId && (
         <>
@@ -227,18 +227,45 @@ function PartResultLine({ businessId, part, result, onUndone }: { businessId: st
   );
 }
 
-const sectionTitle = "text-[12px] font-bold uppercase tracking-[0.08em] text-ink-soft";
+const stepTitle = "text-[15px] font-semibold text-ink";
 
-/** Premium: one preview for every missing answer, and "Apply to Google". */
+/** Step 2's rows: new services first, then the listed ones missing a price (at most 6); `all`: every service. */
+export function serviceOrder<T extends { listed: boolean; googlePrice: number | null }>(services: T[], all: boolean): Array<{ s: T; i: number }> {
+  const rows = services.map((s, i) => ({ s, i }));
+  const fresh = rows.filter((r) => !r.s.listed);
+  const noPrice = rows.filter((r) => r.s.listed && r.s.googlePrice === null);
+  const priced = rows.filter((r) => r.s.listed && r.s.googlePrice !== null);
+  return all ? [...fresh, ...noPrice, ...priced] : [...fresh, ...noPrice.slice(0, 6)];
+}
+
+/** One numbered step of the answers: its title, and "Already on your listing ✓" when nothing's missing there. */
+function Step({ n, title, done, children, testId }: { n: number; title: string; done: boolean; children?: React.ReactNode; testId: string }) {
+  const locale = useLocale();
+  return (
+    <section className="flex gap-3 border-t border-paper-line pt-4 first:border-t-0 first:pt-0" data-testid={testId}>
+      <span className={cn("flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[13px] font-bold", done ? "bg-[color:color-mix(in_srgb,var(--color-green)_14%,white)] text-green" : "bg-ink text-paper")}>{done ? "✓" : n}</span>
+      <div className="flex min-w-0 flex-1 flex-col gap-2">
+        <div className="flex flex-wrap items-baseline justify-between gap-x-3">
+          <h4 className={stepTitle}>{title}</h4>
+          {done && <span className="text-[13px] text-green">{t(locale, W("ans.step.done"))}</span>}
+        </div>
+        {!done && children}
+      </div>
+    </section>
+  );
+}
+
+/** Premium: a simple step-by-step — 1) Description → 2) Services & prices → 3) Customer details — then one "Apply to Google". The optional "Good to know" post and website FAQ come after applying, as their own cards. */
 export function AnswersPreview({ businessId, state, standaloneApply = true }: { businessId: string; state: AnswersState; standaloneApply?: boolean }) {
   const locale = useLocale();
   const [applying, setApplying] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  if (state.status === "idle" || state.status === "loading") return <p className="text-[12.5px] text-ink-mute" data-testid="answers-loading">{t(locale, W("ans.loading"))}</p>;
-  if (state.status === "failed" || !state.data) return <p className="text-[12.5px] text-ink-mute" data-testid="answers-failed">{t(locale, W("ans.failed"))}</p>;
+  const [showAll, setShowAll] = useState(false);
+  if (state.status === "idle" || state.status === "loading") return <p className="text-[13px] text-ink-mute" data-testid="answers-loading">{t(locale, W("ans.loading"))}</p>;
+  if (state.status === "failed" || !state.data) return <p className="text-[13px] text-ink-mute" data-testid="answers-failed">{t(locale, W("ans.failed"))}</p>;
   const d = state.data;
   const missing = d.plan?.missing ?? [];
-  if (missing.length === 0) return <p className="text-[12.5px] text-ink-soft" data-testid="answers-none">{t(locale, W("ans.none"))}</p>;
+  if (missing.length === 0) return <p className="text-[15px] text-ink-soft" data-testid="answers-none">{t(locale, W("ans.none"))}</p>;
   const apply = async () => {
     setApplying(true);
     setError(null);
@@ -250,67 +277,67 @@ export function AnswersPreview({ businessId, state, standaloneApply = true }: { 
     setError(failedText(r.status === "wait" ? r.error : r.status === "error" ? r.error : "", locale));
   };
   const locked = (part: AnswerPart) => !!state.results?.[part] && !["error", "invalid", "spelling"].includes(state.results[part]!.status);
+  const applied = Object.values(state.results ?? {}).some((r) => r && (r.status === "sent" || r.status === "pending_review" || r.status === "no_change"));
+  const field = "w-full rounded-lg border border-paper-line bg-white px-3.5 py-3 text-[14px] leading-relaxed outline-none focus:border-ink disabled:bg-paper";
 
   return (
-    <div className="flex flex-col gap-3" data-testid="answers-preview">
-      <p className="text-[12px] text-ink-mute">{t(locale, W("ans.why"))}</p>
-      {missing.includes("description") && (
-        <section className="flex flex-col gap-1" data-testid="answers-description">
-          <h4 className={sectionTitle}>{t(locale, W("ans.desc.title"))}</h4>
-          <p className="text-[12px] text-ink-mute">{t(locale, W("ans.desc.now"), { count: (d.listing.description ?? "").trim().length })}</p>
-          <textarea value={state.description} onChange={(e) => state.setDescription(e.target.value)} rows={5} disabled={locked("description")} className="w-full rounded-lg border border-paper-line bg-white px-3 py-2 text-[13px] outline-none focus:border-ink disabled:bg-paper" />
-          <p className={cn("text-[11.5px]", state.description.trim().length < DESCRIPTION_TARGET ? "text-red" : "text-ink-mute")}>{t(locale, W("ans.desc.count"), { count: state.description.trim().length })}</p>
+    <div className="flex flex-col gap-4">
+      <div className="flex flex-col gap-4" data-testid="answers-preview">
+        <p className="text-[13px] text-ink-mute">{t(locale, W("ans.why"))}</p>
+        <Step n={1} title={t(locale, W("ans.desc.title"))} done={!missing.includes("description")} testId="answers-description">
+          <p className="text-[13px] text-ink-mute">{t(locale, W("ans.desc.now"), { count: (d.listing.description ?? "").trim().length })}</p>
+          <textarea value={state.description} onChange={(e) => state.setDescription(e.target.value)} rows={5} disabled={locked("description")} className={field} />
+          <p className={cn("text-[13px]", state.description.trim().length < DESCRIPTION_TARGET ? "text-red" : "text-ink-mute")}>{t(locale, W("ans.desc.count"), { count: state.description.trim().length })}</p>
           {descriptionProblems(state.description).filter((p) => p !== "empty").map((p) => (
-            <p key={p} className="text-[12px] text-red">{t(locale, `dashboard.gbpProfileEdits.description.problem.${p}` as MessageKey)}</p>
+            <p key={p} className="text-[13px] text-red">{t(locale, `dashboard.gbpProfileEdits.description.problem.${p}` as MessageKey)}</p>
           ))}
-          {!d.descriptionDraft && !d.listing.description && <p className="text-[12px] text-ink-mute">{t(locale, W("ans.desc.noDraft"))}</p>}
+          {!d.descriptionDraft && !d.listing.description && <p className="text-[13px] text-ink-mute">{t(locale, W("ans.desc.noDraft"))}</p>}
           <SpellingLines state={state} part="description" />
           {state.results?.description && <PartResultLine businessId={businessId} part="description" result={state.results.description} onUndone={() => undefined} />}
-        </section>
-      )}
-      {missing.includes("services") && (
-        <section className="flex flex-col gap-1" data-testid="answers-services">
-          <h4 className={sectionTitle}>{t(locale, W("ans.services.title"))}</h4>
-          <p className="text-[12px] text-ink-mute">{t(locale, W("ans.services.note"))}</p>
-          <ul className="grid gap-x-6 gap-y-1 sm:grid-cols-2">
-            {state.services.map((s, i) => (
-              <li key={i} className="flex flex-wrap items-center gap-2 text-[12.5px]">
-                {!s.listed && <input type="checkbox" checked={s.include} disabled={locked("services")} onChange={(e) => state.setService(i, { include: e.target.checked })} aria-label={t(locale, W("ans.services.include"))} />}
+        </Step>
+        <Step n={2} title={t(locale, W("ans.services.title"))} done={!missing.includes("services")} testId="answers-services">
+          <p className="text-[13px] text-ink-mute">{t(locale, W("ans.services.note"))}</p>
+          <ul className="grid gap-x-6 gap-y-2 sm:grid-cols-2" data-testid="answers-service-list">
+            {serviceOrder(state.services, showAll).map(({ s, i }) => (
+              <li key={i} className="flex flex-wrap items-center gap-2 text-[14px]" data-testid="answers-service-row">
+                {!s.listed && <input type="checkbox" checked={s.include} disabled={locked("services")} onChange={(e) => state.setService(i, { include: e.target.checked })} aria-label={t(locale, W("ans.services.include"))} className="h-5 w-5" />}
                 {s.listed ? (
-                  <span className="min-w-[8rem] flex-1 font-medium">{s.name}</span>
+                  <span className="min-w-[8rem] flex-1">{s.name}</span>
                 ) : (
-                  <input value={s.name} onChange={(e) => state.setService(i, { name: e.target.value })} disabled={locked("services")} placeholder={t(locale, W("ans.services.name"))} className="h-[28px] min-w-[8rem] rounded-md border border-paper-line px-2" />
+                  <input value={s.name} onChange={(e) => state.setService(i, { name: e.target.value })} disabled={locked("services")} placeholder={t(locale, W("ans.services.name"))} className="min-h-[44px] min-w-[8rem] flex-1 rounded-lg border border-paper-line px-3 text-[14px]" />
                 )}
-                {!s.listed && <span className="rounded-full bg-paper px-1.5 text-[10.5px] font-bold text-brass">{t(locale, W("ans.services.new"))}</span>}
+                {!s.listed && <span className="rounded-full bg-paper px-2 py-0.5 text-[13px] font-semibold text-brass">{t(locale, W("ans.services.new"))}</span>}
                 {s.googlePrice !== null ? (
-                  <span className="text-ink-mute">{t(locale, W("ans.services.onGoogle"), { price: priceText(s.googlePrice) })}</span>
+                  <span className="text-[13px] text-ink-mute">{t(locale, W("ans.services.onGoogle"), { price: priceText(s.googlePrice) })}</span>
                 ) : (
-                  <input value={s.price} onChange={(e) => state.setService(i, { price: e.target.value })} disabled={locked("services")} inputMode="decimal" placeholder={t(locale, W("ans.price"))} className={cn("h-[28px] w-28 rounded-md border px-2", s.price && parsePrice(s.price) === null ? "border-red" : "border-paper-line")} />
+                  <input value={s.price} onChange={(e) => state.setService(i, { price: e.target.value })} disabled={locked("services")} inputMode="decimal" placeholder={t(locale, W("ans.price"))} className={cn("min-h-[44px] w-40 rounded-lg border px-3 text-[14px]", s.price && parsePrice(s.price) === null ? "border-red" : "border-paper-line")} />
                 )}
               </li>
             ))}
           </ul>
+          {!showAll && state.services.length > serviceOrder(state.services, false).length && (
+            <button type="button" onClick={() => setShowAll(true)} className="inline-flex min-h-[44px] w-fit items-center text-[13px] font-semibold text-ink underline underline-offset-2" data-testid="answers-services-all">
+              {t(locale, W("ans.services.showAll"), { count: state.services.filter((x) => x.listed).length })}
+            </button>
+          )}
           <SpellingLines state={state} part="services" />
           {!locked("services") && (
-            <button type="button" onClick={state.addService} className="w-fit text-[12px] font-semibold text-ink underline underline-offset-2">
+            <button type="button" onClick={state.addService} className={cn(W_BUTTON_SOFT, "w-fit")}>
               {t(locale, W("ans.services.add"))}
             </button>
           )}
           {state.results?.services && <PartResultLine businessId={businessId} part="services" result={state.results.services} onUndone={() => undefined} />}
-        </section>
-      )}
-      {missing.includes("details") && (
-        <section className="flex flex-col gap-1" data-testid="answers-details">
-          <h4 className={sectionTitle}>{t(locale, W("ans.details.title"))}</h4>
-          <p className="text-[12px] text-ink-mute">{t(locale, W("ans.details.needsYou"))}</p>
+        </Step>
+        <Step n={3} title={t(locale, W("ans.details.title"))} done={!missing.includes("details")} testId="answers-details">
+          <p className="text-[13px] text-ink-mute">{t(locale, W("ans.details.needsYou"))}</p>
           {(d.plan?.details ?? []).map((part) => (
-            <div key={part} className="flex flex-col gap-0.5">
-              <p className="text-[12px] font-semibold">{t(locale, W(`ans.details.part.${part}`))}</p>
+            <div key={part} className="flex flex-col gap-2" data-testid={`answers-group-${part}`}>
+              <p className="text-[13px] font-bold uppercase tracking-[0.08em] text-ink-soft">{t(locale, W(`ans.details.part.${part}`))}</p>
               {d.listing.details
                 .filter((r) => r.part === part)
                 .map((r) => (
-                  <div key={r.id} className="flex flex-wrap items-center gap-2 py-0.5" data-testid="answers-detail-row">
-                    <span className="min-w-[13rem] text-[15px]">{detailLabel(r.id, r.label, locale)}</span>
+                  <div key={r.id} className="flex flex-wrap items-center gap-2" data-testid="answers-detail-row">
+                    <span className="min-w-[13rem] flex-1 text-[14px]">{detailLabel(r.id, r.label, locale)}</span>
                     {(["yes", "no", "skip"] as const).map((v) => {
                       const value = v === "yes" ? true : v === "no" ? false : "skip";
                       const on = state.picks[r.id] === value;
@@ -321,7 +348,7 @@ export function AnswersPreview({ businessId, state, standaloneApply = true }: { 
                           disabled={locked("details")}
                           onClick={() => state.setPick(r.id, on ? null : value)}
                           aria-pressed={on}
-                          className={cn("inline-flex min-h-[44px] min-w-[72px] items-center justify-center gap-1 rounded-lg border-2 px-4 text-[15px] font-semibold", on ? "border-ink bg-ink text-paper" : "border-paper-line bg-white text-ink hover:border-ink")}
+                          className={cn("inline-flex min-h-[44px] min-w-[72px] items-center justify-center gap-1 rounded-lg border-2 px-4 text-[14px] font-semibold", on ? "border-ink bg-ink text-paper" : "border-paper-line bg-white text-ink hover:border-ink")}
                         >
                           {on && <span aria-hidden>✓</span>}
                           {t(locale, W(`ans.${v}`))}
@@ -330,27 +357,28 @@ export function AnswersPreview({ businessId, state, standaloneApply = true }: { 
                     })}
                   </div>
                 ))}
-              {d.listing.details.every((r) => r.part !== part) && <p className="text-[12px] text-ink-mute">{t(locale, W("ans.details.notOffered"))}</p>}
+              {d.listing.details.every((r) => r.part !== part) && <p className="text-[13px] text-ink-mute">{t(locale, W("ans.details.notOffered"))}</p>}
             </div>
           ))}
           {state.results?.details && <PartResultLine businessId={businessId} part="details" result={state.results.details} onUndone={() => undefined} />}
-        </section>
-      )}
-      {standaloneApply && (
-        <div className="flex flex-wrap items-center gap-2">
-          <button type="button" onClick={apply} disabled={!d.canEdit || applying || state.ready.length === 0} className={W_BUTTON} data-testid="answers-apply">
-            {applying ? t(locale, W("ans.applying")) : t(locale, W("ans.apply"))}
-          </button>
-          {missing.includes("details") && state.unanswered > 0 && !locked("details") ? (
-            <span className="text-[12.5px] text-ink-soft" data-testid="answers-needs-details">{t(locale, W(state.ready.length ? "ans.answerToInclude" : "ans.answerToIncludeOnly"), { count: state.unanswered })}</span>
-          ) : (
-            state.needsYou.length > 0 && <span className="text-[12px] text-ink-mute">{t(locale, W("ans.skipped"), { list: state.needsYou.map((p) => t(locale, W(`ans.part.${p}`))).join(", ") })}</span>
-          )}
-        </div>
-      )}
-      {!d.canEdit && <p className="text-[12px] text-ink-mute">{t(locale, W("readOnly"))}</p>}
-      {error && <p className="text-[12px] text-red" data-testid="answers-error">{error}</p>}
-      <AnswersExtras businessId={businessId} state={state} premium />
+        </Step>
+        {standaloneApply && (
+          <div className="flex flex-wrap items-center gap-3 border-t border-paper-line pt-4">
+            <button type="button" onClick={apply} disabled={!d.canEdit || applying || state.ready.length === 0} className={W_BUTTON} data-testid="answers-apply">
+              {applying ? t(locale, W("ans.applying")) : t(locale, W("ans.apply"))}
+            </button>
+            {missing.includes("details") && state.unanswered > 0 && !locked("details") ? (
+              <span className="text-[13px] text-ink-soft" data-testid="answers-needs-details">{t(locale, W(state.ready.length ? "ans.answerToInclude" : "ans.answerToIncludeOnly"), { count: state.unanswered })}</span>
+            ) : (
+              state.needsYou.length > 0 && <span className="text-[13px] text-ink-mute">{t(locale, W("ans.skipped"), { list: state.needsYou.map((p) => t(locale, W(`ans.part.${p}`))).join(", ") })}</span>
+            )}
+          </div>
+        )}
+        {!d.canEdit && <p className="text-[13px] text-ink-mute">{t(locale, W("readOnly"))}</p>}
+        {error && <p className="text-[13px] text-red" data-testid="answers-error">{error}</p>}
+      </div>
+      {/* After applying: the two optional extras, as their own small cards. */}
+      {applied && <AnswersExtras businessId={businessId} state={state} premium />}
     </div>
   );
 }
@@ -363,12 +391,12 @@ export function SpellingLines({ state, part }: { state: AnswersState; part: "des
   return (
     <ul className="flex flex-col gap-1" data-testid={`spelling-${part}`}>
       {list.map(({ flag }) => (
-        <li key={flag.word} className="flex flex-wrap items-center gap-2 text-[12.5px]">
+        <li key={flag.word} className="flex flex-wrap items-center gap-2 text-[13px]">
           <span className="text-red">{t(locale, W("spelling.didYouMean"), { word: flag.word, suggestion: flag.suggestion })}</span>
           <button type="button" onClick={() => state.fixFlag(part, flag)} className={W_BUTTON_SOFT} data-testid="spelling-fix">
             {t(locale, W("spelling.fix"), { suggestion: flag.suggestion })}
           </button>
-          <button type="button" onClick={() => state.keepWord(flag.word)} className="text-[12px] font-semibold text-ink underline underline-offset-2" data-testid="spelling-keep">
+          <button type="button" onClick={() => state.keepWord(flag.word)} className="text-[13px] font-semibold text-ink underline underline-offset-2" data-testid="spelling-keep">
             {t(locale, W("spelling.keep"), { word: flag.word })}
           </button>
         </li>
@@ -378,6 +406,7 @@ export function SpellingLines({ state, part }: { state: AnswersState; part: "des
 }
 
 /** The optional "Good to know" post and the website FAQ. */
+/** The optional "Good to know" Google post and the website FAQ: two small cards (after the answers are applied on Premium). */
 function AnswersExtras({ businessId, state, premium }: { businessId: string; state: AnswersState; premium: boolean }) {
   const locale = useLocale();
   const [open, setOpen] = useState<"post" | "faq" | null>(null);
@@ -385,23 +414,27 @@ function AnswersExtras({ businessId, state, premium }: { businessId: string; sta
   const language = state.data?.locale ?? locale;
   const gtk = facts ? goodToKnowText(facts.name, goodToKnowAnswers(facts, language), language) : null;
   const faq = facts ? faqHtml(faqEntries(facts, language), language) : "";
+  const card = (id: "post" | "faq", title: string, body: string) => (
+    <div className="flex flex-col gap-2.5 rounded-xl border border-paper-deep bg-white p-4 shadow-card" data-testid={`answers-extra-${id}`}>
+      <p className="text-[15px] font-semibold text-ink">{title}</p>
+      <p className="flex-1 text-[13px] text-ink-mute">{body}</p>
+      <button type="button" onClick={() => setOpen(open === id ? null : id)} aria-expanded={open === id} className={cn(W_BUTTON_SOFT, "w-fit")} data-testid={id === "post" ? "answers-gtk-open" : "answers-faq-open"}>
+        {t(locale, W(open === id ? "hide" : "ans.extra.open"))}
+      </button>
+    </div>
+  );
   return (
-    <div className="flex flex-col gap-2 border-t border-paper-line/70 pt-2" data-testid="answers-extras">
-      <div className="flex flex-wrap gap-2">
-        {gtk && (
-          <button type="button" onClick={() => setOpen(open === "post" ? null : "post")} aria-expanded={open === "post"} className={W_BUTTON_SOFT} data-testid="answers-gtk-open">
-            {t(locale, W("ans.gtk.open"))}
-          </button>
-        )}
-        <button type="button" onClick={() => setOpen(open === "faq" ? null : "faq")} aria-expanded={open === "faq"} className={W_BUTTON_SOFT} data-testid="answers-faq-open">
-          {t(locale, W("ans.faq.open"))}
-        </button>
+    <div className="flex flex-col gap-3" data-testid="answers-extras">
+      <p className="text-[13px] font-semibold text-ink-soft">{t(locale, W("ans.extra.title"))}</p>
+      <div className="grid gap-3 sm:grid-cols-2">
+        {gtk && card("post", t(locale, W("ans.gtk.open")), t(locale, W("ans.extra.post")))}
+        {card("faq", t(locale, W("ans.faq.open")), t(locale, W("ans.extra.faq")))}
       </div>
-      {open === "post" && gtk && (premium ? <GoodToKnowPost businessId={businessId} text={gtk} /> : <CopyBlock text={gtk} rows={4} />)}
+      {open === "post" && gtk && <div className="rounded-xl border border-paper-line bg-white p-4">{premium ? <GoodToKnowPost businessId={businessId} text={gtk} /> : <CopyBlock text={gtk} rows={4} />}</div>}
       {open === "faq" && (
-        <div className="flex flex-col gap-1" data-testid="answers-faq">
-          <p className="text-[12px] text-ink-mute">{t(locale, W("ans.faq.note"))}</p>
-          {faq ? <CopyBlock text={faq} rows={10} /> : <p className="text-[12px] text-ink-mute">{t(locale, W("ans.faq.none"))}</p>}
+        <div className="flex flex-col gap-2 rounded-xl border border-paper-line bg-white p-4" data-testid="answers-faq">
+          <p className="text-[13px] text-ink-mute">{t(locale, W("ans.faq.note"))}</p>
+          {faq ? <CopyBlock text={faq} rows={10} /> : <p className="text-[13px] text-ink-mute">{t(locale, W("ans.faq.none"))}</p>}
         </div>
       )}
     </div>
@@ -418,22 +451,22 @@ export function AnswersCopy({ businessId, state }: { businessId: string; state: 
   const locale = useLocale();
   const { load } = state;
   useEffect(() => load(), [load]);
-  if (state.status === "idle" || state.status === "loading") return <p className="text-[12.5px] text-ink-mute" data-testid="answers-loading">{t(locale, W("ans.loading"))}</p>;
-  if (state.status === "failed" || !state.data) return <p className="text-[12.5px] text-ink-mute" data-testid="answers-failed">{t(locale, W("ans.failed"))}</p>;
+  if (state.status === "idle" || state.status === "loading") return <p className="text-[13px] text-ink-mute" data-testid="answers-loading">{t(locale, W("ans.loading"))}</p>;
+  if (state.status === "failed" || !state.data) return <p className="text-[13px] text-ink-mute" data-testid="answers-failed">{t(locale, W("ans.failed"))}</p>;
   const missing = state.data.plan?.missing ?? [];
   const priced = state.services.filter((s) => s.name && (s.googlePrice !== null || parsePrice(s.price) !== null));
   return (
     <div className="flex flex-col gap-2" data-testid="answers-copy">
-      <p className="text-[12px] text-ink-soft">{t(locale, W("ans.grow.note"))}</p>
+      <p className="text-[13px] text-ink-soft">{t(locale, W("ans.grow.note"))}</p>
       {missing.includes("description") && state.description && (
         <>
-          <p className={sectionTitle}>{t(locale, W("ans.desc.title"))}</p>
+          <p className="text-[13px] font-bold uppercase tracking-[0.08em] text-ink-soft">{t(locale, W("ans.desc.title"))}</p>
           <CopyBlock text={state.description} rows={5} />
         </>
       )}
       {missing.includes("services") && priced.length > 0 && (
         <>
-          <p className={sectionTitle}>{t(locale, W("ans.services.title"))}</p>
+          <p className="text-[13px] font-bold uppercase tracking-[0.08em] text-ink-soft">{t(locale, W("ans.services.title"))}</p>
           <CopyBlock text={priced.map((s) => `${s.name} — ${priceText((s.googlePrice ?? parsePrice(s.price))!)}`).join("\n")} rows={Math.min(8, priced.length + 1)} />
         </>
       )}

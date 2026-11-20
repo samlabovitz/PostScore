@@ -261,13 +261,13 @@ describe("11–12. the customer-details choices and 'Apply to Google'", () => {
     load: vi.fn(),
     ...p,
   });
-  test("44px+ tap targets, 15px text, nothing chosen by default; the chosen one filled with a check", () => {
+  test("44px+ tap targets, 14px text, nothing chosen by default; the chosen one filled with a check", () => {
     const html = wrap(<AnswersPreview businessId="b1" state={state({})} />);
     const rows = html.split('data-testid="answers-detail-row"').slice(1);
     expect(rows).toHaveLength(3);
     expect(rows[0]).toContain("Free street parking");
     expect(rows[0]).toContain("min-h-[44px]");
-    expect(rows[0]).toContain("text-[15px]");
+    expect(rows[0]).toContain("text-[14px]");
     expect(html).not.toContain('aria-pressed="true"');
     const chosen = wrap(<AnswersPreview businessId="b1" state={state({ picks: { "attributes/has_parking_lot_free": true } })} />).split('data-testid="answers-detail-row"')[2];
     expect(chosen).toMatch(/aria-pressed="true" class="[^"]*bg-ink[^"]*"><span aria-hidden="true">✓<\/span>Yes/);

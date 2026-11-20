@@ -361,3 +361,13 @@ export function goodToKnowText(name: string, answers: string[], locale: "en" | "
   const joined = list.join(", ");
   return locale === "es" ? `Bueno saber sobre ${name}: ${joined}. Si tiene alguna otra pregunta, con gusto le atendemos.` : `Good to know about ${name}: ${joined}. Any other questions? We're happy to help.`;
 }
+
+/** Drafts saved before the no-invented-story rule went live are never shown again — they're redrafted. */
+export const POST_DRAFT_RULES_SINCE = "2026-11-20T22:30:00Z";
+
+/** A saved draft still fit to show: written under today's rules and passing them now
+ * (this week's general draft: no invented story; one from the owner's facts: Google's rules). */
+export function savedDraftUsable(row: { text: string; kind: string; created_at: string }): boolean {
+  if (!(Date.parse(row.created_at) >= Date.parse(POST_DRAFT_RULES_SINCE))) return false;
+  return postProblems(row.text, { aiDraft: row.kind === "week" }).length === 0;
+}

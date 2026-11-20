@@ -85,7 +85,8 @@ describe("Google posts: the day before the busiest call days", () => {
     expect(plan).toEqual({ weekday: 1, date: "2026-11-23", busiest: "midweek", topic: "hair" });
     const text = recText({ kind: "posts", plan }, "en", "hair");
     expect(text.text).toBe("Post 1 update on Monday (Nov 23), the day before your busiest call days (Tue–Thu)");
-    expect(text.sub).toBe("Idea: a before-and-after of a recent color.");
+    // A general topic (no invented story) — a real before-and-after is the owner's optional upgrade.
+    expect(text.sub).toBe("Idea: an invitation to book a new color or cut this season.");
     expect(recText({ kind: "posts", plan }, "es", "hair").text).toContain("Publique 1 novedad el lunes");
   });
   test("Fri–Sat busiest → Thursday, today's date; no call data → 'this week'; 2+ posts in 30 days → nothing", () => {

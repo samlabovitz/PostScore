@@ -168,12 +168,6 @@ const GOLD_LIGHT = "text-[color:color-mix(in_srgb,var(--color-brass)_55%,white)]
 const NAVY_2 = "bg-[color:color-mix(in_srgb,var(--color-ink)_88%,white)]";
 const NAVY_LINE = "border-[color:color-mix(in_srgb,var(--color-ink)_70%,white)]";
 const CREAM = "bg-[color:color-mix(in_srgb,var(--color-brass)_6%,white)]";
-const TONE_PILL: Record<Tone, string> = {
-  ok: "bg-[color:color-mix(in_srgb,var(--color-green)_12%,white)] text-green",
-  warn: "bg-[color:color-mix(in_srgb,var(--color-amber)_14%,white)] text-amber",
-  bad: "bg-[color:color-mix(in_srgb,var(--color-red)_10%,white)] text-red",
-  neutral: "bg-paper text-ink-mute",
-};
 const STATUS_DOT: Record<RowStatus, { cls: string; mark: string }> = {
   ok: { cls: "bg-green text-white", mark: "✓" },
   warn: { cls: "bg-amber text-white", mark: "!" },
@@ -249,6 +243,11 @@ function ConnectedTab(props: GoogleProfileTabProps) {
       <NextSection {...props} sample={sample} />
       <PartHeader part="protection" />
       <ProtectionSection {...props} />
+      {/* The research behind the levers: a small link at the very bottom. */}
+      <details className="mt-8 text-[13px] text-ink-mute" data-testid="google-tab-sources">
+        <summary className="inline-flex min-h-[44px] cursor-pointer items-center font-semibold text-ink-soft">{t(locale, K("sourcesToggle"))}</summary>
+        <p className="mt-1 max-w-[720px] leading-snug">{t(locale, K("sources"))}</p>
+      </details>
     </div>
     </SyncContext.Provider>
   );
@@ -545,6 +544,12 @@ const LEVER_ICON: Record<LeverId, ReactNode> = {
   website: <IconBuildingStore size={15} aria-hidden />,
 };
 
+/** The chip's short label: "Reviews · 0%", "Photos · 2 mo", "Posts · none", "Deals · none", "Website · 29/30". */
+export function leverShort(lever: Lever, locale: Locale): string {
+  const status = lever.id === "deals" && lever.status === "running" && lever.params.count === 1 ? "runningOne" : lever.status;
+  return `${t(locale, K(`lever.short.${lever.id}.title`))} · ${t(locale, K(`lever.short.${lever.id}.${status}`), lever.params)}`;
+}
+
 /** The lever's grey status and its pill, in words. */
 export function leverText(lever: Lever, locale: Locale): { status: string; pill: string } {
   const p = lever.params;
@@ -655,15 +660,62 @@ function RateChartBox({ trend, months, events = [] }: { trend: Array<{ month: st
   );
 }
 
-/** The change in plain words, per 100 people: "▼ 3 fewer customers per
- * 100 people than September" — red down, green up; under half a customer
- * per 100 is "About the same as September". Never "points" or "%". */
+/** The change as a small pill: "▼ 3 vs September" — customers per 100
+ * people, red down, green up; under half a customer per 100 is "Same as
+ * September". The full sentence is its title. Never "points" or "%". */
 function PointsChange({ now, before, month }: { now: number; before: number; month: string }) {
   const locale = useLocale();
   const change = per100Change(now, before);
   return (
-    <span data-testid="google-tab-points" data-dir={change.dir} className={cn("font-semibold", change.dir === "up" ? "text-[#7fd3a0]" : change.dir === "down" ? "text-[#e8a59b]" : "text-white/70")}>
-      {t(locale, K(`rate.per100.${change.dir}`), { count: change.count, month })}
+    <span
+      data-testid="google-tab-points"
+      data-dir={change.dir}
+      title={t(locale, K(`rate.per100.${change.dir}`), { count: change.count, month })}
+      className={cn("inline-flex items-center rounded-full px-3 py-1 text-[13px] font-semibold", change.dir === "up" ? "bg-[#7fd3a0]/15 text-[#7fd3a0]" : change.dir === "down" ? "bg-[#e8a59b]/15 text-[#e8a59b]" : "bg-white/10 text-white/80")}
+    >
+      {t(locale, K(`rate.change.${change.dir}`), { count: change.count, month })}
+    </span>
+  );
+}
+
+/** "ⓘ": a 44px tap target that opens a small panel (and closes on a second tap, Escape or a tap outside).
+ * The panel stays in the page (hidden) so screen readers and tests find its words. */
+function InfoPop({ label, children, onDark = false, align = "left", testId }: { label: string; children: ReactNode; onDark?: boolean; align?: "left" | "right"; testId?: string }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLSpanElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    const close = (e: MouseEvent | KeyboardEvent) => {
+      if (e instanceof KeyboardEvent ? e.key === "Escape" : !ref.current?.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", close);
+    document.addEventListener("keydown", close);
+    return () => {
+      document.removeEventListener("mousedown", close);
+      document.removeEventListener("keydown", close);
+    };
+  }, [open]);
+  return (
+    <span ref={ref} className="relative inline-flex">
+      <button
+        type="button"
+        onClick={() => setOpen(!open)}
+        aria-expanded={open}
+        aria-label={label}
+        title={label}
+        className={cn("-m-2.5 inline-flex h-11 w-11 items-center justify-center rounded-full text-[15px]", onDark ? "text-white/70 hover:text-white" : "text-ink-mute hover:text-ink")}
+        data-testid={testId}
+      >
+        ⓘ
+      </button>
+      <span
+        hidden={!open}
+        role="dialog"
+        aria-label={label}
+        className={cn("absolute bottom-full z-50 mb-2 w-[min(340px,85vw)] rounded-xl border border-paper-deep bg-white p-4 text-left text-[13px] leading-snug text-ink shadow-card", align === "right" ? "right-0" : "left-0")}
+      >
+        {children}
+      </span>
     </span>
   );
 }
@@ -685,19 +737,9 @@ function WorthBox({ businessId, months, last, averageVisit, visitShare = null, s
   const left = leftOnTable(months, avg);
   const leftRange = left?.kind === "missed" ? leftMoney(left.extra, avg, share) : null;
   const money = (v: number) => `$${formatCount(v, locale)}`;
-  const box = "rounded-xl border border-brass px-3.5 py-2.5";
-  const style = { backgroundColor: "color-mix(in srgb, var(--color-ink) 88%, white)" };
-  const pills = (
-    <span className="ml-1.5 inline-flex items-center gap-1 align-middle">
-      <span className="rounded-[5px] bg-white/10 px-1.5 py-0.5 text-[10.5px] text-white/80">{t(locale, K("worth.estimate"))}</span>
-      <span tabIndex={0} title={t(locale, K("worth.info"))} aria-label={t(locale, K("worth.info"))} className="cursor-help text-[12px] text-white/60 outline-none focus-visible:ring-1 focus-visible:ring-white/60">
-        ⓘ
-      </span>
-    </span>
-  );
   const shareWord = (v: number) => (Math.abs(v - 1 / 3) < 0.005 ? t(locale, K("worth.share.third")) : v === 1 ? t(locale, K("worth.share.all")) : t(locale, K("worth.share.pct"), { percent: formatCount(sharePercent(v), locale) }));
   const toggle = (
-    <button type="button" onClick={() => setOpen(!open)} aria-expanded={open} data-testid="google-tab-worth-how" className="mt-1 text-[12px] font-semibold text-white underline decoration-brass underline-offset-2">
+    <button type="button" onClick={() => setOpen(!open)} aria-expanded={open} data-testid="google-tab-worth-how" className="inline-flex min-h-[44px] items-center text-[13px] font-semibold text-white underline decoration-brass underline-offset-2">
       {t(locale, K(open ? "worth.howClose" : "worth.howOpen"))}
     </button>
   );
@@ -712,52 +754,50 @@ function WorthBox({ businessId, months, last, averageVisit, visitShare = null, s
       mathLines={math ? (math.source === "default" ? [math.shares[0], math.shares[1]] : [math.shares[0]]).map((sh, i) => t(locale, K("worth.math"), { actions: formatCount(acted, locale), avg: money(math.averageVisit), share: shareWord(sh), result: money(Math.round(math.exact[i])) })) : []}
     />
   );
+  const strip = "rounded-xl bg-ink px-5 py-3 text-white";
   if (!math) {
     return (
-      <div className={cn("mt-2.5", box)} style={style} data-testid="google-tab-worth">
-        <Eyebrow className={cn("text-[10.5px]", GOLD_LIGHT)}>{t(locale, K("worth.label"))}</Eyebrow>
-        <Link href={`/business/${businessId}/settings#average-visit`} data-testid="google-tab-worth-set" className="text-[12.5px] font-semibold text-white underline decoration-brass underline-offset-2">
-          {t(locale, K("worth.setIt"))}
-        </Link>
-        {acted > 0 && <div>{toggle}</div>}
+      <div className={strip} data-testid="google-tab-worth">
+        <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
+          <p className="text-[15px] font-semibold">{t(locale, K("worth.label"))}</p>
+          <Link href={`/business/${businessId}/settings#average-visit`} data-testid="google-tab-worth-set" className="inline-flex min-h-[44px] items-center text-[13px] font-semibold text-white underline decoration-brass underline-offset-2">
+            {t(locale, K("worth.setIt"))}
+          </Link>
+          {acted > 0 && toggle}
+        </div>
         {panel}
       </div>
     );
   }
   return (
-    <div className={cn("mt-2.5", box)} style={style} data-testid="google-tab-worth">
-      <div className="grid gap-x-5 gap-y-2.5 sm:grid-cols-2">
-        <div>
-          <p className="text-[13px] font-semibold leading-snug text-white" data-testid="google-tab-worth-brought">
+    <div className={strip} data-testid="google-tab-worth">
+      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
+        <p className="text-[15px] leading-snug">
+          <b className="font-semibold" data-testid="google-tab-worth-brought">
             {math.low === math.high ? t(locale, K("worth.broughtOne"), { amount: money(math.low) }) : t(locale, K("worth.brought"), { low: money(math.low), high: money(math.high) })}
-            {pills}
-          </p>
-          <p className="mt-0.5 text-[12px] leading-snug text-white/70">
+          </b>
+          <span data-testid="google-tab-left">
+            {left?.kind === "missed" && leftRange ? (
+              <span className="text-white/80"> · {leftRange.low === leftRange.high ? t(locale, K("worth.strip.leftOne"), { amount: money(leftRange.high) }) : t(locale, K("worth.strip.left"), { low: money(leftRange.low), high: money(leftRange.high) })}</span>
+            ) : left?.kind === "matched" ? (
+              <span className="text-white/80"> · {t(locale, K("worth.matched"))}</span>
+            ) : null}
+          </span>
+          <span className="ml-2 rounded-full bg-white/10 px-2 py-0.5 align-middle text-[13px] text-white/80">{t(locale, K("worth.estimate"))}</span>
+        </p>
+        {toggle}
+      </div>
+      {open && (
+        <div className="mt-1 text-[13px] leading-snug text-white/75">
+          <p>
             {math.source === "default"
               ? t(locale, K("worth.broughtSub"), { actions: formatCount(acted, locale), avg: formatCount(math.averageVisit, locale) })
               : t(locale, K("worth.broughtSubOwn"), { actions: formatCount(acted, locale), avg: formatCount(math.averageVisit, locale), share: shareWord(math.shares[0]) })}
           </p>
-          {toggle}
+          {left?.kind === "missed" && <p>{t(locale, K("worth.leftSub"), { month: monthName(left.best.month, locale), best: formatRate(left.best.rate, locale), views: formatCount(totalViews(last), locale), extra: left.extra })}</p>}
+          <p>{t(locale, K("worth.info"))}</p>
         </div>
-        <div data-testid="google-tab-left">
-          {left?.kind === "missed" && leftRange ? (
-            <>
-              <p className="text-[13px] font-semibold leading-snug text-white">
-                {leftRange.low === leftRange.high ? t(locale, K("worth.left"), { missed: money(leftRange.high) }) : t(locale, K("worth.leftRange"), { low: money(leftRange.low), high: money(leftRange.high) })}
-                {pills}
-              </p>
-              <p className="mt-0.5 text-[12px] leading-snug text-white/70">
-                {t(locale, K("worth.leftSub"), { month: monthName(left.best.month, locale), best: formatRate(left.best.rate, locale), views: formatCount(totalViews(last), locale), extra: left.extra })}{" "}
-                <a href="#google-tab-levers" className="underline decoration-brass underline-offset-2">
-                  {t(locale, K("worth.leversLink"))}
-                </a>
-              </p>
-            </>
-          ) : left?.kind === "matched" ? (
-            <p className="text-[13px] font-semibold leading-snug text-white">{t(locale, K("worth.matched"))}</p>
-          ) : null}
-        </div>
-      </div>
+      )}
       {panel}
     </div>
   );
@@ -893,152 +933,160 @@ function LastMonthSection(props: GoogleProfileTabProps & { months: InsightsMonth
     website: props.website,
     media: props.media ?? null,
   });
-  const meta = last && prev ? t(locale, K("s1.meta"), { month: monthYear(last.month, locale), previous: monthName(prev.month, locale) }) : last ? monthYear(last.month, locale) : t(locale, K("monthly"));
   const averageVisit = sample ? SAMPLE_AVERAGE_VISIT : (props.averageVisit ?? null);
   const of = last ? { actions: formatCount(actions(last), locale), viewers: formatCount(totalViews(last), locale) } : null;
 
   return (
-    <SectionHead n={1} id="last-month" title={t(locale, K("s1.title"))} meta={meta}>
-      <div className="mt-3 rounded-2xl bg-ink px-3.5 py-3 text-white sm:px-[18px] sm:py-3.5">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <Eyebrow className={GOLD_LIGHT}>
-            {t(locale, K("rate.label"))}
-            {sample && <SampleTag className="ml-2" />}
-          </Eyebrow>
-          <span className={cn("rounded-full border px-2.5 py-1 text-[12px] text-white/80", NAVY_LINE)}>{t(locale, K("rate.pill"), { date: next })}</span>
-        </div>
-
-        {rate !== null && last && of ? (
-          <div className="mt-2 grid items-center gap-4 sm:grid-cols-[1.3fr_1fr]" data-testid="google-tab-rate">
-            <div>
-              <p className="mb-1 text-[12.5px] font-semibold text-white/85" data-testid="google-tab-rate-month">
-                {t(locale, K("s1.lastFull"), { month: monthName(last.month, locale) })}
-                {prev && <span className="font-normal text-white/65"> · {t(locale, K("kpi.vsMonth"), { month: monthName(prev.month, locale) })}</span>}
-              </p>
-              <div className={cn("font-serif text-[40px] font-semibold leading-none sm:text-[46px]", GOLD_LIGHT)}>{formatRate(rate, locale)}</div>
-              <p className="mt-1.5 max-w-[520px] text-[13px] leading-snug text-white/85">{t(locale, K("rate.sentence"))}</p>
-              {howCalculated(actions(last), totalViews(last)) && (
-                <p data-testid="google-tab-rate-how" className={cn("mt-1.5 w-fit max-w-[560px] rounded-lg px-2.5 py-1 text-[12.5px] leading-snug text-white/85", NAVY_2)}>
-                  {t(locale, K("rate.how"), { interactions: formatCount(actions(last), locale), views: formatCount(totalViews(last), locale) })}{" "}
-                  <span title={t(locale, K("rate.howTip"))} aria-label={t(locale, K("rate.howTip"))} className="cursor-help text-white/70">
-                    ⓘ
-                  </span>
+    <SectionHead n={1} id="last-month" title={t(locale, K("s1.title"))}>
+      <div className="mt-4 flex flex-col gap-5">
+        {/* 1. The hero: the month's conversion rate and the 6-month chart. */}
+        <div className="rounded-xl bg-ink p-5 text-white sm:p-6" data-testid="google-tab-hero">
+          {rate !== null && last && of ? (
+            <div className="grid items-center gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)]" data-testid="google-tab-rate">
+              <div className="flex min-w-0 flex-col">
+                <p className="text-[15px] font-semibold">
+                  {t(locale, K("s1.heroTitle"))}
+                  {sample && <SampleTag className="ml-2" />}
                 </p>
-              )}
-              {/* Both months' own ratios, and the change in percentage points. */}
-              <div data-testid="google-tab-rate-change" className="mt-1.5 text-[12.5px] leading-snug">
-                <p className="font-semibold text-white/90">{t(locale, K("rate.monthLine"), { month: monthName(last.month, locale), rate: formatRate(rate, locale), ...of })}</p>
-                {prev && prevRate !== null && (
-                  <p className="text-white/70">{t(locale, K("rate.monthLine"), { month: monthName(prev.month, locale), rate: formatRate(prevRate, locale), actions: formatCount(actions(prev), locale), viewers: formatCount(totalViews(prev), locale) })}</p>
-                )}
-                {/* The change, on its own line. */}
-                {prev && prevRate !== null && !small && (
-                  <p>
-                    <PointsChange now={rate} before={prevRate} month={monthName(prev.month, locale)} />
-                  </p>
-                )}
-                {small && <p className="text-white/70">{t(locale, K("rate.small"))}</p>}
+                <p className="text-[13px] text-white/70" data-testid="google-tab-rate-month">
+                  {t(locale, K("s1.lastFull"), { month: monthName(last.month, locale) })}
+                </p>
+                <div className={cn("mt-4 font-serif text-[56px] font-semibold leading-none", GOLD_LIGHT)}>{formatRate(rate, locale)}</div>
+                <p className="mt-2 max-w-[440px] text-[15px] leading-snug text-white/85">{t(locale, K("rate.sentenceShort"))}</p>
+                <div className="mt-3 flex flex-wrap items-center gap-3">
+                  {prev && prevRate !== null && !small && <PointsChange now={rate} before={prevRate} month={monthName(prev.month, locale)} />}
+                  <InfoPop label={t(locale, K("rate.infoLabel"))} onDark testId="google-tab-rate-info">
+                    {howCalculated(actions(last), totalViews(last)) && (
+                      <span className="block" data-testid="google-tab-rate-how">
+                        {t(locale, K("rate.how"), { interactions: formatCount(actions(last), locale), views: formatCount(totalViews(last), locale) })}
+                      </span>
+                    )}
+                    <span className="mt-2 block" data-testid="google-tab-rate-change">
+                      <span className="block font-semibold">{t(locale, K("rate.monthLine"), { month: monthName(last.month, locale), rate: formatRate(rate, locale), ...of })}</span>
+                      {prev && prevRate !== null && <span className="block text-ink-soft">{t(locale, K("rate.monthLine"), { month: monthName(prev.month, locale), rate: formatRate(prevRate, locale), actions: formatCount(actions(prev), locale), viewers: formatCount(totalViews(prev), locale) })}</span>}
+                      {small && <span className="block text-ink-soft">{t(locale, K("rate.small"))}</span>}
+                    </span>
+                    <span className="mt-2 block text-ink-mute">{t(locale, K("rate.howTip"))}</span>
+                  </InfoPop>
+                </div>
+                <p className="mt-4 text-[13px] text-white/60">{t(locale, K("rate.updates"), { date: next })}</p>
               </div>
+              <RateChartBox trend={trend} months={months} events={sample ? [] : (props.actionEvents ?? [])} />
             </div>
-            <RateChartBox trend={trend} months={months} events={sample ? [] : (props.actionEvents ?? [])} />
-          </div>
-        ) : (
-          <div className="mt-2.5" data-testid="google-tab-rate-empty">
-            <SyncMessage className={cn("font-serif text-[22px] font-semibold leading-snug", GOLD_LIGHT)} onDark />
-            <p className="mt-1.5 max-w-[620px] text-[13px] leading-snug text-white/75">{t(locale, K("rate.emptyBody"))}</p>
-          </div>
-        )}
-
-        <div id="google-tab-levers" className="mt-3 scroll-mt-20 rounded-xl bg-white px-[13px] py-[11px] text-ink" data-testid="google-tab-levers">
-          <div className="flex flex-col gap-0.5 sm:flex-row sm:items-baseline sm:gap-2.5">
-            <b className="text-[14px]">{t(locale, K("raise.title"))}</b>
-            <span className="text-[12px] text-ink-mute">{t(locale, K("raise.sub"))}</span>
-          </div>
-          <div className="mt-2 grid grid-cols-2 gap-1.5 sm:grid-cols-3 lg:grid-cols-[repeat(5,minmax(0,1fr))]" data-testid="google-tab-lever-grid">
-            {ls.map((lever) => (
-              <LeverBox key={lever.id} lever={lever} />
-            ))}
-          </div>
-          <ThisWeek props={props} />
-          <RecapLine saved={props.saved} />
-          <p className="mt-1.5 text-[10.5px] text-ink-mute">{t(locale, K("sources"))}</p>
+          ) : (
+            <div data-testid="google-tab-rate-empty">
+              <p className="text-[15px] font-semibold">{t(locale, K("s1.heroTitle"))}</p>
+              <SyncMessage className={cn("mt-3 font-serif text-[22px] font-semibold leading-snug", GOLD_LIGHT)} onDark />
+              <p className="mt-2 max-w-[620px] text-[15px] leading-snug text-white/75">{t(locale, K("rate.emptyBody"))}</p>
+              <p className="mt-4 text-[13px] text-white/60">{t(locale, K("rate.updates"), { date: next })}</p>
+            </div>
+          )}
         </div>
 
-        <SinceCard businessId={props.businessId} connected={props.connected} sample={sample} events={props.actionEvents ?? []} />
-
+        {/* 2. The numbers. */}
         {last ? (
-          <>
-            <div className="mt-2.5 grid grid-cols-2 gap-2 sm:grid-cols-4" data-testid="google-tab-kpis">
+          <div className="flex flex-col gap-2">
+            <div className="grid grid-cols-2 gap-3 lg:grid-cols-4" data-testid="google-tab-kpis">
               {(["calls", "directions", "bookings", "websiteClicks"] as const).map((k) => {
                 const d = prev ? last[k] - prev[k] : null;
+                const note =
+                  k === "bookings" && last.bookings === 0 && props.booking?.tracking.kind === "partner_not_counted" ? (
+                    <span data-testid="booking-tile-note">{t(locale, K("booking.notCountedA"), { provider: props.booking.tracking.provider })}</span>
+                  ) : k === "bookings" && last.bookings === 0 && props.booking?.tracking.kind === "turn_on" ? (
+                    <a href="#edit-booking-steps" data-testid="booking-tile-note" className="font-semibold text-ink underline underline-offset-2">
+                      {t(locale, K("booking.tileB"), { partner: props.booking.tracking.provider })}
+                    </a>
+                  ) : null;
                 return (
-                  <div key={k} className={cn("rounded-xl border px-3 py-2", NAVY_2, NAVY_LINE)} data-testid={`google-tab-kpi-${k}`}>
-                    <span className="flex flex-wrap items-baseline gap-x-1.5">
-                      <b className="font-serif text-[22px] font-semibold leading-none">{formatCount(last[k], locale)}</b>
-                      <small className="text-[12px] leading-tight text-white/75">{t(locale, K(`kpi.in.${k}`), { month: monthName(last.month, locale) })}</small>
+                  <Box key={k} className="flex min-w-0 flex-col gap-1 p-4" data-testid={`google-tab-kpi-${k}`}>
+                    <span className="flex items-start justify-between gap-2">
+                      <b className="font-serif text-[28px] font-semibold leading-none text-ink">{formatCount(last[k], locale)}</b>
+                      {note && (
+                        <InfoPop label={t(locale, K("kpi.infoLabel"))} align="right">
+                          {note}
+                        </InfoPop>
+                      )}
                     </span>
+                    <span className="text-[13px] leading-snug text-ink-soft">{t(locale, K(`kpi.in.${k}`), { month: monthName(last.month, locale) })}</span>
                     {prev && (
-                      <em className={cn("mt-0.5 block text-[12px] not-italic", d && d > 0 ? "text-[#7fd3a0]" : d && d < 0 ? "text-[#e8a59b]" : "text-white/60")}>
+                      <span className={cn("text-[13px] font-semibold", d && d > 0 ? "text-green" : d && d < 0 ? "text-red" : "text-ink-mute")}>
                         {d && d > 0 ? `▲${d} ` : d && d < 0 ? `▼${-d} ` : "= "}
-                        <span className="text-white/60">{t(locale, K("kpi.vsMonth"), { month: monthName(prev.month, locale) })}</span>
-                      </em>
+                        <span className="font-normal text-ink-mute">{t(locale, K("kpi.vsMonth"), { month: monthName(prev.month, locale, "short") })}</span>
+                      </span>
                     )}
-                    {/* Booked in Google at 0: why (case A), or what to turn on (case B). */}
-                    {k === "bookings" && last.bookings === 0 && props.booking?.tracking.kind === "partner_not_counted" && (
-                      <small data-testid="booking-tile-note" className="mt-1 block text-[11px] leading-snug text-white/65">
-                        {t(locale, K("booking.notCountedA"), { provider: props.booking.tracking.provider })}
-                      </small>
-                    )}
-                    {k === "bookings" && last.bookings === 0 && props.booking?.tracking.kind === "turn_on" && (
-                      <a href="#edit-booking-steps" data-testid="booking-tile-note" className="mt-1 block text-[11px] leading-snug text-[#f2d49a] underline underline-offset-2">
-                        {t(locale, K("booking.tileB"), { partner: props.booking.tracking.provider })}
-                      </a>
-                    )}
-                  </div>
+                  </Box>
                 );
               })}
             </div>
             {props.connected && !sample && <SoFarLine businessId={props.businessId} last={last.month} />}
-            <WorthBox businessId={props.businessId} months={months} last={last} averageVisit={averageVisit} visitShare={sample ? null : (props.visitShare ?? null)} sample={sample} />
-          </>
-        ) : (
-          <div className={cn("mt-2.5 rounded-xl border px-3 py-2 text-[12.5px] text-white/75", NAVY_2, NAVY_LINE)} data-testid="google-tab-kpis-empty">
-            {t(locale, K("kpi.empty"))}
           </div>
+        ) : (
+          <Box className="p-4 text-[13px] text-ink-soft" data-testid="google-tab-kpis-empty">
+            {t(locale, K("kpi.empty"))}
+          </Box>
         )}
+
+        {/* 3. The money. */}
+        {last && <WorthBox businessId={props.businessId} months={months} last={last} averageVisit={averageVisit} visitShare={sample ? null : (props.visitShare ?? null)} sample={sample} />}
+
+        {/* 4. What to do this week: the levers as status chips, Approve all, the to-dos. */}
+        <Box className="p-5 sm:p-6">
+          <ThisWeek props={props} chips={<LeverChips levers={ls} />} />
+        </Box>
+
+        {/* 5. Since you did this (with what you did last month first). */}
+        <SinceCard businessId={props.businessId} connected={props.connected} sample={sample} events={props.actionEvents ?? []} recap={<RecapLine saved={props.saved} />} />
       </div>
     </SectionHead>
   );
 }
 
-function LeverBox({ lever }: { lever: Lever }) {
+/** The five levers as one row of small status chips ("Reviews · 0% replied"); a tap shows the research line and where to do it. */
+function LeverChips({ levers: ls }: { levers: Lever[] }) {
   const locale = useLocale();
-  const text = leverText(lever, locale);
-  const inner = (
-    <>
-      {/* Narrow tiles: the pill drops under the title, never a word cut in two. */}
-      <span className="flex flex-wrap items-start gap-x-[7px] gap-y-1">
-        <span className={cn("hidden h-[22px] w-[22px] shrink-0 items-center justify-center rounded-md text-brass xl:flex", CREAM)}>{LEVER_ICON[lever.id]}</span>
-        <span className="flex min-w-[6.5rem] flex-1 flex-col leading-tight">
-          <b className="text-[12.5px] leading-tight">{t(locale, K(`lever.${lever.id}.title`))}</b>
-          <small className="text-[11px] leading-tight text-ink-mute">{text.status}</small>
-        </span>
-        <span data-testid={`lever-pill-${lever.id}`} data-tone={lever.tone} className={cn("shrink-0 self-start whitespace-nowrap rounded-full px-1.5 py-px text-[10.5px] font-bold", TONE_PILL[lever.tone])}>
-          {text.pill}
-        </span>
-      </span>
-      <span className="border-t border-dashed border-paper-line pt-1 text-[10.5px] leading-snug text-ink-mute">{t(locale, K(`lever.${lever.id}.why`))}</span>
-    </>
-  );
-  const cls = "flex min-w-0 flex-col gap-1 rounded-[10px] border border-paper-line px-2 py-1.5 text-ink hover:border-brass hover:bg-[color:color-mix(in_srgb,var(--color-brass)_6%,white)]";
-  return lever.href.startsWith("#") ? (
-    <a href={lever.href} className={cls} data-testid={`lever-${lever.id}`}>
-      {inner}
-    </a>
-  ) : (
-    <Link href={lever.href} className={cls} data-testid={`lever-${lever.id}`}>
-      {inner}
-    </Link>
+  const [open, setOpen] = useState<LeverId | null>(null);
+  const shown = ls.find((l) => l.id === open) ?? null;
+  const DOT: Record<Tone, string> = { ok: "bg-green", warn: "bg-amber", bad: "bg-red", neutral: "bg-paper-deep" };
+  return (
+    <div id="google-tab-levers" className="flex scroll-mt-20 flex-col gap-2" data-testid="google-tab-levers">
+      <div className="flex flex-wrap gap-2" data-testid="google-tab-lever-grid">
+        {ls.map((lever) => {
+          const text = leverText(lever, locale);
+          return (
+            <button
+              key={lever.id}
+              type="button"
+              onClick={() => setOpen(open === lever.id ? null : lever.id)}
+              aria-expanded={open === lever.id}
+              title={t(locale, K(`lever.${lever.id}.why`))}
+              className={cn("inline-flex min-h-[44px] items-center gap-2 whitespace-nowrap rounded-full border px-3.5 text-[13px] text-ink", open === lever.id ? "border-ink" : "border-paper-line hover:border-ink")}
+              data-testid={`lever-${lever.id}`}
+            >
+              <span className="text-brass">{LEVER_ICON[lever.id]}</span>
+              <span className="font-semibold">{leverShort(lever, locale)}</span>
+              <span className={cn("h-2 w-2 shrink-0 rounded-full", DOT[lever.tone])} data-testid={`lever-pill-${lever.id}`} data-tone={lever.tone} title={text.pill} aria-label={text.pill} />
+            </button>
+          );
+        })}
+      </div>
+      {shown && (
+        <p className="rounded-lg bg-paper px-3.5 py-2.5 text-[13px] leading-snug text-ink-soft" data-testid="lever-why">
+          <b className="text-ink">
+            {t(locale, K(`lever.${shown.id}.title`))}: {leverText(shown, locale).status} · {leverText(shown, locale).pill}.
+          </b>{" "}
+          {t(locale, K(`lever.${shown.id}.why`))}{" "}
+          {shown.href.startsWith("#") ? (
+            <a href={shown.href} className="font-semibold text-ink underline underline-offset-2">
+              {t(locale, K("lever.go"))}
+            </a>
+          ) : (
+            <Link href={shown.href} className="font-semibold text-ink underline underline-offset-2">
+              {t(locale, K("lever.go"))}
+            </Link>
+          )}
+        </p>
+      )}
+    </div>
   );
 }
 
@@ -1054,7 +1102,7 @@ function RecapLine({ saved }: { saved: GoogleTabSaved | null }) {
   const locale = useLocale();
   const s = recapSentence(saved, locale);
   return (
-    <p data-testid="google-tab-recap" className={cn("mt-2 rounded border-l-[3px] border-brass px-2.5 py-1.5 text-[12.5px] leading-snug text-ink-soft", CREAM)}>
+    <p data-testid="google-tab-recap" className="text-[13px] leading-snug text-ink-soft">
       <b className="text-ink">{t(locale, K("recap.did"))}</b> {s.did}.{" "}
       {s.notYet && (
         <>
@@ -1065,7 +1113,6 @@ function RecapLine({ saved }: { saved: GoogleTabSaved | null }) {
     </p>
   );
 }
-
 
 // ---------------------------------------------------------------------------
 // Day 23C: this week's to-dos, what you did on the chart, "Since you did this"
@@ -1089,20 +1136,22 @@ function SoFarLine({ businessId, last }: { businessId: string; last: string }) {
   const item = (k: "calls" | "websiteClicks" | "directions", n: number) => t(locale, K(`soFar.${k}${n === 1 ? "One" : ""}`), { count: formatCount(n, locale) });
   const next = addMonths(r.month, 1);
   return (
-    <p className={cn("mt-2.5 rounded-xl border px-3 py-2 text-[12.5px] leading-snug text-white/85", NAVY_2, NAVY_LINE)} data-testid="google-tab-so-far">
-      <b className="text-white">
+    <p className="px-4 text-[13px] leading-snug text-ink-soft" data-testid="google-tab-so-far">
+      <b className="font-semibold text-ink">
         {t(locale, K("soFar.line"), { month: monthName(r.month, locale).replace(/^./, (c) => c.toUpperCase()), date: shortDate(r.through, locale), list: [item("calls", r.calls), item("websiteClicks", r.websiteClicks), item("directions", r.directions)].join(", ") })}
       </b>{" "}
-      <span className="text-white/65">{t(locale, K("soFar.note"), { month: monthName(next, locale, "short"), from: 1, to: 5 })}</span>
+      <span className="text-ink-mute">{t(locale, K("soFar.note"), { month: monthName(next, locale, "short"), from: 1, to: 5 })}</span>
     </p>
   );
 }
 
 /** Under the levers: the levers' to-dos in exact numbers (replies, photos,
  * the post) and the answers, with Approve all (components/gbp/ThisWeekList.tsx). */
-function ThisWeek({ props }: { props: GoogleProfileTabProps }) {
+function ThisWeek({ props, chips }: { props: GoogleProfileTabProps; chips?: ReactNode }) {
+  const locale = useLocale();
   const { recs, type } = useTabIdeas(props);
-  return <ThisWeekList businessId={props.businessId} recs={thisWeekRecs(recs)} type={type} canEdit={props.canEditGoogle === true} practice={props.practice} />;
+  const title = <h3 className="text-[15px] font-bold text-ink">{t(locale, K("s1.todo.title"))}</h3>;
+  return <ThisWeekList businessId={props.businessId} recs={thisWeekRecs(recs)} type={type} canEdit={props.canEditGoogle === true} practice={props.practice} title={title} chips={chips} />;
 }
 
 /** "Nov 3: replied to 10 reviews". */
@@ -1123,9 +1172,9 @@ function SinceTable({ result }: { result: { days: number; before: WindowTotals; 
   const locale = useLocale();
   const cell = "whitespace-nowrap px-1.5 py-0.5 text-right tabular-nums";
   return (
-    <table className="mt-1 w-full text-[12.5px]">
+    <table className="mt-2 w-full text-[13px]">
       <thead>
-        <tr className="text-[11px] text-ink-mute">
+        <tr className="text-[13px] text-ink-mute">
           <th className="py-0.5 pr-1.5 text-left font-semibold">{t(locale, K("since.window"), { days: result.days })}</th>
           <th className={cn(cell, "font-semibold")}>{t(locale, K("since.before"))}</th>
           <th className={cn(cell, "font-semibold")}>{t(locale, K("since.after"))}</th>
@@ -1144,7 +1193,8 @@ function SinceTable({ result }: { result: { days: number; before: WindowTotals; 
               <td className="py-0.5 pr-1.5 text-ink-soft">{t(locale, K(`since.metric.${m}`))}</td>
               <td className={cn(cell, "text-ink-soft")}>{show(b)}</td>
               <td className={cn(cell, "font-semibold text-ink")}>{show(a)}</td>
-              <td className={cn(cell, "whitespace-nowrap pr-0 font-semibold", c?.dir === "up" ? "text-green" : c?.dir === "down" ? "text-red" : "text-ink-mute")} data-dir={c?.dir ?? "none"}>
+              {/* The change may wrap on a phone ("▼ 4 menos por cada 100") — never cut off. */}
+              <td className={cn("px-1.5 py-0.5 pr-0 text-right font-semibold tabular-nums", c?.dir === "up" ? "text-green" : c?.dir === "down" ? "text-red" : "text-ink-mute")} data-dir={c?.dir ?? "none"}>
                 {!c ? "" : c.dir === "same" ? t(locale, K("since.same")) : rate ? `${c.dir === "up" ? "▲" : "▼"} ${t(locale, K(`since.per100.${c.dir}`), { count: c.value })}` : `${c.dir === "up" ? "▲" : "▼"} ${formatCount(c.value, locale)}`}
               </td>
             </tr>
@@ -1158,7 +1208,7 @@ function SinceTable({ result }: { result: { days: number; before: WindowTotals; 
 /** "Since you did this": up to 3 recent actions, the 30 days after vs the
  * 30 days before (read live, never stored); "Check back on {date}" under
  * 14 days. "After", never "because". */
-function SinceCard({ businessId, connected, sample, events }: { businessId: string; connected: boolean; sample: boolean; events: ActionEvent[] }) {
+function SinceCard({ businessId, connected, sample, events, recap = null }: { businessId: string; connected: boolean; sample: boolean; events: ActionEvent[]; recap?: ReactNode }) {
   const locale = useLocale();
   const timeZone = useTimeZone();
   const today = localToday(Date.now(), timeZone).date;
@@ -1176,19 +1226,22 @@ function SinceCard({ businessId, connected, sample, events }: { businessId: stri
       alive = false;
     };
   }, [businessId, connected, sample, readyKey]);
-  const box = "mt-2.5 rounded-xl bg-white px-[13px] py-[11px] text-ink";
+  const box = "flex flex-col gap-3 rounded-xl border border-paper-deep bg-white p-5 text-ink shadow-card sm:p-6";
   const head = (
-    <div className="flex flex-wrap items-baseline gap-x-2.5">
-      <b className="text-[14px]">{t(locale, K("since.title"))}</b>
-      {sample && <SampleTag />}
-    </div>
+    <>
+      <div className="flex flex-wrap items-baseline gap-x-2.5">
+        <h3 className="text-[15px] font-bold">{t(locale, K("since.title"))}</h3>
+        {sample && <SampleTag />}
+      </div>
+      {recap}
+    </>
   );
-  const note = <p className="mt-1.5 text-[11.5px] text-ink-mute">{t(locale, K("since.note"))}</p>;
+  const note = <p className="text-[13px] text-ink-mute">{t(locale, K("since.note"))}</p>;
   if (sample) {
     return (
       <div className={box} data-testid="google-tab-since">
         {head}
-        <p className="mt-1 text-[13px] font-semibold">{eventLine(SAMPLE_SINCE.event.date, [SAMPLE_SINCE.event], locale)}</p>
+        <p className="text-[15px] font-semibold">{eventLine(SAMPLE_SINCE.event.date, [SAMPLE_SINCE.event], locale)}</p>
         <SinceTable result={SAMPLE_SINCE.result} />
         {note}
       </div>
@@ -1198,7 +1251,7 @@ function SinceCard({ businessId, connected, sample, events }: { businessId: stri
     return (
       <div className={box} data-testid="google-tab-since">
         {head}
-        <p className="mt-1 text-[12.5px] text-ink-soft" data-testid="since-not-connected">{t(locale, K("since.notConnected"))}</p>
+        <p className="text-[13px] text-ink-soft" data-testid="since-not-connected">{t(locale, K("since.notConnected"))}</p>
       </div>
     );
   }
@@ -1206,32 +1259,34 @@ function SinceCard({ businessId, connected, sample, events }: { businessId: stri
     return (
       <div className={box} data-testid="google-tab-since">
         {head}
-        <p className="mt-1 text-[12.5px] text-ink-soft" data-testid="since-none">{t(locale, K("since.none"))}</p>
+        <p className="text-[13px] text-ink-soft" data-testid="since-none">{t(locale, K("since.none"))}</p>
       </div>
     );
   }
   return (
     <div className={box} data-testid="google-tab-since">
       {head}
-      <div className="mt-1 grid items-start gap-3 sm:grid-cols-[repeat(auto-fit,minmax(240px,1fr))]">
-        {picks.map((e) => {
+      <div className="grid items-start gap-3 lg:grid-cols-3">
+        {/* Cards with before/after numbers first (two-thirds wide), "Check back on…" ones beside and after them. */}
+        {[...picks].sort((a, b) => Number(sinceStatus(b.date, today).ready) - Number(sinceStatus(a.date, today).ready)).map((e) => {
           const st = sinceStatus(e.date, today);
           const r = data && data !== "loading" && data.status === "ok" ? data.results.find((x) => x.date === e.date) : null;
           return (
-            <div key={`${e.date}-${e.kind}`} className="min-w-0 rounded-lg border border-paper-line px-2.5 py-2" data-testid="since-action" data-ready={st.ready ? "1" : "0"}>
-              <p className="text-[13px] font-semibold leading-snug">{eventLine(e.date, [e], locale)}</p>
+            // A card with before/after numbers gets two-thirds of the row; "Check back on…" stays compact.
+            <div key={`${e.date}-${e.kind}`} className={cn("min-w-0 rounded-xl border border-paper-line p-4", st.ready && "lg:col-span-2")} data-testid="since-action" data-ready={st.ready ? "1" : "0"}>
+              <p className="text-[15px] font-semibold leading-snug">{eventLine(e.date, [e], locale)}</p>
               {!st.ready ? (
-                <p className="mt-0.5 text-[12.5px] text-ink-soft" data-testid="since-check-back">
+                <p className="mt-1 text-[13px] text-ink-soft" data-testid="since-check-back">
                   <b className="text-ink">{t(locale, K("since.checkBack"), { date: shortDate(st.checkBack, locale) })}</b> · {t(locale, K("since.checkBackWhy"))}
                 </p>
               ) : data === "loading" || data === null ? (
-                <p className="mt-0.5 text-[12.5px] text-ink-mute" role="status">{t(locale, K("since.loading"))}</p>
+                <p className="mt-1 text-[13px] text-ink-mute" role="status">{t(locale, K("since.loading"))}</p>
               ) : data.status !== "ok" ? (
-                <p className="mt-0.5 text-[12.5px] text-ink-mute" data-testid="since-failed">{t(locale, K(data.status === "not_connected" ? "since.notConnected" : "since.failed"))}</p>
+                <p className="mt-1 text-[13px] text-ink-mute" data-testid="since-failed">{t(locale, K(data.status === "not_connected" ? "since.notConnected" : "since.failed"))}</p>
               ) : r && r.days !== null ? (
                 <SinceTable result={r} />
               ) : (
-                <p className="mt-0.5 text-[12.5px] text-ink-mute">{t(locale, K("since.noData"))}</p>
+                <p className="mt-1 text-[13px] text-ink-mute">{t(locale, K("since.noData"))}</p>
               )}
             </div>
           );
@@ -1310,7 +1365,7 @@ function WhoCard({ a, sample, span }: { a: Audience; sample: boolean; span: stri
       <CardHead title={t(locale, K("s2.whoTitle"))} period={history ? t(locale, K("who.vs"), { now: span, last: lastSpan }) : span} extra={sample ? <SampleTag className="ml-2" /> : undefined} />
       <table className="mt-2 w-full text-[12.5px]" data-testid="google-tab-who-table">
         <thead>
-          <tr className="text-[11px] text-ink-mute">
+          <tr className="text-[13px] text-ink-mute">
             <th className="py-1 pr-1.5 text-left font-semibold" />
             <th className={cn(cell, "font-semibold")}>{span}</th>
             <th className={cn(cell, "font-semibold")}>{lastSpan}</th>

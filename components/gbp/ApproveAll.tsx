@@ -48,7 +48,10 @@ export function ApproveAll({
   practice,
   failures = {},
   onFailure = () => undefined,
+  title = null,
 }: {
+  /** The card's title, on the left of the button (the button sits at the top right). */
+  title?: React.ReactNode;
   businessId: string;
   replies?: WeekRepliesState | null;
   post?: PostDraftState | null;
@@ -136,18 +139,21 @@ export function ApproveAll({
   };
 
   return (
-    <div className="flex flex-col gap-1 rounded-lg border border-paper-line bg-white px-3 py-2" data-testid="approve-all">
-      <div className="flex flex-wrap items-center gap-2">
-        <button type="button" onClick={run} disabled={!canEdit || count === 0 || progress !== null} className={W_BUTTON} data-testid="approve-all-button" data-count={count}>
-          {progress ? t(locale, W("approveAll.sending"), { done: progress.done, count: progress.of }) : t(locale, W("approveAll"), { count })}
-        </button>
-        {loading && <span className="text-[12px] text-ink-mute">{t(locale, W("preparing"))}</span>}
+    <div className="flex flex-col gap-1.5" data-testid="approve-all">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="min-w-0">{title}</div>
+        <div className="flex flex-wrap items-center gap-2.5">
+          {loading && <span className="text-[13px] text-ink-mute">{t(locale, W("preparing"))}</span>}
+          <button type="button" onClick={run} disabled={!canEdit || count === 0 || progress !== null} className={W_BUTTON} data-testid="approve-all-button" data-count={count}>
+            {progress ? t(locale, W("approveAll.sending"), { done: progress.done, count: progress.of }) : t(locale, W("approveAll"), { count })}
+          </button>
+        </div>
       </div>
-      <p className="text-[12px] text-ink-mute">{t(locale, W("approveAll.note"))}</p>
-      {practice && <p className="text-[11.5px] font-semibold text-brass" data-testid="approve-all-practice">{t(locale, W("practice"))}</p>}
-      {!canEdit && <p className="text-[12px] text-ink-mute" data-testid="approve-all-off">{t(locale, W("readOnly"))}</p>}
+      <p className="text-[13px] text-ink-mute">{t(locale, W("approveAll.note"))}</p>
+      {practice && <p className="text-[13px] font-semibold text-brass" data-testid="approve-all-practice">{t(locale, W("practice"))}</p>}
+      {!canEdit && <p className="text-[13px] text-ink-mute" data-testid="approve-all-off">{t(locale, W("readOnly"))}</p>}
       {summary && (
-        <p className="text-[12px]" data-testid="approve-all-summary">
+        <p className="text-[13px]" data-testid="approve-all-summary">
           <b className="text-green">{t(locale, W("approveAll.sent"), { count: summary.sent })}</b>
           {summary.failed > 0 && <span className="text-red"> · {t(locale, W("approveAll.failedRows"), { count: summary.failed })}</span>}
         </p>

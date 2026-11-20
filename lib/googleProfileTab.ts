@@ -409,12 +409,13 @@ export function monthKeyOf(iso: string, timeZone: string): string {
   return `${parts.find((p) => p.type === "year")?.value}-${String(parts.find((p) => p.type === "month")?.value).padStart(2, "0")}`;
 }
 
-/** Listing changes that went through last month (real ones, or practice
- * ones in practice mode), each kind once. Undos and failures don't count. */
-export function monthListingChanges(rows: ChangeRow[], month: string, timeZone: string, practice: boolean): ListingChangeKind[] {
+/** Listing changes that went through last month, each kind once — real
+ * ones only (practice mode's never count, even in practice mode). Undos
+ * and failures don't count. */
+export function monthListingChanges(rows: ChangeRow[], month: string, timeZone: string): ListingChangeKind[] {
   const out: ListingChangeKind[] = [];
   for (const r of [...rows].sort((a, b) => a.approved_at.localeCompare(b.approved_at))) {
-    if (isPracticeRow(r) !== practice || r.undo_of || r.undone_at) continue;
+    if (isPracticeRow(r) || r.undo_of || r.undone_at) continue;
     if (r.status !== "sent" && r.status !== "pending_review") continue;
     if (monthKeyOf(r.approved_at, timeZone) !== month) continue;
     const k = listingChangeKind(r.kind, r.field);

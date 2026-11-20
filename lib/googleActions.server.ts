@@ -20,7 +20,8 @@ const dateIn = (iso: string, timeZone: string) => localToday(Date.parse(iso), ti
 /** The actions, one event per day and kind, oldest first. */
 export function groupActions(
   rows: { replies: Array<{ action: string; status: string; created_at: string }>; changes: ChangeRow[]; promos: Array<{ created_at: string }>; referrals: Array<{ created_at: string }> },
-  opts: { timeZone: string; practice: boolean }
+  /** `practice` is ignored: practice-mode actions are never shown as results. */
+  opts: { timeZone: string; practice?: boolean }
 ): ActionEvent[] {
   const events = new Map<string, ActionEvent>();
   const add = (date: string, kind: ActionEvent["kind"], what?: string) => {
@@ -30,13 +31,14 @@ export function groupActions(
     if (what && e.what && !e.what.includes(what)) e.what.push(what);
     events.set(key, e);
   };
+  // Real actions only — practice mode's never reach the chart, "Since you did this" or any report.
   for (const r of rows.replies) {
-    if (r.action !== "post" || !(opts.practice ? r.status === "practice" : r.status === "ok" || r.status === "unconfirmed")) continue;
+    if (r.action !== "post" || !(r.status === "ok" || r.status === "unconfirmed")) continue;
     add(dateIn(r.created_at, opts.timeZone), "replies");
   }
   const batches = new Set<string>();
   for (const r of rows.changes) {
-    if (isPracticeRow(r) !== opts.practice || r.undo_of || r.undone_at || (r.status !== "sent" && r.status !== "pending_review")) continue;
+    if (isPracticeRow(r) || r.undo_of || r.undone_at || (r.status !== "sent" && r.status !== "pending_review")) continue;
     if (r.kind.replace(/_practice$/, "") === "local_post") {
       if (r.status === "sent") add(dateIn(r.approved_at, opts.timeZone), "posts");
       continue;

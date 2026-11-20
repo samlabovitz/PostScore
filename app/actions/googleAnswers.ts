@@ -130,7 +130,14 @@ export async function openAnswers(businessId: string): Promise<OpenAnswersResult
     facts: {
       name: shown.name ?? "",
       city: shown.address ? (extractCityFromAddress(shown.address) ?? null) : null,
-      hours: Array.isArray(shown.opening_hours) && shown.opening_hours.length ? shown.opening_hours : null,
+      hours: await (async () => {
+        // From Google's own periods, in the business's language ("Lunes: cerrado"); Google's English text only for an English business.
+        const { weekFromGoogle } = await import("@/lib/gbpProfileEdits");
+        const { hoursLines } = await import("@/lib/googleAnswers");
+        const week = real?.ok ? weekFromGoogle((real.listing.location.regularHours?.periods ?? []) as never) : null;
+        if (week) return hoursLines(week, normalizeLocale(row.language));
+        return normalizeLocale(row.language) === "en" && Array.isArray(shown.opening_hours) && shown.opening_hours.length ? shown.opening_hours : null;
+      })(),
       bookingUrl: booking && booking.kind !== "none" ? booking.uri : null,
     },
     locale: normalizeLocale(row.language),

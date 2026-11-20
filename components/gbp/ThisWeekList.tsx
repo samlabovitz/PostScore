@@ -96,42 +96,45 @@ function Badge({ state, minutes, tomorrow }: { state: ItemState; minutes: number
               ? t(locale, W("failed.badge"))
               : t(locale, W("needsYou"), { time: t(locale, W("time.min"), { count: minutes }) });
   return (
-    <span className={cn("shrink-0 whitespace-nowrap rounded-full px-2 py-0.5 text-[11px] font-bold", cls)} data-testid="week-badge" data-state={state}>
+    <span className={cn("shrink-0 whitespace-nowrap rounded-full px-2.5 py-1 text-[12.5px] font-semibold", cls)} data-testid="week-badge" data-state={state}>
       {label}
     </span>
   );
 }
 
-export function WeekItem({ rec, state, type, businessId, canEdit, children, failure, onRetry, tomorrow }: { rec: Rec; state: ItemState; type: IdeaType | null; businessId: string; canEdit: boolean; children?: React.ReactNode; failure?: string | null; onRetry?: () => Promise<void>; tomorrow?: string }) {
+/** One to-do: its title, one line of detail, its status pill and one button; its preview opens below it (one at a time). */
+export function WeekItem({ rec, state, type, businessId, canEdit, children, failure, onRetry, tomorrow, open: openProp, onToggle }: { rec: Rec; state: ItemState; type: IdeaType | null; businessId: string; canEdit: boolean; children?: React.ReactNode; failure?: string | null; onRetry?: () => Promise<void>; tomorrow?: string; open?: boolean; onToggle?: () => void }) {
   const locale = useLocale();
-  const [open, setOpen] = useState(false);
+  const [openSelf, setOpenSelf] = useState(false);
+  const open = openProp ?? openSelf;
+  const setOpen = (v: boolean) => (onToggle ? onToggle() : setOpenSelf(v));
   const [retrying, setRetrying] = useState(false);
   const x = itemText(rec, locale, type);
   return (
-    <li className="flex flex-col gap-2 border-t border-paper-line/70 py-2.5 first:border-t-0" data-testid={`week-${rec.kind}`} data-state={state}>
-      <div className="flex flex-col gap-1.5 sm:flex-row sm:items-start sm:justify-between sm:gap-3">
+    <li className="flex flex-col gap-3 border-t border-paper-line py-4 first:border-t-0 first:pt-1 last:pb-0" data-testid={`week-${rec.kind}`} data-state={state}>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
         <div className="min-w-0">
-          <p className="text-[13px] font-semibold leading-snug text-ink">{x.text}</p>
-          {x.sub && <p className="text-[12px] leading-snug text-ink-mute">{x.sub}</p>}
+          <p className="text-[15px] font-semibold leading-snug text-ink">{x.text}</p>
+          {x.sub && <p className="mt-0.5 text-[13px] leading-snug text-ink-mute">{x.sub}</p>}
         </div>
-        <div className="flex shrink-0 flex-wrap items-center gap-2">
+        <div className="flex shrink-0 flex-wrap items-center gap-2.5">
           <Badge state={state} minutes={needsMinutes(rec)} tomorrow={tomorrow} />
           {rec.kind === "photos" ? (
             // The owner's own photos: never "PostScore can do this for you".
-            <a href="#edit-photos" className="inline-flex h-[30px] shrink-0 items-center whitespace-nowrap rounded-lg border border-ink bg-ink px-3 text-[12.5px] font-semibold text-paper" data-testid="week-upload-photos">
+            <a href="#edit-photos" className={ROW_BUTTON_SOLID} data-testid="week-upload-photos">
               {t(locale, W("photos.upload"))}
             </a>
           ) : children ? (
-            <button type="button" onClick={() => setOpen(!open)} aria-expanded={open} className="text-[12px] font-semibold text-ink underline underline-offset-2" data-testid={`week-toggle-${rec.kind}`}>
+            <button type="button" onClick={() => setOpen(!open)} aria-expanded={open} className={ROW_BUTTON} data-testid={`week-toggle-${rec.kind}`}>
               {t(locale, W(open ? "hide" : "preview"))}
             </button>
           ) : (
-            <RecPremiumButton rec={rec} businessId={businessId} canEdit={canEdit} />
+            <RecPremiumButton rec={rec} businessId={businessId} canEdit={canEdit} className="h-11 px-4 text-[14px]" />
           )}
         </div>
       </div>
       {state === "failed" && (
-        <p className="flex flex-wrap items-center gap-2 text-[12.5px] text-red" data-testid={`week-failed-${rec.kind}`}>
+        <p className="flex flex-wrap items-center gap-2 text-[13px] text-red" data-testid={`week-failed-${rec.kind}`}>
           {t(locale, W("failed.row"), { reason: failure ?? t(locale, W("failed.generic")) })}
           {onRetry && (
             <button
@@ -141,7 +144,7 @@ export function WeekItem({ rec, state, type, businessId, canEdit, children, fail
                 setRetrying(true);
                 await onRetry().finally(() => setRetrying(false));
               }}
-              className="font-semibold text-ink underline underline-offset-2"
+              className={ROW_BUTTON}
               data-testid={`week-retry-${rec.kind}`}
             >
               {retrying ? t(locale, W("sending")) : t(locale, W("retry"))}
@@ -149,10 +152,13 @@ export function WeekItem({ rec, state, type, businessId, canEdit, children, fail
           )}
         </p>
       )}
-      {children && open && <div className="rounded-lg border border-paper-line/70 bg-white px-3 py-2.5">{children}</div>}
+      {children && open && <div className="rounded-xl border border-paper-line bg-paper/40 p-4">{children}</div>}
     </li>
   );
 }
+
+const ROW_BUTTON = "inline-flex min-h-[44px] shrink-0 items-center justify-center whitespace-nowrap rounded-lg border border-paper-line bg-white px-4 text-[14px] font-semibold text-ink hover:border-ink disabled:opacity-60";
+const ROW_BUTTON_SOLID = "inline-flex min-h-[44px] shrink-0 items-center justify-center whitespace-nowrap rounded-lg border border-ink bg-ink px-4 text-[14px] font-semibold text-paper";
 
 /** The item's sentence; the post's and answers' in Day 23E words. */
 export function itemText(rec: Rec, locale: ReturnType<typeof useLocale>, type: IdeaType | null): { text: string; sub: string | null } {
@@ -167,7 +173,9 @@ export function itemText(rec: Rec, locale: ReturnType<typeof useLocale>, type: I
   return recText(rec, locale, type);
 }
 
-export function ThisWeekList({ businessId, recs, type, canEdit, practice }: { businessId: string; recs: Rec[]; type: IdeaType | null; canEdit: boolean; practice: boolean }) {
+/** Section 1's "What to do this week" card: the title with Approve all at the top right, the levers as
+ * status chips (`chips`), then one row per to-do — a preview opens under its row, one at a time. */
+export function ThisWeekList({ businessId, recs, type, canEdit, practice, title, chips }: { businessId: string; recs: Rec[]; type: IdeaType | null; canEdit: boolean; practice: boolean; title?: React.ReactNode; chips?: React.ReactNode }) {
   const locale = useLocale();
   const timeZone = useTimeZone();
   const list = thisWeekKinds(recs);
@@ -179,7 +187,8 @@ export function ThisWeekList({ businessId, recs, type, canEdit, practice }: { bu
   const post = usePostDraft(businessId, { day, auto: has("posts") });
   const answers = useAnswers(businessId, { auto: has("answers"), suggest: answersRec?.plan.suggest ?? [] });
   const [failures, setFailures] = useState<ItemFailures>({});
-  if (list.length === 0) return null;
+  const [openKind, setOpenKind] = useState<Rec["kind"] | null>(null);
+  if (list.length === 0 && !title) return null;
   const onFailure = (kind: keyof ItemFailures, reason: string | null) => setFailures((f) => ({ ...f, [kind]: reason ?? undefined }));
 
   const stateOf = (rec: Rec): ItemState =>
@@ -220,31 +229,34 @@ export function ThisWeekList({ businessId, recs, type, canEdit, practice }: { bu
     const child = rec.kind === "replies" ? <RepliesPreview businessId={businessId} state={replies} /> : rec.kind === "posts" ? <PostPreview businessId={businessId} state={post} /> : rec.kind === "answers" ? <AnswersPreview businessId={businessId} state={answers} /> : null;
     const tomorrow = rec.kind === "posts" && post.blockedToday === "posted_today" ? t(locale, W("tomorrow.posted")) : undefined;
     return (
-      <WeekItem key={rec.kind} rec={rec} state={state} type={type} businessId={businessId} canEdit={canEdit} failure={failures[rec.kind as keyof ItemFailures]} onRetry={retry[rec.kind]} tomorrow={tomorrow}>
+      <WeekItem key={rec.kind} rec={rec} state={state} type={type} businessId={businessId} canEdit={canEdit} failure={failures[rec.kind as keyof ItemFailures]} onRetry={retry[rec.kind]} tomorrow={tomorrow} open={openKind === rec.kind} onToggle={() => setOpenKind(openKind === rec.kind ? null : rec.kind)}>
         {child}
       </WeekItem>
     );
   };
 
+  const heading = title ?? <p className="text-[13px] font-bold uppercase tracking-[0.12em] text-brass">{t(locale, "dashboard.googleTab.rec.thisWeek")}</p>;
   return (
-    <div className="mt-2 flex flex-col gap-2" data-testid="google-tab-this-week" id="google-tab-this-week">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-brass">{t(locale, "dashboard.googleTab.rec.thisWeek")}</p>
-        {allDone && (
-          <p className="text-[13px] font-bold text-green" data-testid="week-all-done">
-            {t(locale, W("allDone"))}
-          </p>
-        )}
-      </div>
-      {!allDone && (
-        <ApproveAll businessId={businessId} replies={has("replies") ? replies : null} post={has("posts") ? post : null} answers={has("answers") ? answers : null} canEdit={canEdit} practice={practice} failures={failures} onFailure={onFailure} />
+    <div className="flex flex-col gap-4" data-testid="google-tab-this-week" id="google-tab-this-week">
+      {allDone || list.length === 0 ? (
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          {heading}
+          {list.length > 0 && (
+            <p className="text-[14px] font-bold text-green" data-testid="week-all-done">
+              {t(locale, W("allDone"))}
+            </p>
+          )}
+        </div>
+      ) : (
+        <ApproveAll businessId={businessId} title={heading} replies={has("replies") ? replies : null} post={has("posts") ? post : null} answers={has("answers") ? answers : null} canEdit={canEdit} practice={practice} failures={failures} onFailure={onFailure} />
       )}
+      {chips}
       {allDone ? (
         <>
           {done.length > 0 && <ul>{done.map(row)}</ul>}
           {rest.length > 0 && (
             <>
-              <p className="mt-1 text-[11px] font-bold uppercase tracking-[0.1em] text-ink-soft" data-testid="week-still-needs-you">
+              <p className="text-[13px] font-bold uppercase tracking-[0.1em] text-ink-soft" data-testid="week-still-needs-you">
                 {t(locale, W("stillNeedsYou"))}
               </p>
               <ul>{rest.map(row)}</ul>
@@ -252,7 +264,7 @@ export function ThisWeekList({ businessId, recs, type, canEdit, practice }: { bu
           )}
         </>
       ) : (
-        <ul>{list.map(row)}</ul>
+        list.length > 0 && <ul>{list.map(row)}</ul>
       )}
     </div>
   );

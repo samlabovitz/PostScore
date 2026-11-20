@@ -21,8 +21,9 @@ import { cn } from "@/lib/utils";
 
 const W = (key: string) => `dashboard.googleTab.w.${key}` as MessageKey;
 
-export const W_BUTTON = "inline-flex h-[30px] shrink-0 items-center justify-center whitespace-nowrap rounded-lg border border-ink bg-ink px-3 text-[12.5px] font-semibold text-paper disabled:opacity-60";
-export const W_BUTTON_SOFT = "inline-flex h-[28px] shrink-0 items-center whitespace-nowrap rounded-lg border border-paper-line bg-white px-2.5 text-[12px] font-semibold text-ink disabled:opacity-60";
+/** Every action button: at least 44px tall, 14px text. */
+export const W_BUTTON = "inline-flex min-h-[44px] shrink-0 items-center justify-center whitespace-nowrap rounded-lg border border-ink bg-ink px-4 text-[14px] font-semibold text-paper disabled:opacity-60";
+export const W_BUTTON_SOFT = "inline-flex min-h-[44px] shrink-0 items-center justify-center whitespace-nowrap rounded-lg border border-paper-line bg-white px-4 text-[14px] font-semibold text-ink hover:border-ink disabled:opacity-60";
 
 export interface PostDraftState {
   status: "idle" | "loading" | "ok" | "failed";
@@ -179,7 +180,7 @@ export function PostStatusLine({ businessId, state }: { businessId: string; stat
   const [error, setError] = useState(false);
   usePostPolling(businessId, state);
   const l = state.latest;
-  if (removed) return <p className="text-[12.5px] text-ink-soft" data-testid="post-removed">{t(locale, W("post.removed"))}</p>;
+  if (removed) return <p className="text-[13px] text-ink-soft" data-testid="post-removed">{t(locale, W("post.removed"))}</p>;
   if (!l) return null;
   const remove = async () => {
     setBusy(true);
@@ -228,7 +229,7 @@ function ProblemLines({ problems }: { problems: PostProblem[] }) {
   const shown = problems.filter((p) => p !== "empty");
   if (shown.length === 0) return null;
   return (
-    <ul className="text-[12px] text-red" data-testid="post-problems">
+    <ul className="text-[13px] text-red" data-testid="post-problems">
       {shown.map((p) => (
         <li key={p}>{t(locale, W(`post.problem.${p}`))}</li>
       ))}
@@ -238,7 +239,7 @@ function ProblemLines({ problems }: { problems: PostProblem[] }) {
 
 function AnotherButton({ state }: { state: PostDraftState }) {
   const locale = useLocale();
-  if (state.left === 0 || state.anotherLimit) return <p className="text-[12px] text-ink-mute">{t(locale, W("post.limit"))}</p>;
+  if (state.left === 0 || state.anotherLimit) return <p className="text-[13px] text-ink-mute">{t(locale, W("post.limit"))}</p>;
   return (
     <button type="button" onClick={() => void state.another()} disabled={state.anotherBusy} className={cn(W_BUTTON_SOFT, "w-fit")} data-testid="post-another">
       {state.anotherBusy ? t(locale, W("post.writing")) : state.left === null ? t(locale, W("post.another")) : t(locale, W("post.anotherLeft"), { count: state.left })}
@@ -252,8 +253,8 @@ export function PostPreview({ businessId, state, kind = "week", standalonePublis
   const timeZone = useTimeZone();
   const [publishing, setPublishing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  if (state.status === "idle" || state.status === "loading") return <p className="text-[12.5px] text-ink-mute" data-testid="post-loading">{t(locale, W("post.loading"))}</p>;
-  if (state.status === "failed") return <p className="text-[12.5px] text-ink-mute" data-testid="post-failed">{t(locale, W("post.failed"))}</p>;
+  if (state.status === "idle" || state.status === "loading") return <p className="text-[13px] text-ink-mute" data-testid="post-loading">{t(locale, W("post.loading"))}</p>;
+  if (state.status === "failed") return <p className="text-[13px] text-ink-mute" data-testid="post-failed">{t(locale, W("post.failed"))}</p>;
   const canEdit = state.publish?.canEdit === true;
   const live = state.latest && state.latest.state !== "rejected";
 
@@ -272,33 +273,34 @@ export function PostPreview({ businessId, state, kind = "week", standalonePublis
   };
 
   return (
-    <div className="flex flex-col gap-2.5" data-testid={`post-preview-${kind}`}>
-      {state.fallback && <p className="text-[12px] text-ink-mute">{t(locale, W("post.fallback"))}</p>}
-      <label className="flex flex-col gap-1">
-        <span className="text-[11.5px] font-semibold text-ink-soft">{t(locale, W("post.textLabel"))}</span>
+    <div className="flex flex-col gap-4" data-testid={`post-preview-${kind}`}>
+      {state.fallback && <p className="text-[13px] text-ink-mute">{t(locale, W("post.fallback"))}</p>}
+      {state.offer && (
+        <p className="rounded-lg bg-paper px-3 py-2.5 text-[13px] text-ink-soft" data-testid="post-offer">
+          {t(locale, W(state.publish ? "post.offer.premium" : "post.offer.grow"), { offer: state.offer.offer, code: state.offer.code })}
+        </p>
+      )}
+      {/* 1. The text */}
+      <label className="flex flex-col gap-1.5">
+        <span className="text-[13px] font-semibold text-ink-soft">{t(locale, W("post.textLabel"))}</span>
         <textarea
           value={state.text}
           onChange={(e) => state.setText(e.target.value)}
           rows={5}
           maxLength={POST_MAX + 200}
           disabled={!!live}
-          className="w-full rounded-lg border border-paper-line bg-white px-3 py-2 text-[13px] text-ink outline-none focus:border-ink disabled:bg-paper"
+          className="w-full rounded-lg border border-paper-line bg-white px-3.5 py-3 text-[14px] leading-relaxed text-ink outline-none focus:border-ink disabled:bg-paper"
           data-testid="post-text"
         />
-        <span className={cn("text-[11px]", state.text.length > POST_MAX ? "text-red" : "text-ink-mute")}>{t(locale, W("post.count"), { count: state.text.length.toLocaleString(locale) })}</span>
+        <span className={cn("text-[13px]", state.text.length > POST_MAX ? "text-red" : "text-ink-mute")}>{t(locale, W("post.count"), { count: state.text.length.toLocaleString(locale) })}</span>
       </label>
       <ProblemLines problems={state.problems} />
       <PostSpelling state={state} />
-      {state.offer && (
-        <p className="rounded-lg bg-paper px-3 py-2 text-[12px] text-ink-soft" data-testid="post-offer">
-          {t(locale, W(state.publish ? "post.offer.premium" : "post.offer.grow"), { offer: state.offer.offer, code: state.offer.code })}
-        </p>
-      )}
-      {!live && !state.offer && <FactsBox state={state} />}
+      {/* 2. The photo */}
       {state.publish && (
-        <div className="flex flex-col gap-1">
-          <span className="text-[11.5px] font-semibold text-ink-soft">{t(locale, W("post.photo"))}</span>
-          <div className="flex flex-wrap gap-2" data-testid="post-photos">
+        <div className="flex flex-col gap-1.5">
+          <span className="text-[13px] font-semibold text-ink-soft">{t(locale, W("post.photo"))}</span>
+          <div className="flex flex-wrap gap-2.5" data-testid="post-photos">
             {state.photos.map((p) => (
               <button
                 key={p.name}
@@ -306,35 +308,39 @@ export function PostPreview({ businessId, state, kind = "week", standalonePublis
                 disabled={!!live}
                 onClick={() => state.setPhotoName(p.name)}
                 aria-pressed={state.photoName === p.name}
-                className={cn("h-14 w-20 overflow-hidden rounded-md border-2", state.photoName === p.name ? "border-ink" : "border-transparent opacity-80")}
+                className={cn("h-16 w-24 overflow-hidden rounded-lg border-2", state.photoName === p.name ? "border-ink" : "border-transparent opacity-80")}
               >
                 {/* eslint-disable-next-line @next/next/no-img-element -- Google's own image, shown live, never saved */}
                 <img src={p.thumb} alt="" className="h-full w-full object-cover" referrerPolicy="no-referrer" />
               </button>
             ))}
-            <button type="button" disabled={!!live} onClick={() => state.setPhotoName(null)} aria-pressed={state.photoName === null} className={cn("h-14 rounded-md border-2 px-2 text-[11.5px] text-ink-soft", state.photoName === null ? "border-ink" : "border-paper-line")}>
+            <button type="button" disabled={!!live} onClick={() => state.setPhotoName(null)} aria-pressed={state.photoName === null} className={cn("h-16 rounded-lg border-2 px-3 text-[13px] text-ink-soft", state.photoName === null ? "border-ink" : "border-paper-line")}>
               {t(locale, W("post.photo.none"))}
             </button>
           </div>
-          {state.photoName === null && <p className="text-[11.5px] text-ink-mute">{t(locale, W("post.photo.tip"))}</p>}
+          {state.photoName === null && <p className="text-[13px] text-ink-mute">{t(locale, W("post.photo.tip"))}</p>}
         </div>
       )}
+      {/* 3. The button */}
       {state.publish && !state.offer && (
-        <label className="flex flex-wrap items-center gap-2 text-[12.5px]">
-          <span className="text-[11.5px] font-semibold text-ink-soft">{t(locale, W("post.button"))}</span>
-          <select value={state.cta} onChange={(e) => state.setCta(e.target.value as PostCta)} disabled={!!live} className="h-[28px] rounded-md border border-paper-line bg-white px-2 text-[12.5px]" data-testid="post-cta">
-            {state.ctas.map((c) => (
-              <option key={c.type} value={c.type}>
-                {t(locale, W(`post.cta.${c.type}`))}
-              </option>
-            ))}
-          </select>
-          {state.cta === "CALL" && <span className="text-[11.5px] text-ink-mute">{t(locale, W("post.ctaNote.CALL"))}</span>}
+        <label className="flex flex-col gap-1.5">
+          <span className="text-[13px] font-semibold text-ink-soft">{t(locale, W("post.button"))}</span>
+          <span className="flex flex-wrap items-center gap-2.5">
+            <select value={state.cta} onChange={(e) => state.setCta(e.target.value as PostCta)} disabled={!!live} className="min-h-[44px] rounded-lg border border-paper-line bg-white px-3 text-[14px]" data-testid="post-cta">
+              {state.ctas.map((c) => (
+                <option key={c.type} value={c.type}>
+                  {t(locale, W(`post.cta.${c.type}`))}
+                </option>
+              ))}
+            </select>
+            {state.cta === "CALL" && <span className="text-[13px] text-ink-mute">{t(locale, W("post.ctaNote.CALL"))}</span>}
+          </span>
         </label>
       )}
       <PostStatusLine businessId={businessId} state={state} />
+      {/* 4. Write another · Publish */}
       {!live && (
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2.5">
           <AnotherButton state={state} />
           {standalonePublish && state.publish && !state.blockedToday && (
             <button type="button" onClick={publish} disabled={!canEdit || publishing || state.problems.length > 0 || state.flags.length > 0} className={W_BUTTON} data-testid="post-publish">
@@ -342,14 +348,15 @@ export function PostPreview({ businessId, state, kind = "week", standalonePublis
             </button>
           )}
           {state.publish && state.blockedToday && (
-            <span className="text-[12.5px] font-semibold text-brass" data-testid="post-blocked-today">
+            <span className="text-[13px] font-semibold text-brass" data-testid="post-blocked-today">
               {t(locale, W(state.blockedToday === "posted_today" ? "tomorrow.posted" : "tomorrow.cap"))}
             </span>
           )}
         </div>
       )}
-      {state.publish && !canEdit && <p className="text-[12px] text-ink-mute" data-testid="post-read-only">{t(locale, W("readOnly"))}</p>}
-      {error && <p className="text-[12px] text-red" data-testid="post-error">{error}</p>}
+      {!live && !state.offer && <FactsBox state={state} />}
+      {state.publish && !canEdit && <p className="text-[13px] text-ink-mute" data-testid="post-read-only">{t(locale, W("readOnly"))}</p>}
+      {error && <p className="text-[13px] text-red" data-testid="post-error">{error}</p>}
     </div>
   );
 }
@@ -359,12 +366,12 @@ export function PostDraftCopy({ state }: { state: PostDraftState }) {
   const locale = useLocale();
   const { load } = state;
   useEffect(() => load(), [load]);
-  if (state.status === "idle" || state.status === "loading") return <p className="text-[12.5px] text-ink-mute" data-testid="post-loading">{t(locale, W("post.loading"))}</p>;
-  if (state.status === "failed") return <p className="text-[12.5px] text-ink-mute" data-testid="post-failed">{t(locale, W("post.failed"))}</p>;
+  if (state.status === "idle" || state.status === "loading") return <p className="text-[13px] text-ink-mute" data-testid="post-loading">{t(locale, W("post.loading"))}</p>;
+  if (state.status === "failed") return <p className="text-[13px] text-ink-mute" data-testid="post-failed">{t(locale, W("post.failed"))}</p>;
   return (
     <div className="flex flex-col gap-2" data-testid="post-copy">
-      {state.offer && <p className="rounded-lg bg-paper px-3 py-2 text-[12px] text-ink-soft" data-testid="post-offer">{t(locale, W("post.offer.grow"), { offer: state.offer.offer, code: state.offer.code })}</p>}
-      {!state.offer && <p className="text-[12px] text-ink-soft">{t(locale, W("post.grow.note"))}</p>}
+      {state.offer && <p className="rounded-lg bg-paper px-3 py-2 text-[13px] text-ink-soft" data-testid="post-offer">{t(locale, W("post.offer.grow"), { offer: state.offer.offer, code: state.offer.code })}</p>}
+      {!state.offer && <p className="text-[13px] text-ink-soft">{t(locale, W("post.grow.note"))}</p>}
       {/* A likely typo is fixed or kept before the text can be copied. */}
       <PostSpelling state={state} />
       {state.flags.length === 0 ? <CopyBlock text={state.text} rows={5} /> : <p className="whitespace-pre-wrap rounded-lg border border-paper-line bg-paper px-3 py-2 text-[13px]">{state.text}</p>}
@@ -386,7 +393,7 @@ function PostSpelling({ state }: { state: PostDraftState }) {
           <button type="button" onClick={() => state.fixFlag(flag)} className={W_BUTTON_SOFT} data-testid="spelling-fix">
             {t(locale, W("spelling.fix"), { suggestion: flag.suggestion })}
           </button>
-          <button type="button" onClick={() => state.keepWord(flag.word)} className="text-[12px] font-semibold text-ink underline underline-offset-2" data-testid="spelling-keep">
+          <button type="button" onClick={() => state.keepWord(flag.word)} className="text-[13px] font-semibold text-ink underline underline-offset-2" data-testid="spelling-keep">
             {t(locale, W("spelling.keep"), { word: flag.word })}
           </button>
         </li>
@@ -410,7 +417,7 @@ function FactsBox({ state }: { state: PostDraftState }) {
         </button>
       ) : (
         <>
-          <p className="text-[12px] text-ink-soft">{t(locale, W("post.facts.note"))}</p>
+          <p className="text-[13px] text-ink-soft">{t(locale, W("post.facts.note"))}</p>
           <textarea value={facts} onChange={(e) => setFacts(e.target.value)} rows={2} maxLength={300} placeholder={t(locale, W(story ? `post.facts.placeholder.${state.topic}` : "post.facts.placeholder.default"))} className="w-full rounded-lg border border-paper-line bg-white px-3 py-2 text-[13px] outline-none focus:border-ink" data-testid="post-facts-text" />
           <button type="button" onClick={() => void state.fromFacts(facts)} disabled={state.anotherBusy || facts.trim().length < 8} className={cn(W_BUTTON_SOFT, "w-fit")} data-testid="post-facts-write">
             {state.anotherBusy ? t(locale, W("post.writing")) : t(locale, W("post.facts.write"))}

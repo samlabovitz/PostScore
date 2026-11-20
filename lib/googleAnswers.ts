@@ -8,6 +8,26 @@
 // schema.org FAQPage markup). Pure.
 
 import { DESCRIPTION_TARGET } from "@/lib/googleRecommendations";
+import { WEEK_ORDER, formatTime, type WeeklyHours } from "@/lib/gbpProfileEdits";
+
+/** The week's hours in the business's language, Monday first, for the website FAQ:
+ * "Monday: Closed" / "Lunes: cerrado", "Tuesday: 9:30 AM – 5:00 PM" / "Martes: 9:30 – 17:00". */
+export function hoursLines(week: WeeklyHours, locale: "en" | "es"): string[] {
+  const dayName = (d: number) => {
+    const n = new Intl.DateTimeFormat(locale, { weekday: "long", timeZone: "UTC" }).format(new Date(Date.UTC(2023, 0, 1 + d, 12)));
+    return n.charAt(0).toUpperCase() + n.slice(1);
+  };
+  return WEEK_ORDER.map((d) => {
+    const day = week[d];
+    const value =
+      day.mode === "closed"
+        ? locale === "es" ? "cerrado" : "Closed"
+        : day.mode === "open24"
+          ? locale === "es" ? "abierto las 24 horas" : "Open 24 hours"
+          : day.ranges.map((r) => `${formatTime(r.open, locale)} – ${formatTime(r.close, locale)}`).join(", ");
+    return `${dayName(d)}: ${value}`;
+  });
+}
 
 export type AnswerPart = "description" | "services" | "details";
 export type DetailPart = "parking" | "accessibility" | "payment";

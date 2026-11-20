@@ -54,7 +54,8 @@ export async function loadGoogleTabSaved(db: SupabaseClient, businessId: string,
   const inMonth = (iso: string) => monthKeyOf(iso, opts.timeZone) === month;
 
   const replyRows = ((replies.error ? [] : replies.data) ?? []) as Array<{ action: string; status: string; created_at: string }>;
-  const repliesPosted = replyRows.filter((r) => r.action === "post" && (opts.practice ? r.status === "practice" : r.status === "ok" || r.status === "unconfirmed") && inMonth(r.created_at)).length;
+  // "Last month you": real replies only — practice mode's never count.
+  const repliesPosted = replyRows.filter((r) => r.action === "post" && (r.status === "ok" || r.status === "unconfirmed") && inMonth(r.created_at)).length;
 
   const promoRows = ((promos.error ? [] : promos.data) ?? []) as Array<{ active: boolean; expiry: string | null; created_at: string }>;
   const couponsRunning = promoRows.filter((p) => p.active && (!p.expiry || p.expiry >= today)).length;
@@ -83,7 +84,7 @@ export async function loadGoogleTabSaved(db: SupabaseClient, businessId: string,
   return {
     couponsRunning,
     lastMonth: month,
-    recap: monthRecap({ listing: monthListingChanges(rows, month, opts.timeZone, opts.practice), replies: repliesPosted, campaigns }),
+    recap: monthRecap({ listing: monthListingChanges(rows, month, opts.timeZone), replies: repliesPosted, campaigns }),
     made: madeFromPostScore(rows, now.getTime(), opts.practice),
     others,
     businessStatus: opts.businessStatus,

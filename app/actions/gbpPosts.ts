@@ -14,7 +14,7 @@
 // Free never calls these (its post item is unchanged).
 
 import { revalidatePath } from "next/cache";
-import { GROW_POST_REDRAFTS, cleanPostText, ctaChoices, offerTemplate, postProblems, postSystemPrompt, postTemplate, postUserMessage, weekStartOf, type PostCta, type PostOffer, type PostPhoto, type PostProblem, type PostTopic } from "@/lib/gbpPosts";
+import { GROW_POST_REDRAFTS, savedDraftUsable, cleanPostText, ctaChoices, offerTemplate, postProblems, postSystemPrompt, postTemplate, postUserMessage, weekStartOf, type PostCta, type PostOffer, type PostPhoto, type PostProblem, type PostTopic } from "@/lib/gbpPosts";
 import type { SpellingFlag } from "@/lib/serviceSpelling";
 import type { GbpEditBlock } from "@/lib/gbpEditGate.server";
 import type { LatestPost } from "@/lib/gbpPostsPublish.server";
@@ -88,9 +88,11 @@ async function draft(inputs: import("@/lib/gbpPostsContext.server").DraftInputs,
 }
 
 async function savedDraft(admin: import("@supabase/supabase-js").SupabaseClient, businessId: string, week: string, language: string): Promise<string | null | "missing"> {
-  const { data, error } = await admin.from("post_drafts").select("text").eq("business_id", businessId).eq("week_start", week).eq("language", language).in("kind", ["week", "another"]).order("created_at", { ascending: false }).limit(1);
+  const { data, error } = await admin.from("post_drafts").select("text, kind, created_at").eq("business_id", businessId).eq("week_start", week).eq("language", language).in("kind", ["week", "another"]).order("created_at", { ascending: false }).limit(5);
   if (error) return "missing";
-  return ((data ?? [])[0] as { text?: string } | undefined)?.text ?? null;
+  // The newest usable one; an older-rules or rule-breaking draft is skipped (and a new one written).
+  const rows = (data ?? []) as Array<{ text: string; kind: string; created_at: string }>;
+  return rows.find(savedDraftUsable)?.text ?? null;
 }
 
 async function anotherCount(admin: import("@supabase/supabase-js").SupabaseClient, businessId: string, week: string): Promise<number> {
@@ -144,6 +146,7 @@ export async function openPostDraft(businessId: string, timeZone: unknown, day: 
     // The offer's draft: kept in memory by coupon and language (it changes when the coupon does).
     const key = `offer|${offer.promoId}|${offer.offer}|${offer.code}|${offer.expiry}|${inputs.locale}`;
     text = memDrafts.get(key) ?? null;
+    if (text && postProblems(text, { aiDraft: true, ownerFacts: offer.offer }).length) text = null;
     if (!text) {
       const d = await draft(inputs, cleanDay(day), { offer });
       text = d.text;
@@ -153,6 +156,7 @@ export async function openPostDraft(businessId: string, timeZone: unknown, day: 
   } else {
     const saved = await savedDraft(o.admin, businessId, week, inputs.locale);
     text = saved === "missing" ? (memDrafts.get(`${businessId}|${week}|${inputs.locale}`) ?? null) : saved;
+    if (text && postProblems(text, { aiDraft: true }).length) text = null;
     if (!text) {
       const d = await draft(inputs, cleanDay(day));
       text = d.text;

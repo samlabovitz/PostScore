@@ -42,15 +42,14 @@ export function vocabularyOf(names: string[]): string[] {
   return Array.from(new Set(names.flatMap((n) => n.toLowerCase().match(/[a-záéíóúñü]{5,}/g) ?? [])));
 }
 
-/** How far a word may be from a service name: 1 edit for short words, 2 from 7 letters, 3 from 7 when the first two letters match.
- * In running text (`prose`) only 1 edit — "Express" is not a typo of "espresso". */
-function close(w: string, v: string, prose = false): boolean {
+/** How far a word may be from a service name: 1 edit for short words, 2 from 7 letters, 3 from 7 when the first two letters match. */
+function close(w: string, v: string): boolean {
   if (w === v || w[0] !== v[0] || Math.abs(w.length - v.length) > 2) return false;
   // A plural or another ending of the same word is fine ("highlight" / "highlights", "glaze" / "glazed").
   const ending = (long: string, short: string) => long.startsWith(short) && /^(s|es|d|ed|ing|r|er)$/.test(long.slice(short.length));
   if (ending(w, v) || ending(v, w) || ending(w, v.replace(/e$/, "")) || ending(v, w.replace(/e$/, ""))) return false;
   const dist = editDistance(w, v);
-  if (w.length < 7 || prose) return dist <= 1;
+  if (w.length < 7) return dist <= 1;
   return dist <= 2 || (dist === 3 && w.slice(0, 2) === v.slice(0, 2));
 }
 
@@ -61,9 +60,11 @@ export interface SpellingFlag {
   suggestion: string;
 }
 
-/** Likely typos of service names in `text`: "baylage" → "balayage". The
- * listing's own service words and the words the owner chose to keep are
- * never flagged. `prose`: a post or description, not a list of names. */
+/** Likely typos of service names: "baylage" → "balayage". Only service
+ * NAMES are checked — a list of names (the services being added, the price
+ * list), or, in running text (`prose`: a post or description), only the
+ * words the business's own service names / price list misspell. The
+ * listing's own spellings and the words the owner chose to keep are never flagged. */
 export function spellingFlags(text: string, opts: { services?: string[]; keep?: string[]; prose?: boolean; ownerTerms?: string[] } = {}): SpellingFlag[] {
   const own = vocabularyOf(opts.services ?? []);
   // Running text: words the owner's own price list misspells are checked like service names (they're where "baylage" comes from).
@@ -74,7 +75,10 @@ export function spellingFlags(text: string, opts: { services?: string[]; keep?: 
   for (const word of text.match(WORD) ?? []) {
     const w = word.toLowerCase();
     if (known.has(w) || COMMON.has(w) || out.some((f) => f.word.toLowerCase() === w)) continue;
-    const hit = vocab.find((v) => close(w, v, opts.prose === true && !ownerTypos.has(w)));
+    // Running text: only the business's own misspelled service names ("baylage" from its price list) —
+    // never ordinary words ("tones" isn't a typo of "toner").
+    if (opts.prose && !ownerTypos.has(w)) continue;
+    const hit = vocab.find((v) => close(w, v));
     if (hit) out.push({ word, suggestion: word[0] === word[0].toUpperCase() ? hit[0].toUpperCase() + hit.slice(1) : hit });
   }
   return out;

@@ -113,7 +113,10 @@ export function recButtonLabel(rec: Rec, locale: Locale, ctx: { premium: boolean
   return b.kind === "do_it" ? t(locale, "dashboard.breakdown.action.doItForYou") : t(locale, K(VERB[rec.kind]));
 }
 
-const BUTTON = "inline-flex h-[30px] shrink-0 items-center whitespace-nowrap rounded-lg border border-ink bg-ink px-3 text-[12.5px] font-semibold text-paper";
+/** At least 44px tall, 14px text (the Google Profile tab's buttons). */
+const BUTTON = "inline-flex min-h-[44px] shrink-0 items-center whitespace-nowrap rounded-lg border border-ink bg-ink px-4 text-[14px] font-semibold text-paper";
+/** The secondary (outlined) look: Grow's "How to do it". */
+const BUTTON_OUTLINE = "inline-flex min-h-[44px] shrink-0 items-center whitespace-nowrap rounded-lg border border-paper-line bg-white px-4 text-[14px] font-semibold text-ink hover:border-ink";
 
 /** Premium: one button. */
 export function RecPremiumButton({ rec, businessId, canEdit, className }: { rec: Rec; businessId: string; canEdit: boolean; className?: string }) {
@@ -141,12 +144,12 @@ export function RecSteps({ rec, businessId, drafts = false }: { rec: Rec; busine
   const google = rec.kind === "replies" ? GOOGLE_LINKS.businessProfileReviews : GOOGLE_LINKS.businessProfile;
   return (
     <div className="flex flex-col gap-1.5">
-      <div className="flex flex-wrap items-center gap-2">
-        <button type="button" onClick={() => setOpen(!open)} aria-expanded={open} className={BUTTON} data-testid={`rec-steps-${rec.kind}`}>
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+        <button type="button" onClick={() => setOpen(!open)} aria-expanded={open} className={BUTTON_OUTLINE} data-testid={`rec-steps-${rec.kind}`}>
           {t(locale, K(open ? "rec.steps.hide" : "rec.steps.show"))}
         </button>
         {b.kind === "steps" && b.premiumLine && (
-          <Link href={`/business/${businessId}/settings#compare-plans`} data-testid="premium-one-click" className="w-fit text-[12px] font-medium text-ink-mute underline decoration-brass/60 underline-offset-2 hover:text-ink">
+          <Link href={`/business/${businessId}/settings#compare-plans`} data-testid="premium-one-click" className="w-fit text-[13px] font-medium text-ink-mute underline decoration-brass/60 underline-offset-2 hover:text-ink">
             {t(locale, "dashboard.fix.premiumOneClick")}
           </Link>
         )}
@@ -154,7 +157,7 @@ export function RecSteps({ rec, businessId, drafts = false }: { rec: Rec; busine
       {open && drafts && rec.kind === "posts" && <GrowPostDraft businessId={businessId} rec={rec} />}
       {open && drafts && rec.kind === "answers" && <GrowAnswers businessId={businessId} suggest={rec.plan.suggest} />}
       {open && (
-        <div className="rounded-lg bg-paper px-3 py-2 text-[12.5px] text-ink-soft" data-testid={`rec-steps-body-${rec.kind}`}>
+        <div className="rounded-lg bg-paper px-4 py-3 text-[13px] text-ink-soft" data-testid={`rec-steps-body-${rec.kind}`}>
           <ol className="list-decimal pl-4">
             {[1, 2, 3].map((n) => (
               <li key={n}>{t(locale, K(`rec.steps.${rec.kind}.${n}`))}</li>
@@ -188,10 +191,10 @@ export function RecItem({ rec, businessId, premium, canEdit, type, drafts = fals
   const locale = useLocale();
   const x = recText(rec, locale, type);
   return (
-    <li className={cn("flex flex-col gap-1.5 border-t border-paper-line/70 py-2 first:border-t-0", premium && "sm:flex-row sm:items-center sm:justify-between sm:gap-3")} data-testid={`rec-${rec.kind}`}>
+    <li className={cn("flex flex-col gap-2.5 border-t border-paper-line py-4 first:border-t-0", premium && "sm:flex-row sm:items-center sm:justify-between sm:gap-4")} data-testid={`rec-${rec.kind}`}>
       <div className="min-w-0">
-        <p className="text-[13px] font-semibold leading-snug text-ink">{x.text}</p>
-        {x.sub && <p className="text-[12px] leading-snug text-ink-mute">{x.sub}</p>}
+        <p className="text-[15px] font-semibold leading-snug text-ink">{x.text}</p>
+        {x.sub && <p className="mt-0.5 text-[13px] leading-snug text-ink-mute">{x.sub}</p>}
       </div>
       {premium ? <RecPremiumButton rec={rec} businessId={businessId} canEdit={canEdit} /> : <RecSteps rec={rec} businessId={businessId} drafts={drafts} />}
     </li>

@@ -2086,6 +2086,44 @@ export type MessageKey =
   | "dashboard.googleTab.ev.campaign"
   | "dashboard.googleTab.ev.campaignOne"
   | "dashboard.googleTab.ev.line"
+  | "dashboard.googleTab.w.ans.services.showAll"
+  | "dashboard.googleTab.lever.short.reviews.title"
+  | "dashboard.googleTab.lever.short.photos.title"
+  | "dashboard.googleTab.lever.short.posts.title"
+  | "dashboard.googleTab.lever.short.deals.title"
+  | "dashboard.googleTab.lever.short.website.title"
+  | "dashboard.googleTab.lever.short.reviews.replied"
+  | "dashboard.googleTab.lever.short.reviews.notChecked"
+  | "dashboard.googleTab.lever.short.reviews.noRecent"
+  | "dashboard.googleTab.lever.short.photos.newest"
+  | "dashboard.googleTab.lever.short.photos.none"
+  | "dashboard.googleTab.lever.short.photos.soon"
+  | "dashboard.googleTab.lever.short.posts.count"
+  | "dashboard.googleTab.lever.short.posts.none"
+  | "dashboard.googleTab.lever.short.posts.soon"
+  | "dashboard.googleTab.lever.short.deals.running"
+  | "dashboard.googleTab.lever.short.deals.runningOne"
+  | "dashboard.googleTab.lever.short.deals.none"
+  | "dashboard.googleTab.lever.short.website.score"
+  | "dashboard.googleTab.lever.short.website.none"
+  | "dashboard.googleTab.s1.heroTitle"
+  | "dashboard.googleTab.rate.sentenceShort"
+  | "dashboard.googleTab.rate.change.up"
+  | "dashboard.googleTab.rate.change.down"
+  | "dashboard.googleTab.rate.change.same"
+  | "dashboard.googleTab.rate.infoLabel"
+  | "dashboard.googleTab.rate.updates"
+  | "dashboard.googleTab.kpi.infoLabel"
+  | "dashboard.googleTab.worth.strip.left"
+  | "dashboard.googleTab.worth.strip.leftOne"
+  | "dashboard.googleTab.s1.todo.title"
+  | "dashboard.googleTab.lever.go"
+  | "dashboard.googleTab.sourcesToggle"
+  | "dashboard.googleTab.w.ans.step.done"
+  | "dashboard.googleTab.w.ans.extra.title"
+  | "dashboard.googleTab.w.ans.extra.open"
+  | "dashboard.googleTab.w.ans.extra.post"
+  | "dashboard.googleTab.w.ans.extra.faq"
   | "dashboard.googleTab.w.photos.upload"
   | "dashboard.googleTab.w.tomorrow.posted"
   | "dashboard.googleTab.w.tomorrow.cap"
@@ -8289,6 +8327,44 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.googleTab.ev.campaign": "started {count} coupons or referral cards",
     "dashboard.googleTab.ev.campaignOne": "started 1 coupon or referral card",
     "dashboard.googleTab.ev.line": "{date}: {what}",
+    "dashboard.googleTab.w.ans.services.showAll": "Show all {count} services",
+    "dashboard.googleTab.lever.short.reviews.title": "Reviews",
+    "dashboard.googleTab.lever.short.photos.title": "Photos",
+    "dashboard.googleTab.lever.short.posts.title": "Posts",
+    "dashboard.googleTab.lever.short.deals.title": "Deals",
+    "dashboard.googleTab.lever.short.website.title": "Website",
+    "dashboard.googleTab.lever.short.reviews.replied": "{percent}%",
+    "dashboard.googleTab.lever.short.reviews.notChecked": "not checked",
+    "dashboard.googleTab.lever.short.reviews.noRecent": "none new",
+    "dashboard.googleTab.lever.short.photos.newest": "{months} mo",
+    "dashboard.googleTab.lever.short.photos.none": "none",
+    "dashboard.googleTab.lever.short.photos.soon": "soon",
+    "dashboard.googleTab.lever.short.posts.count": "{count}",
+    "dashboard.googleTab.lever.short.posts.none": "none",
+    "dashboard.googleTab.lever.short.posts.soon": "soon",
+    "dashboard.googleTab.lever.short.deals.running": "{count}",
+    "dashboard.googleTab.lever.short.deals.runningOne": "1",
+    "dashboard.googleTab.lever.short.deals.none": "none",
+    "dashboard.googleTab.lever.short.website.score": "{earned}/{of}",
+    "dashboard.googleTab.lever.short.website.none": "none",
+    "dashboard.googleTab.s1.heroTitle": "Your month on Google",
+    "dashboard.googleTab.rate.sentenceShort": "of people who found you on Google became customers",
+    "dashboard.googleTab.rate.change.up": "▲ {count} vs {month}",
+    "dashboard.googleTab.rate.change.down": "▼ {count} vs {month}",
+    "dashboard.googleTab.rate.change.same": "Same as {month}",
+    "dashboard.googleTab.rate.infoLabel": "How it's calculated",
+    "dashboard.googleTab.rate.updates": "Updates on the 1st · next: {date}",
+    "dashboard.googleTab.kpi.infoLabel": "About this number",
+    "dashboard.googleTab.worth.strip.left": "Left on the table about {low}–{high}",
+    "dashboard.googleTab.worth.strip.leftOne": "Left on the table about {amount}",
+    "dashboard.googleTab.s1.todo.title": "What to do this week",
+    "dashboard.googleTab.lever.go": "Go there →",
+    "dashboard.googleTab.sourcesToggle": "Sources",
+    "dashboard.googleTab.w.ans.step.done": "Already on your listing ✓",
+    "dashboard.googleTab.w.ans.extra.title": "Optional, now that your answers are on Google:",
+    "dashboard.googleTab.w.ans.extra.open": "Open",
+    "dashboard.googleTab.w.ans.extra.post": "A short post that tells customers what's new on your listing.",
+    "dashboard.googleTab.w.ans.extra.faq": "The same answers for your own website, with FAQ markup.",
     "dashboard.googleTab.w.photos.upload": "Upload your photos",
     "dashboard.googleTab.w.tomorrow.posted": "Posted today · next post tomorrow",
     "dashboard.googleTab.w.tomorrow.cap": "Today's limit for Google changes is used · tomorrow",
@@ -8770,13 +8846,13 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.googleTab.ideas.posts.pill": "Gives searchers a reason to act now",
     "dashboard.googleTab.ideas.posts.reason": "No Google posts in the last 30 days. Try {topic}.",
     "dashboard.googleTab.ideas.posts.button": "Preview this week's post",
-    "dashboard.googleTab.ideas.posts.topic.hair": "a before-and-after of a recent color",
-    "dashboard.googleTab.ideas.posts.topic.barber": "a fresh fade with its price",
-    "dashboard.googleTab.ideas.posts.topic.nails": "this month's nail art",
-    "dashboard.googleTab.ideas.posts.topic.restaurant": "this week's special, with a photo",
-    "dashboard.googleTab.ideas.posts.topic.art": "your next class, with its date",
-    "dashboard.googleTab.ideas.posts.topic.home": "a recent job, before and after",
-    "dashboard.googleTab.ideas.posts.topic.default": "what's new this month",
+    "dashboard.googleTab.ideas.posts.topic.hair": "an invitation to book a new color or cut this season",
+    "dashboard.googleTab.ideas.posts.topic.barber": "an invitation to come in for a fresh cut or fade",
+    "dashboard.googleTab.ideas.posts.topic.nails": "an invitation to come in for a fresh set this season",
+    "dashboard.googleTab.ideas.posts.topic.restaurant": "an invitation to come try the menu this week",
+    "dashboard.googleTab.ideas.posts.topic.art": "an invitation to join a class",
+    "dashboard.googleTab.ideas.posts.topic.home": "an invitation to book your next project",
+    "dashboard.googleTab.ideas.posts.topic.default": "an invitation to visit this month",
     "dashboard.googleTab.ideas.photos.title": "Add 3 new photos",
     "dashboard.googleTab.ideas.photos.pill": "42% more direction requests with photos (Google)",
     "dashboard.googleTab.ideas.photos.reason": "Your newest photo on Google is {count} months old.",
@@ -14776,6 +14852,44 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.googleTab.ev.campaign": "inició {count} cupones o tarjetas de referidos",
     "dashboard.googleTab.ev.campaignOne": "inició 1 cupón o tarjeta de referidos",
     "dashboard.googleTab.ev.line": "{date}: {what}",
+    "dashboard.googleTab.w.ans.services.showAll": "Mostrar los {count} servicios",
+    "dashboard.googleTab.lever.short.reviews.title": "Reseñas",
+    "dashboard.googleTab.lever.short.photos.title": "Fotos",
+    "dashboard.googleTab.lever.short.posts.title": "Publicaciones",
+    "dashboard.googleTab.lever.short.deals.title": "Ofertas",
+    "dashboard.googleTab.lever.short.website.title": "Sitio web",
+    "dashboard.googleTab.lever.short.reviews.replied": "{percent} %",
+    "dashboard.googleTab.lever.short.reviews.notChecked": "sin revisar",
+    "dashboard.googleTab.lever.short.reviews.noRecent": "sin nuevas",
+    "dashboard.googleTab.lever.short.photos.newest": "{months} m",
+    "dashboard.googleTab.lever.short.photos.none": "ninguna",
+    "dashboard.googleTab.lever.short.photos.soon": "pronto",
+    "dashboard.googleTab.lever.short.posts.count": "{count}",
+    "dashboard.googleTab.lever.short.posts.none": "ninguna",
+    "dashboard.googleTab.lever.short.posts.soon": "pronto",
+    "dashboard.googleTab.lever.short.deals.running": "{count}",
+    "dashboard.googleTab.lever.short.deals.runningOne": "1",
+    "dashboard.googleTab.lever.short.deals.none": "ninguna",
+    "dashboard.googleTab.lever.short.website.score": "{earned}/{of}",
+    "dashboard.googleTab.lever.short.website.none": "no",
+    "dashboard.googleTab.s1.heroTitle": "Su mes en Google",
+    "dashboard.googleTab.rate.sentenceShort": "de las personas que lo encontraron en Google se convirtieron en clientes",
+    "dashboard.googleTab.rate.change.up": "▲ {count} frente a {month}",
+    "dashboard.googleTab.rate.change.down": "▼ {count} frente a {month}",
+    "dashboard.googleTab.rate.change.same": "Igual que en {month}",
+    "dashboard.googleTab.rate.infoLabel": "Cómo se calcula",
+    "dashboard.googleTab.rate.updates": "Se actualiza el día 1 · próxima: {date}",
+    "dashboard.googleTab.kpi.infoLabel": "Sobre este número",
+    "dashboard.googleTab.worth.strip.left": "Se quedó sobre la mesa cerca de {low}–{high}",
+    "dashboard.googleTab.worth.strip.leftOne": "Se quedó sobre la mesa cerca de {amount}",
+    "dashboard.googleTab.s1.todo.title": "Qué hacer esta semana",
+    "dashboard.googleTab.lever.go": "Ir →",
+    "dashboard.googleTab.sourcesToggle": "Fuentes",
+    "dashboard.googleTab.w.ans.step.done": "Ya está en su ficha ✓",
+    "dashboard.googleTab.w.ans.extra.title": "Opcional, ahora que sus respuestas están en Google:",
+    "dashboard.googleTab.w.ans.extra.open": "Abrir",
+    "dashboard.googleTab.w.ans.extra.post": "Una publicación breve que cuenta a sus clientes lo nuevo de su ficha.",
+    "dashboard.googleTab.w.ans.extra.faq": "Las mismas respuestas para su propio sitio web, con marcado de preguntas frecuentes.",
     "dashboard.googleTab.w.photos.upload": "Suba sus fotos",
     "dashboard.googleTab.w.tomorrow.posted": "Publicado hoy · la próxima, mañana",
     "dashboard.googleTab.w.tomorrow.cap": "Se usó el límite de cambios en Google de hoy · mañana",
@@ -15257,13 +15371,13 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.googleTab.ideas.posts.pill": "Da a quienes buscan un motivo para actuar ya",
     "dashboard.googleTab.ideas.posts.reason": "Ninguna publicación en Google en los últimos 30 días. Pruebe con {topic}.",
     "dashboard.googleTab.ideas.posts.button": "Ver la publicación de esta semana",
-    "dashboard.googleTab.ideas.posts.topic.hair": "un antes y después de un color reciente",
-    "dashboard.googleTab.ideas.posts.topic.barber": "un fade reciente con su precio",
-    "dashboard.googleTab.ideas.posts.topic.nails": "el diseño de uñas de este mes",
-    "dashboard.googleTab.ideas.posts.topic.restaurant": "el especial de esta semana, con una foto",
-    "dashboard.googleTab.ideas.posts.topic.art": "su próxima clase, con la fecha",
-    "dashboard.googleTab.ideas.posts.topic.home": "un trabajo reciente, antes y después",
-    "dashboard.googleTab.ideas.posts.topic.default": "lo nuevo de este mes",
+    "dashboard.googleTab.ideas.posts.topic.hair": "una invitación a reservar un color o un corte nuevo esta temporada",
+    "dashboard.googleTab.ideas.posts.topic.barber": "una invitación a venir por un corte o un fade nuevo",
+    "dashboard.googleTab.ideas.posts.topic.nails": "una invitación a venir por unas uñas nuevas esta temporada",
+    "dashboard.googleTab.ideas.posts.topic.restaurant": "una invitación a probar el menú esta semana",
+    "dashboard.googleTab.ideas.posts.topic.art": "una invitación a tomar una clase",
+    "dashboard.googleTab.ideas.posts.topic.home": "una invitación a reservar su próximo proyecto",
+    "dashboard.googleTab.ideas.posts.topic.default": "una invitación a visitarle este mes",
     "dashboard.googleTab.ideas.photos.title": "Agregue 3 fotos nuevas",
     "dashboard.googleTab.ideas.photos.pill": "42 % más solicitudes de indicaciones con fotos (Google)",
     "dashboard.googleTab.ideas.photos.reason": "Su foto más reciente en Google tiene {count} meses.",

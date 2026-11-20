@@ -147,7 +147,7 @@ describe("the five levers: status and pill", () => {
 
 describe("“Last month you: … Not yet: …” from the real logs", () => {
   const row = (over: Partial<ChangeRow>): ChangeRow => ({ batch_id: Math.random().toString(), kind: "profile_info", field: "hours", status: "sent", approved_at: "2026-10-10T15:00:00Z", undone_at: null, undo_closed_at: null, undo_of: null, ...over });
-  test("only changes that went through, last month, each once; practice rows only in practice mode", () => {
+  test("only changes that went through, last month, each once; practice rows never (Day 23E fix)", () => {
     const rows = [
       row({}),
       row({ approved_at: "2026-10-12T15:00:00Z" }),
@@ -157,8 +157,7 @@ describe("“Last month you: … Not yet: …” from the real logs", () => {
       row({ kind: "profile_info", field: "description", approved_at: "2026-11-02T15:00:00Z" }),
       row({ kind: "profile_info_practice", field: "phone" }),
     ];
-    expect(monthListingChanges(rows, "2026-10", "America/New_York", false)).toEqual(["hours", "customer_details"]);
-    expect(monthListingChanges(rows, "2026-10", "America/New_York", true)).toEqual(["phone"]);
+    expect(monthListingChanges(rows, "2026-10", "America/New_York")).toEqual(["hours", "customer_details"]);
   });
 
   test("the sentence (EN + ES), with what's not done yet", () => {
@@ -477,14 +476,15 @@ describe("the tab's states", () => {
     for (const s of ["Last month", "Searches → customers", "What people searched", "Your listing", "Show up for more", "Changes"]) expect(words).toContain(s);
     expect(html).toContain('data-testid="google-tab-rate-empty"');
     expect(words).toContain("Google hasn't shared numbers for your listing yet. They usually appear within a few days.");
-    expect(words).toContain("Updates on the 1st of every month · next: ");
+    expect(words).toContain("Updates on the 1st · next: ");
     expect(html).toContain('data-testid="google-tab-kpis-empty"');
     // Sections 2 and 3 wait for Google's numbers; section 5 never says "Coming soon".
     expect(html.match(/data-testid="google-tab-coming"/g)).toHaveLength(2);
     expect(words).not.toContain("first full month");
     expect(words).not.toMatch(/Sample data|11\.8%|704|\$3,700/);
-    // The levers, with the exact micro descriptions.
-    expect(words).toContain("What raises your conversion rate");
+    // The levers: short status chips; the exact research line on hover (and on tap).
+    expect(words).toContain("What to do this week");
+    const titles = Array.from(html.matchAll(/data-testid="lever-[a-z]+"|title="([^"]*)"/g)).map((m) => (m[1] ?? "").replace(/&#x27;/g, "'"));
     for (const why of [
       "80% prefer businesses that reply to every review.",
       "42% more direction requests with photos (Google).",
@@ -492,7 +492,7 @@ describe("the tab's states", () => {
       "50% of customers look for a deal when searching (Google).",
       "0.1s faster on phones lifts conversions ~8% (Deloitte).",
     ])
-      expect(words).toContain(why);
+      expect(titles).toContain(why);
     expect(words).not.toMatch(/Instagram|Facebook|social media/i);
     expect(words).toContain("Last month you: added customer details · fixed your website link. Not yet: review replies, a coupon or referral card. The more of these you keep up each month, the better your odds of this number climbing.");
     expect(words).toContain("Sources: Google Business Profile playbooks · BrightLocal Local Consumer Review Survey 2026 · Sterling Sky Google Posts test · Deloitte 'Milliseconds Make Millions'.");
@@ -553,7 +553,8 @@ describe("the tab's states", () => {
     const words = text(render({ practice: true, connected: false }));
     expect(words).toContain("11.8%");
     expect(words).toContain("October: 11.8% · 83 of 704 people");
-    expect(words).toContain("September: 10.1% · 69 of 680 people ▲ 2 more customers per 100 people than the month before");
+    expect(words).toContain("September: 10.1% · 69 of 680 people");
+    expect(words).toContain("▲ 2 vs September");
     expect(words).toContain("Sample data");
     expect(words).toContain("hair salon tarrytown");
     expect(words).toContain("Google brought you about $1,250–$3,750 last month");
@@ -575,7 +576,8 @@ describe("the tab's states", () => {
   test("Spanish (usted)", () => {
     const words = text(render({}, "es"));
     expect(words).toContain("Google aún no ha compartido números de su ficha. Suelen aparecer en unos días.");
-    expect(words).toContain("Qué sube su tasa de conversión");
+    expect(words).toContain("Qué hacer esta semana");
+    expect(words).toContain("Su mes en Google");
     expect(words).toContain("Cómo le contactan");
     expect(text(render({ connected: false }, "es"))).toContain("Conecte Google para ver su Perfil de Empresa en Google");
     expect(t("es", "dashboard.googleTab.lever.reviews.why")).toBe("El 80 % prefiere negocios que responden a todas las reseñas.");
