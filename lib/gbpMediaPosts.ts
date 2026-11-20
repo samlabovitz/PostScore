@@ -11,6 +11,8 @@ export const FRESH_DAYS = 30;
 export interface MediaItem {
   mediaFormat?: string;
   createTime?: string;
+  /** Google's photo type (INTERIOR, AT_WORK, TEAMS…). */
+  locationAssociation?: { category?: string };
 }
 export interface LocalPost {
   createTime?: string;
@@ -21,6 +23,8 @@ export interface LocalPost {
 export interface PhotoSummary {
   count: number;
   newestAt: string | null;
+  /** The photo types the listing has (Day 23C), sorted; null before supabase/day23c-google-tab.sql or the first read. */
+  categories?: string[] | null;
 }
 export interface PostSummary {
   last30: number;
@@ -31,7 +35,8 @@ export interface PostSummary {
 export function photoSummary(items: MediaItem[]): PhotoSummary {
   const photos = items.filter((m) => (m.mediaFormat ?? "PHOTO") === "PHOTO");
   const newest = photos.map((m) => m.createTime).filter((t): t is string => !!t && Number.isFinite(Date.parse(t))).sort().pop() ?? null;
-  return { count: photos.length, newestAt: newest };
+  const categories = Array.from(new Set(photos.map((m) => m.locationAssociation?.category).filter((c): c is string => !!c && /^[A-Z_]{2,40}$/.test(c)))).sort();
+  return { count: photos.length, newestAt: newest, categories };
 }
 
 /** When each photo was added (photos only, like photoSummary). */

@@ -29,6 +29,9 @@ import { GoogleMapsAttribution } from "@/components/google/GoogleMapsAttribution
 import { GbpMessagingStep, GoogleAiAnswersLine } from "@/components/gbp/GbpMessagingStep";
 import { formatShortDate, t, useLocale, useTimeZone } from "@/lib/i18n";
 import { googleWritesCopy } from "@/lib/googleWritesLaunch";
+import { RecItem } from "@/components/gbp/GoogleRecs";
+import type { Rec } from "@/lib/googleRecommendations";
+import type { IdeaType } from "@/lib/listingIdeas";
 
 export interface GoogleListingFacts {
   rating: number | null;
@@ -64,6 +67,7 @@ export function GoogleProfilePanel({
   searchDemand,
   connection = null,
   practice = false,
+  recs = null,
 }: {
   businessId: string;
   plan: Plan;
@@ -79,6 +83,8 @@ export function GoogleProfilePanel({
   connection?: GoogleProfileConnection | null;
   /** Practice mode: Edit on Google on a sample listing (nothing sent to Google). */
   practice?: boolean;
+  /** Day 23C, Grow/Free: this week's Google to-dos, each with the steps to do it yourself. */
+  recs?: { list: Rec[]; type: IdeaType | null; connected: boolean } | null;
 }) {
   const locale = useLocale();
   const gbpEdit = useGbpEdit();
@@ -116,6 +122,32 @@ export function GoogleProfilePanel({
           </div>
           <UpgradeTrigger feature="googleProfile" className="shrink-0" />
         </Card>
+      )}
+
+      {!premium && recs && !websiteOnly && (
+        <section data-testid="grow-google-recs">
+          <SectionTitle>{t(locale, "dashboard.googleTab.grow.title")}</SectionTitle>
+          <Card className="p-4 sm:p-5">
+            <p className="text-[12.5px] text-ink-mute">{t(locale, "dashboard.googleTab.grow.sub")}</p>
+            {recs.list.length > 0 ? (
+              <ul className="mt-1">
+                {recs.list.map((rec) => (
+                  <RecItem key={rec.kind} rec={rec} businessId={businessId} premium={false} canEdit={false} type={recs.type} />
+                ))}
+              </ul>
+            ) : (
+              <p className="mt-2 text-[13px] text-ink-soft" data-testid="grow-google-recs-none">{t(locale, "dashboard.googleTab.grow.none")}</p>
+            )}
+            {!recs.connected && (
+              <p className="mt-2 text-[12px] text-ink-mute">
+                {t(locale, "dashboard.googleTab.grow.connect")}{" "}
+                <Link href={gbpReplyCheckPath(businessId, plan)} className={linkClass}>
+                  {t(locale, "dashboard.gbp.goToReviewsConnect")}
+                </Link>
+              </p>
+            )}
+          </Card>
+        </section>
       )}
 
       <section>

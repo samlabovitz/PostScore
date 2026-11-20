@@ -172,6 +172,39 @@ export function monthlyTotals(res: MultiDailyResponse, months: string[]): Insigh
   return months.filter((m) => rows.has(m)).map((m) => rows.get(m)!);
 }
 
+/** Google's daily series as one row per day (for "Since you did this":
+ * read live, never stored), oldest first, and the last day with any
+ * number — Google's newest days arrive a few days late. */
+export function dailyNumbers(res: MultiDailyResponse): { days: Array<{ date: string; views: number; calls: number; directions: number; websiteClicks: number; actions: number }>; dataThrough: string | null } {
+  const rows = new Map<string, { date: string; views: number; calls: number; directions: number; websiteClicks: number; actions: number }>();
+  let through: string | null = null;
+  for (const group of res.multiDailyMetricTimeSeries ?? []) {
+    for (const series of group.dailyMetricTimeSeries ?? []) {
+      const metric = series.dailyMetric as DailyMetric | undefined;
+      for (const dv of series.timeSeries?.datedValues ?? []) {
+        const d = dv.date;
+        if (!d?.year || !d.month || !d.day) continue;
+        const date = `${d.year}-${String(d.month).padStart(2, "0")}-${String(d.day).padStart(2, "0")}`;
+        let r = rows.get(date);
+        if (!r) {
+          r = { date, views: 0, calls: 0, directions: 0, websiteClicks: 0, actions: 0 };
+          rows.set(date, r);
+        }
+        const v = num(dv.value);
+        if (v > 0 && (!through || date > through)) through = date;
+        if (metric?.startsWith("BUSINESS_IMPRESSIONS_")) r.views += v;
+        else if (metric) {
+          if (metric === "CALL_CLICKS") r.calls += v;
+          if (metric === "BUSINESS_DIRECTION_REQUESTS") r.directions += v;
+          if (metric === "WEBSITE_CLICKS") r.websiteClicks += v;
+          r.actions += v;
+        }
+      }
+    }
+  }
+  return { days: Array.from(rows.values()).sort((a, b) => a.date.localeCompare(b.date)), dataThrough: through };
+}
+
 /** The month's search terms with real counts, biggest first. Terms Google
  * hides under its threshold ("fewer than 15") are left out. */
 export function topKeywords(pages: KeywordsResponse[], max = 10): Keyword[] {

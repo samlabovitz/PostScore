@@ -303,9 +303,13 @@ describe("Show up for more searches (section 5)", () => {
       extras: full,
       messagingOn: false,
       media: { photos: { count: 4, newestAt: "2026-09-09T00:00:00Z" }, posts: { last30: 0, lastAt: null, lastType: null }, checkedAt: "2026-11-15T00:00:00Z" },
-      insights: [{ ...SAMPLE_INSIGHTS[SAMPLE_INSIGHTS.length - 1], topKeywords: [{ term: "keratin tarrytown", count: 12 }] }],
+      // "barber near me" → a second category: a 6th idea, so "Show 1 more".
+      insights: [{ ...SAMPLE_INSIGHTS[SAMPLE_INSIGHTS.length - 1], topKeywords: [{ term: "keratin tarrytown", count: 12 }, { term: "barber near me", count: 20 }] }],
     });
     const s5 = section(html);
+    // Day 23C: the photos and the post are in section 1's "This week", not repeated here.
+    expect(html).not.toContain('data-testid="google-tab-idea-photos"');
+    expect(html).not.toContain('data-testid="google-tab-idea-posts"');
     expect(s5).toContain("Add Keratin treatment to your services");
     expect(s5).toContain("Reach: 12 searches/mo");
     expect(s5).toContain("Your description is only 10 characters (“Hair salon”)");

@@ -12,11 +12,23 @@ const NOW = Date.parse("2026-11-15T12:00:00Z");
 
 describe("photo and post summaries", () => {
   test("photos: the count (videos left out) and the newest one's date", () => {
-    expect(photoSummary(F.media.mediaItems)).toEqual({ count: 4, newestAt: "2026-09-09T15:45:23Z" });
-    expect(photoSummary([])).toEqual({ count: 0, newestAt: null });
+    expect(photoSummary(F.media.mediaItems)).toMatchObject({ count: 4, newestAt: "2026-09-09T15:45:23Z" });
+    expect(photoSummary([])).toEqual({ count: 0, newestAt: null, categories: [] });
     expect(monthsAgo("2026-09-09T15:45:23Z", NOW)).toBe(2);
     expect(isFresh("2026-09-09T15:45:23Z", NOW)).toBe(false);
     expect(isFresh("2026-11-01T00:00:00Z", NOW)).toBe(true);
+  });
+
+  test("Day 23C: the photo types the listing has (Google's categories), once each — videos and odd values left out", () => {
+    const items = [
+      { mediaFormat: "PHOTO", createTime: "2026-09-01T00:00:00Z", locationAssociation: { category: "INTERIOR" } },
+      { mediaFormat: "PHOTO", createTime: "2026-09-02T00:00:00Z", locationAssociation: { category: "AT_WORK" } },
+      { mediaFormat: "PHOTO", createTime: "2026-09-03T00:00:00Z", locationAssociation: { category: "INTERIOR" } },
+      { mediaFormat: "VIDEO", createTime: "2026-09-04T00:00:00Z", locationAssociation: { category: "TEAMS" } },
+      { mediaFormat: "PHOTO", createTime: "2026-09-05T00:00:00Z", locationAssociation: { category: "<b>" } },
+      { mediaFormat: "PHOTO", createTime: "2026-09-06T00:00:00Z" },
+    ];
+    expect(photoSummary(items).categories).toEqual(["AT_WORK", "INTERIOR"]);
   });
 
   test("posts: how many in the last 30 days (rejected ones left out), the last one's date and type", () => {

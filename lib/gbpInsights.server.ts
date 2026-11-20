@@ -24,6 +24,7 @@ import {
   BACKFILL_MONTHS,
   DAILY_METRICS,
   addMonths,
+  dailyNumbers,
   fromRow,
   lastFullMonth,
   monthBounds,
@@ -331,4 +332,61 @@ export async function loadBookingState(admin: SupabaseClient, businessId: string
   const { data } = await admin.from("gbp_connections").select("booking_reminder_snoozed_at").eq("business_id", businessId).maybeSingle();
   const snoozedAt = (data as { booking_reminder_snoozed_at?: string | null } | null)?.booking_reminder_snoozed_at ?? null;
   return { link, tracking: bookingTracking(link, months.map((m) => m.bookings + m.foodOrders), snoozedAt, now.getTime()) };
+}
+
+/** One call: every daily metric for a range of days ("2026-10-01" … "2026-11-18"). */
+export function dailyRangeUrl(locationName: string, start: string, end: string, metrics: readonly string[] = DAILY_METRICS): string {
+  const url = new URL(`${BASE}/${locationName}:fetchMultiDailyMetricsTimeSeries`);
+  for (const m of metrics) url.searchParams.append("dailyMetrics", m);
+  const [sy, sm, sd] = start.split("-").map(Number);
+  const [ey, em, ed] = end.split("-").map(Number);
+  url.searchParams.set("dailyRange.start_date.year", String(sy));
+  url.searchParams.set("dailyRange.start_date.month", String(sm));
+  url.searchParams.set("dailyRange.start_date.day", String(sd));
+  url.searchParams.set("dailyRange.end_date.year", String(ey));
+  url.searchParams.set("dailyRange.end_date.month", String(em));
+  url.searchParams.set("dailyRange.end_date.day", String(ed));
+  return url.toString();
+}
+
+/** Day 23C "Since you did this": the daily numbers for a range of days,
+ * read live from the Performance API and returned — never stored. A 401 is
+ * refreshed once (the tokens are never deleted after one failure). */
+export async function readDailyNumbers(
+  admin: SupabaseClient,
+  businessId: string,
+  start: string,
+  end: string,
+  fetchImpl: typeof fetch = fetch
+): Promise<{ ok: true; days: ReturnType<typeof dailyNumbers>["days"]; dataThrough: string | null } | { ok: false; reason: "not_connected" | "reconnect" | "failed" }> {
+  const { data: conn } = await admin.from("gbp_connections").select("status, google_location_id").eq("business_id", businessId).maybeSingle();
+  const location = (conn as { status?: string; google_location_id?: string | null } | null)?.google_location_id;
+  if ((conn as { status?: string } | null)?.status !== "connected" || typeof location !== "string" || !location.startsWith("locations/")) return { ok: false, reason: "not_connected" };
+  const counter = { calls: 0 };
+  const f = gbpFetch(counter, fetchImpl);
+  try {
+    let token = await getValidAccessTokenWithClient(admin, businessId, fetchImpl);
+    if (token.status !== "ok") return { ok: false, reason: token.reason === "reconnect" ? "reconnect" : token.reason === "not_connected" ? "not_connected" : "failed" };
+    const read = async (t: string) => {
+      let r = await getJson<MultiDailyResponse>(f, t, dailyRangeUrl(location, start, end));
+      if (!r.ok && r.status === 400) r = await getJson<MultiDailyResponse>(f, t, dailyRangeUrl(location, start, end, DAILY_METRICS.filter((m) => m !== "BUSINESS_FOOD_ORDERS")));
+      return r;
+    };
+    let res = await read(token.accessToken);
+    if (!res.ok && res.status === 401) {
+      const checked = await markGbpReconnect(admin, businessId, fetchImpl);
+      if (checked.status === "error" && checked.reason === "reconnect") return { ok: false, reason: "reconnect" };
+      token = await getValidAccessTokenWithClient(admin, businessId, fetchImpl);
+      if (token.status !== "ok") return { ok: false, reason: "failed" };
+      res = await read(token.accessToken);
+    }
+    if (!res.ok) {
+      logFailure("daily", { status: res.status, reason: res.reason });
+      return { ok: false, reason: "failed" };
+    }
+    const parsed = dailyNumbers(res.data);
+    return { ok: true, days: parsed.days, dataThrough: parsed.dataThrough };
+  } finally {
+    logGbpCalls("since", counter);
+  }
 }

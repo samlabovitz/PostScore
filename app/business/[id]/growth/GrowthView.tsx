@@ -25,6 +25,8 @@ import type { DetailsMismatchState } from "@/lib/detailsMismatch.server";
 import { mismatchesCoveredBy, URGENT_DETAILS } from "@/lib/detailsMismatch";
 import type { HoursCheckState } from "@/lib/hoursCheck";
 import { GOOGLE_TAB_PARAM, isGoogleTabParam } from "@/lib/googleProfileTab";
+import type { Rec } from "@/lib/googleRecommendations";
+import type { IdeaType } from "@/lib/listingIdeas";
 import type { SearchDemandView } from "@/components/gbp/SearchDemandSection";
 import { growthMoveOverlapsActionPlan } from "@/lib/growthMoveOverlap";
 import type { WeeklyChecklistItem, WeeklyChecklistItemId } from "@/lib/weeklyChecklist";
@@ -224,6 +226,8 @@ export function GrowthView({
     connection?: GoogleProfileConnection | null;
     /** Practice mode (lib/gbpReviewPractice.ts): Edit on Google on a sample listing. */
     practice?: boolean;
+    /** Day 23C, Grow/Free: this week's Google to-dos with their steps (lib/googleRecommendations.ts). */
+    recs?: { list: Rec[]; type: IdeaType | null; connected: boolean } | null;
   };
   /** When this business was last re-scanned — see getLastScanAt() in
    * app/actions/scoring.ts. Lets a still-pending task tell "hasn't been
@@ -551,6 +555,7 @@ export function GrowthView({
             searchDemand={googleProfile.searchDemand}
             connection={googleProfile.connection ?? null}
             practice={googleProfile.practice ?? false}
+            recs={googleProfile.recs ?? null}
           />
         )}
       </div>

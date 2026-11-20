@@ -91,9 +91,13 @@ import type { BookingTracking } from "@/lib/bookingPartners";
 import type { MediaPostsState } from "@/lib/gbpMediaPosts";
 import { BookingStepsPanel } from "@/components/gbp/BookingSteps";
 import { HolidayHoursEditor, ServicesEditor } from "@/components/gbp/ListingFieldEditors";
-import { actions, audience, type InsightsState, callsByDays, isSmallMonth, leftOnTable, SAMPLE_AUDIENCE, sixMonthSpan, totalViews, worthRange, whoTable, type Audience, type InsightsMonth, type WhoRow } from "@/lib/gbpInsights";
+import { actions, addMonths, audience, type InsightsState, callsByDays, isSmallMonth, leftOnTable, SAMPLE_AUDIENCE, sixMonthSpan, totalViews, whoTable, type Audience, type InsightsMonth, type WhoRow } from "@/lib/gbpInsights";
 import type { GbpReplyCounts } from "@/lib/gbpReviewReplies";
 import { cn } from "@/lib/utils";
+import { change, chartMarkers, DOES_FOR_YOU, leftMoney, recommendations, revenueMath, SAMPLE_SINCE, SHARE_PRESETS, shareChoice, parseSharePercent, sharePercent, sinceActions, sinceStatus, localToday, within, type ActionEvent, type Rec, type RecInputs, type VisitShare, type WindowTotals } from "@/lib/googleRecommendations";
+import { ideaPlanLine, RecItem, shortDate } from "@/components/gbp/GoogleRecs";
+import { loadMonthSoFar, loadSinceNumbers, saveVisitShare, type MonthSoFarResult, type SinceResult } from "@/app/actions/googleSince";
+import { saveAverageVisitValue } from "@/app/actions/averageVisit";
 
 const K = (key: string) => `dashboard.googleTab.${key}` as MessageKey;
 
@@ -151,6 +155,10 @@ export interface GoogleProfileTabProps {
   canEditGoogle?: boolean;
   /** Day 23B: after a PostScore change is live, "Your {field} now match…" (lib/detailsMismatch.ts). */
   nowMatch?: NowMatchPrompts;
+  /** Day 23C: the owner's "how many become paying visits" (0–1); null: PostScore's default range. */
+  visitShare?: number | null;
+  /** Day 23C: what the owner did from PostScore, by day (lib/googleActions.server.ts). */
+  actionEvents?: ActionEvent[];
 }
 
 /** Gold-on-navy and the mockup's soft tones, from the app's own colors. */
@@ -264,6 +272,7 @@ function NotConnectedCard({ businessId, needsReconnect, canStart, result, busine
       <ul className="flex flex-col gap-1.5 text-[13.5px] text-ink">
         <li>• {t(locale, K("notConnected.rate"))}</li>
         <li>• {t(locale, K("notConnected.searches"))}</li>
+        <li>• {t(locale, K("notConnected.since"))}</li>
         <li>
           • {t(locale, K("notConnected.edit"))}
           {beta}
@@ -551,10 +560,12 @@ export function leverText(lever: Lever, locale: Locale): { status: string; pill:
  * stretched SVG (strokes keep their width); dots and labels are positioned
  * over it so they stay round and sharp at any width. */
 const CHART_H = 84;
-function RateChartBox({ trend, months }: { trend: Array<{ month: string; rate: number | null }>; months: InsightsMonth[] }) {
+function RateChartBox({ trend, months, events = [] }: { trend: Array<{ month: string; rate: number | null }>; months: InsightsMonth[]; events?: ActionEvent[] }) {
   const locale = useLocale();
   const chart = rateChart(trend, CHART_H);
   if (!chart) return null;
+  // Day 23C: small dots on the bottom line for what the owner did, by day.
+  const markers = chartMarkers(events, trend.map((p) => p.month));
   const byMonth = new Map(months.map((m) => [m.month, m]));
   const lastIndex = chart.points.map((p) => p.rate !== null).lastIndexOf(true);
   const summary = chart.points.map((p) => `${monthName(p.month, locale, "short")} ${p.rate === null ? "—" : formatRate(p.rate, locale)}`).join(", ");
@@ -618,6 +629,15 @@ function RateChartBox({ trend, months }: { trend: Array<{ month: string; rate: n
                 </span>
               );
             })}
+          {markers.map((mk) => {
+            const tip = eventLine(mk.date, mk.events, locale);
+            return (
+              <span key={mk.date} className="group absolute z-[5] -translate-x-1/2" style={{ left: `${mk.x}%`, top: CHART_H - 4 }} data-testid="google-tab-trend-action">
+                <span tabIndex={0} title={tip} aria-label={tip} className="block h-2 w-2 rounded-full border border-[color:color-mix(in_srgb,var(--color-ink)_88%,white)] bg-white outline-none focus-visible:ring-2 focus-visible:ring-white/60" />
+                <span className="pointer-events-none absolute bottom-full left-1/2 z-10 mb-1 hidden -translate-x-1/2 whitespace-nowrap rounded-md bg-white px-1.5 py-0.5 text-[11px] text-ink shadow group-hover:block group-focus-within:block">{tip}</span>
+              </span>
+            );
+          })}
           </div>
           {/* A month under every point; the latest bold. */}
           <div className="relative mt-1 h-3.5 text-[10.5px] leading-none text-white/50">
@@ -647,25 +667,24 @@ function PointsChange({ now, before, month }: { now: number; before: number; mon
 }
 
 /** "What that could be worth", honestly: a range (a third to all of last
- * month's customer actions as visits) and what last month's viewers would
- * have meant at the best rate of the last 6 months. Both estimates. */
-function WorthBox({ businessId, months, last, averageVisit }: { businessId: string; months: InsightsMonth[]; last: InsightsMonth; averageVisit: number | null }) {
+ * month's customer actions as visits, or the owner's own share) and what
+ * last month's viewers would have meant at the best rate of the last 6
+ * months. Both estimates. Day 23C: "How we calculated this" opens the real
+ * math inline, where the owner can change the average visit (the same
+ * value as Settings) and how many actions become paying visits — the
+ * numbers update as they change. */
+function WorthBox({ businessId, months, last, averageVisit, visitShare = null, sample = false }: { businessId: string; months: InsightsMonth[]; last: InsightsMonth; averageVisit: number | null; visitShare?: VisitShare; sample?: boolean }) {
   const locale = useLocale();
-  const range = worthRange(actions(last), averageVisit);
-  const left = leftOnTable(months, averageVisit);
+  const [avg, setAvg] = useState<number | null>(averageVisit);
+  const [share, setShare] = useState<VisitShare>(visitShare);
+  const [open, setOpen] = useState(false);
+  const acted = actions(last);
+  const math = revenueMath(acted, avg, share);
+  const left = leftOnTable(months, avg);
+  const leftRange = left?.kind === "missed" ? leftMoney(left.extra, avg, share) : null;
   const money = (v: number) => `$${formatCount(v, locale)}`;
   const box = "rounded-xl border border-brass px-3.5 py-2.5";
   const style = { backgroundColor: "color-mix(in srgb, var(--color-ink) 88%, white)" };
-  if (averageVisit === null || !range) {
-    return (
-      <div className={cn("mt-2.5", box)} style={style} data-testid="google-tab-worth">
-        <Eyebrow className={cn("text-[10.5px]", GOLD_LIGHT)}>{t(locale, K("worth.label"))}</Eyebrow>
-        <Link href={`/business/${businessId}/settings#average-visit`} data-testid="google-tab-worth-set" className="text-[12.5px] font-semibold text-white underline decoration-brass underline-offset-2">
-          {t(locale, K("worth.setIt"))}
-        </Link>
-      </div>
-    );
-  }
   const pills = (
     <span className="ml-1.5 inline-flex items-center gap-1 align-middle">
       <span className="rounded-[5px] bg-white/10 px-1.5 py-0.5 text-[10.5px] text-white/80">{t(locale, K("worth.estimate"))}</span>
@@ -674,32 +693,182 @@ function WorthBox({ businessId, months, last, averageVisit }: { businessId: stri
       </span>
     </span>
   );
-  return (
-    <div className={cn("mt-2.5 grid gap-x-5 gap-y-2.5 sm:grid-cols-2", box)} style={style} data-testid="google-tab-worth">
-      <div>
-        <p className="text-[13px] font-semibold leading-snug text-white">
-          {t(locale, K("worth.brought"), { low: money(range.low), high: money(range.high) })}
-          {pills}
-        </p>
-        <p className="mt-0.5 text-[12px] leading-snug text-white/70">{t(locale, K("worth.broughtSub"), { actions: formatCount(actions(last), locale), avg: formatCount(averageVisit, locale) })}</p>
+  const shareWord = (v: number) => (Math.abs(v - 1 / 3) < 0.005 ? t(locale, K("worth.share.third")) : v === 1 ? t(locale, K("worth.share.all")) : t(locale, K("worth.share.pct"), { percent: formatCount(sharePercent(v), locale) }));
+  const toggle = (
+    <button type="button" onClick={() => setOpen(!open)} aria-expanded={open} data-testid="google-tab-worth-how" className="mt-1 text-[12px] font-semibold text-white underline decoration-brass underline-offset-2">
+      {t(locale, K(open ? "worth.howClose" : "worth.howOpen"))}
+    </button>
+  );
+  const panel = open && (
+    <WorthPanel
+      businessId={businessId}
+      sample={sample}
+      avg={avg}
+      share={share}
+      onAvg={setAvg}
+      onShare={setShare}
+      mathLines={math ? (math.source === "default" ? [math.shares[0], math.shares[1]] : [math.shares[0]]).map((sh, i) => t(locale, K("worth.math"), { actions: formatCount(acted, locale), avg: money(math.averageVisit), share: shareWord(sh), result: money(Math.round(math.exact[i])) })) : []}
+    />
+  );
+  if (!math) {
+    return (
+      <div className={cn("mt-2.5", box)} style={style} data-testid="google-tab-worth">
+        <Eyebrow className={cn("text-[10.5px]", GOLD_LIGHT)}>{t(locale, K("worth.label"))}</Eyebrow>
+        <Link href={`/business/${businessId}/settings#average-visit`} data-testid="google-tab-worth-set" className="text-[12.5px] font-semibold text-white underline decoration-brass underline-offset-2">
+          {t(locale, K("worth.setIt"))}
+        </Link>
+        {acted > 0 && <div>{toggle}</div>}
+        {panel}
       </div>
-      <div data-testid="google-tab-left">
-        {left?.kind === "missed" && left.missed !== null ? (
-          <>
-            <p className="text-[13px] font-semibold leading-snug text-white">
-              {t(locale, K("worth.left"), { missed: money(left.missed) })}
-              {pills}
-            </p>
-            <p className="mt-0.5 text-[12px] leading-snug text-white/70">
-              {t(locale, K("worth.leftSub"), { month: monthName(left.best.month, locale), best: formatRate(left.best.rate, locale), views: formatCount(totalViews(last), locale), extra: left.extra })}{" "}
-              <a href="#google-tab-levers" className="underline decoration-brass underline-offset-2">
-                {t(locale, K("worth.leversLink"))}
-              </a>
-            </p>
-          </>
-        ) : left?.kind === "matched" ? (
-          <p className="text-[13px] font-semibold leading-snug text-white">{t(locale, K("worth.matched"))}</p>
-        ) : null}
+    );
+  }
+  return (
+    <div className={cn("mt-2.5", box)} style={style} data-testid="google-tab-worth">
+      <div className="grid gap-x-5 gap-y-2.5 sm:grid-cols-2">
+        <div>
+          <p className="text-[13px] font-semibold leading-snug text-white" data-testid="google-tab-worth-brought">
+            {math.low === math.high ? t(locale, K("worth.broughtOne"), { amount: money(math.low) }) : t(locale, K("worth.brought"), { low: money(math.low), high: money(math.high) })}
+            {pills}
+          </p>
+          <p className="mt-0.5 text-[12px] leading-snug text-white/70">
+            {math.source === "default"
+              ? t(locale, K("worth.broughtSub"), { actions: formatCount(acted, locale), avg: formatCount(math.averageVisit, locale) })
+              : t(locale, K("worth.broughtSubOwn"), { actions: formatCount(acted, locale), avg: formatCount(math.averageVisit, locale), share: shareWord(math.shares[0]) })}
+          </p>
+          {toggle}
+        </div>
+        <div data-testid="google-tab-left">
+          {left?.kind === "missed" && leftRange ? (
+            <>
+              <p className="text-[13px] font-semibold leading-snug text-white">
+                {leftRange.low === leftRange.high ? t(locale, K("worth.left"), { missed: money(leftRange.high) }) : t(locale, K("worth.leftRange"), { low: money(leftRange.low), high: money(leftRange.high) })}
+                {pills}
+              </p>
+              <p className="mt-0.5 text-[12px] leading-snug text-white/70">
+                {t(locale, K("worth.leftSub"), { month: monthName(left.best.month, locale), best: formatRate(left.best.rate, locale), views: formatCount(totalViews(last), locale), extra: left.extra })}{" "}
+                <a href="#google-tab-levers" className="underline decoration-brass underline-offset-2">
+                  {t(locale, K("worth.leversLink"))}
+                </a>
+              </p>
+            </>
+          ) : left?.kind === "matched" ? (
+            <p className="text-[13px] font-semibold leading-snug text-white">{t(locale, K("worth.matched"))}</p>
+          ) : null}
+        </div>
+      </div>
+      {panel}
+    </div>
+  );
+}
+
+/** The inline panel: the real math, which actions count, and the two assumptions (saved for the owner). */
+function WorthPanel({ businessId, sample, avg, share, onAvg, onShare, mathLines }: { businessId: string; sample: boolean; avg: number | null; share: VisitShare; onAvg: (v: number | null) => void; onShare: (v: VisitShare) => void; mathLines: string[] }) {
+  const locale = useLocale();
+  const [avgText, setAvgText] = useState(avg !== null ? String(avg) : "");
+  const [choice, setChoice] = useState(shareChoice(share));
+  const [ownText, setOwnText] = useState(choice === "own" && share !== null ? String(sharePercent(share)) : "");
+  const [status, setStatus] = useState<{ field: "avg" | "share"; kind: "saved" | "failed" | "notReady" | "invalidAvg" | "invalidShare" } | null>(null);
+  const field = "h-8 rounded-lg border border-white/30 bg-white px-2 text-[13px] text-ink";
+  const tag = (mine: boolean) => (
+    <span className={cn("rounded-[5px] px-1.5 py-0.5 text-[10.5px] font-semibold", mine ? "bg-brass text-ink" : "bg-white/10 text-white/80")} data-testid={mine ? "worth-tag-yours" : "worth-tag-default"}>
+      {t(locale, K(mine ? "worth.tag.yours" : "worth.tag.default"))}
+    </span>
+  );
+  async function saveAvg() {
+    const raw = avgText.trim();
+    const parsed = raw === "" ? null : Number(raw.replace(/[$,\s]/g, ""));
+    if (parsed !== null && !(Number.isFinite(parsed) && parsed > 0 && parsed < 100000)) return setStatus({ field: "avg", kind: "invalidAvg" });
+    onAvg(parsed);
+    if (sample) return setStatus({ field: "avg", kind: "saved" });
+    const r = await saveAverageVisitValue(businessId, raw).catch(() => null);
+    setStatus({ field: "avg", kind: r?.status === "ok" ? "saved" : r?.status === "error" && r.error === "not_ready" ? "notReady" : r?.status === "error" && r.error === "invalid" ? "invalidAvg" : "failed" });
+  }
+  async function saveShare(v: VisitShare) {
+    onShare(v);
+    if (sample) return setStatus({ field: "share", kind: "saved" });
+    const r = await saveVisitShare(businessId, v).catch(() => null);
+    setStatus({ field: "share", kind: r?.status === "ok" ? "saved" : r?.status === "error" && r.error === "not_ready" ? "notReady" : "failed" });
+  }
+  const statusLine = (f: "avg" | "share") =>
+    status?.field === f && (
+      <span role="status" className={cn("text-[11.5px]", status.kind === "saved" ? "text-[#7fd3a0]" : "text-[#e8a59b]")} data-testid={`worth-status-${f}`}>
+        {t(locale, K({ saved: "worth.saved", failed: "worth.saveFailed", notReady: "worth.notReady", invalidAvg: "worth.invalidAvg", invalidShare: "worth.invalidShare" }[status.kind]))}
+      </span>
+    );
+  const radio = (id: "default" | "third" | "half" | "most" | "own") => (
+    <label key={id} className="flex items-center gap-1.5 text-[12.5px] text-white/90">
+      <input
+        type="radio"
+        name={`visit-share-${businessId}`}
+        checked={choice === id}
+        onChange={() => {
+          setChoice(id);
+          setStatus(null);
+          if (id === "default") void saveShare(null);
+          else if (id !== "own") void saveShare(SHARE_PRESETS[id]);
+          else {
+            // "My own %": saved once a number is typed.
+            const v = parseSharePercent(ownText);
+            if (v !== "invalid") void saveShare(v);
+          }
+        }}
+        data-testid={`worth-share-${id}`}
+        className="accent-[color:var(--color-brass)]"
+      />
+      {t(locale, K(`worth.choice.${id}`))}
+    </label>
+  );
+  return (
+    <div className="mt-2.5 border-t border-white/15 pt-2.5 text-white" data-testid="google-tab-worth-panel">
+      {mathLines.map((line) => (
+        <p key={line} className="text-[12.5px] font-semibold leading-snug" data-testid="worth-math">
+          {line}
+        </p>
+      ))}
+      <p className="mt-1 text-[12px] leading-snug text-white/70">{t(locale, K("worth.counts"))}</p>
+      <div className="mt-2 grid gap-3 sm:grid-cols-2">
+        <div>
+          <p className="flex flex-wrap items-center gap-1.5 text-[12px] font-semibold text-white/85">
+            {t(locale, K("worth.avgLabel"))} {avg !== null && tag(true)}
+          </p>
+          <div className="mt-1 flex flex-wrap items-center gap-1.5">
+            <span className="text-[13px]">$</span>
+            <input value={avgText} onChange={(e) => setAvgText(e.target.value)} inputMode="decimal" aria-label={t(locale, K("worth.avgLabel"))} className={cn(field, "w-24")} data-testid="worth-avg-input" />
+            <button type="button" onClick={() => void saveAvg()} className="h-8 rounded-lg border border-white/40 px-2.5 text-[12.5px] font-semibold text-white hover:bg-white/10" data-testid="worth-avg-save">
+              {t(locale, K("worth.save"))}
+            </button>
+            {statusLine("avg")}
+          </div>
+          <p className="mt-0.5 text-[11.5px] text-white/60">{t(locale, K("worth.avgSettings"))}</p>
+        </div>
+        <div>
+          <p className="flex flex-wrap items-center gap-1.5 text-[12px] font-semibold text-white/85">
+            {t(locale, K("worth.shareLabel"))} {tag(share !== null)}
+          </p>
+          <div className="mt-1 flex flex-col gap-0.5">
+            {(["default", "third", "half", "most"] as const).map(radio)}
+            <div className="flex flex-wrap items-center gap-1.5">
+              {radio("own")}
+              <input
+                value={ownText}
+                onChange={(e) => setOwnText(e.target.value)}
+                onFocus={() => setChoice("own")}
+                onBlur={() => {
+                  if (ownText.trim() === "") return;
+                  const v = parseSharePercent(ownText);
+                  if (v === "invalid") setStatus({ field: "share", kind: "invalidShare" });
+                  else void saveShare(v);
+                }}
+                inputMode="decimal"
+                aria-label={t(locale, K("worth.choice.own"))}
+                className={cn(field, "w-16")}
+                data-testid="worth-share-own-input"
+              />
+              <span className="text-[12.5px]">%</span>
+            </div>
+            {statusLine("share")}
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -740,6 +909,10 @@ function LastMonthSection(props: GoogleProfileTabProps & { months: InsightsMonth
         {rate !== null && last && of ? (
           <div className="mt-2 grid items-center gap-4 sm:grid-cols-[1.3fr_1fr]" data-testid="google-tab-rate">
             <div>
+              <p className="mb-1 text-[12.5px] font-semibold text-white/85" data-testid="google-tab-rate-month">
+                {t(locale, K("s1.lastFull"), { month: monthName(last.month, locale) })}
+                {prev && <span className="font-normal text-white/65"> · {t(locale, K("kpi.vsMonth"), { month: monthName(prev.month, locale) })}</span>}
+              </p>
               <div className={cn("font-serif text-[40px] font-semibold leading-none sm:text-[46px]", GOLD_LIGHT)}>{formatRate(rate, locale)}</div>
               <p className="mt-1.5 max-w-[520px] text-[13px] leading-snug text-white/85">{t(locale, K("rate.sentence"))}</p>
               {howCalculated(actions(last), totalViews(last)) && (
@@ -765,7 +938,7 @@ function LastMonthSection(props: GoogleProfileTabProps & { months: InsightsMonth
                 {small && <p className="text-white/70">{t(locale, K("rate.small"))}</p>}
               </div>
             </div>
-            <RateChartBox trend={trend} months={months} />
+            <RateChartBox trend={trend} months={months} events={sample ? [] : (props.actionEvents ?? [])} />
           </div>
         ) : (
           <div className="mt-2.5" data-testid="google-tab-rate-empty">
@@ -779,14 +952,17 @@ function LastMonthSection(props: GoogleProfileTabProps & { months: InsightsMonth
             <b className="text-[14px]">{t(locale, K("raise.title"))}</b>
             <span className="text-[12px] text-ink-mute">{t(locale, K("raise.sub"))}</span>
           </div>
-          <div className="mt-2 grid grid-cols-2 gap-1.5 sm:grid-cols-[repeat(5,minmax(0,1fr))]">
+          <div className="mt-2 grid grid-cols-2 gap-1.5 sm:grid-cols-3 lg:grid-cols-[repeat(5,minmax(0,1fr))]" data-testid="google-tab-lever-grid">
             {ls.map((lever) => (
               <LeverBox key={lever.id} lever={lever} />
             ))}
           </div>
+          <ThisWeek props={props} />
           <RecapLine saved={props.saved} />
           <p className="mt-1.5 text-[10.5px] text-ink-mute">{t(locale, K("sources"))}</p>
         </div>
+
+        <SinceCard businessId={props.businessId} connected={props.connected} sample={sample} events={props.actionEvents ?? []} />
 
         {last ? (
           <>
@@ -794,16 +970,17 @@ function LastMonthSection(props: GoogleProfileTabProps & { months: InsightsMonth
               {(["calls", "directions", "bookings", "websiteClicks"] as const).map((k) => {
                 const d = prev ? last[k] - prev[k] : null;
                 return (
-                  <div key={k} className={cn("rounded-xl border px-3 py-2", NAVY_2, NAVY_LINE)}>
-                    <small className="block truncate text-[11.5px] leading-tight text-white/65">{t(locale, K(`kpi.${k}`))}</small>
-                    <span className="mt-0.5 flex items-baseline gap-1.5">
+                  <div key={k} className={cn("rounded-xl border px-3 py-2", NAVY_2, NAVY_LINE)} data-testid={`google-tab-kpi-${k}`}>
+                    <span className="flex flex-wrap items-baseline gap-x-1.5">
                       <b className="font-serif text-[22px] font-semibold leading-none">{formatCount(last[k], locale)}</b>
-                      {d !== null && d !== 0 && prev && (
-                        <em className={cn("text-[12px] not-italic", d > 0 ? "text-[#7fd3a0]" : "text-[#e8a59b]")}>
-                          {d > 0 ? `▲${d}` : `▼${-d}`} <span className="text-white/60">{t(locale, K("kpi.vsMonth"), { month: monthName(prev.month, locale, "short") })}</span>
-                        </em>
-                      )}
+                      <small className="text-[12px] leading-tight text-white/75">{t(locale, K(`kpi.in.${k}`), { month: monthName(last.month, locale) })}</small>
                     </span>
+                    {prev && (
+                      <em className={cn("mt-0.5 block text-[12px] not-italic", d && d > 0 ? "text-[#7fd3a0]" : d && d < 0 ? "text-[#e8a59b]" : "text-white/60")}>
+                        {d && d > 0 ? `▲${d} ` : d && d < 0 ? `▼${-d} ` : "= "}
+                        <span className="text-white/60">{t(locale, K("kpi.vsMonth"), { month: monthName(prev.month, locale) })}</span>
+                      </em>
+                    )}
                     {/* Booked in Google at 0: why (case A), or what to turn on (case B). */}
                     {k === "bookings" && last.bookings === 0 && props.booking?.tracking.kind === "partner_not_counted" && (
                       <small data-testid="booking-tile-note" className="mt-1 block text-[11px] leading-snug text-white/65">
@@ -819,7 +996,8 @@ function LastMonthSection(props: GoogleProfileTabProps & { months: InsightsMonth
                 );
               })}
             </div>
-            <WorthBox businessId={props.businessId} months={months} last={last} averageVisit={averageVisit} />
+            {props.connected && !sample && <SoFarLine businessId={props.businessId} last={last.month} />}
+            <WorthBox businessId={props.businessId} months={months} last={last} averageVisit={averageVisit} visitShare={sample ? null : (props.visitShare ?? null)} sample={sample} />
           </>
         ) : (
           <div className={cn("mt-2.5 rounded-xl border px-3 py-2 text-[12.5px] text-white/75", NAVY_2, NAVY_LINE)} data-testid="google-tab-kpis-empty">
@@ -836,17 +1014,18 @@ function LeverBox({ lever }: { lever: Lever }) {
   const text = leverText(lever, locale);
   const inner = (
     <>
-      <span className="flex items-center gap-[7px]">
+      {/* Narrow tiles: the pill drops under the title, never a word cut in two. */}
+      <span className="flex flex-wrap items-start gap-x-[7px] gap-y-1">
         <span className={cn("hidden h-[22px] w-[22px] shrink-0 items-center justify-center rounded-md text-brass xl:flex", CREAM)}>{LEVER_ICON[lever.id]}</span>
-        <span className="flex min-w-0 flex-1 flex-col leading-tight">
-          <b className="truncate text-[12.5px]">{t(locale, K(`lever.${lever.id}.title`))}</b>
-          <small className="line-clamp-2 text-[11px] leading-tight text-ink-mute">{text.status}</small>
+        <span className="flex min-w-[6.5rem] flex-1 flex-col leading-tight">
+          <b className="text-[12.5px] leading-tight">{t(locale, K(`lever.${lever.id}.title`))}</b>
+          <small className="text-[11px] leading-tight text-ink-mute">{text.status}</small>
         </span>
         <span data-testid={`lever-pill-${lever.id}`} data-tone={lever.tone} className={cn("shrink-0 self-start whitespace-nowrap rounded-full px-1.5 py-px text-[10.5px] font-bold", TONE_PILL[lever.tone])}>
           {text.pill}
         </span>
       </span>
-      <span className="line-clamp-2 border-t border-dashed border-paper-line pt-1 text-[10.5px] leading-snug text-ink-mute">{t(locale, K(`lever.${lever.id}.why`))}</span>
+      <span className="border-t border-dashed border-paper-line pt-1 text-[10.5px] leading-snug text-ink-mute">{t(locale, K(`lever.${lever.id}.why`))}</span>
     </>
   );
   const cls = "flex min-w-0 flex-col gap-1 rounded-[10px] border border-paper-line px-2 py-1.5 text-ink hover:border-brass hover:bg-[color:color-mix(in_srgb,var(--color-brass)_6%,white)]";
@@ -882,6 +1061,193 @@ function RecapLine({ saved }: { saved: GoogleTabSaved | null }) {
       )}
       {t(locale, K("recap.tail"))}
     </p>
+  );
+}
+
+
+// ---------------------------------------------------------------------------
+// Day 23C: this week's to-dos, what you did on the chart, "Since you did this"
+// ---------------------------------------------------------------------------
+
+/** "November so far: 12 calls, 20 website clicks, 31 direction requests" —
+ * this month's live daily numbers (never stored), only once the month after
+ * the last full one has begun and Google has a day of it. */
+function SoFarLine({ businessId, last }: { businessId: string; last: string }) {
+  const locale = useLocale();
+  const timeZone = useTimeZone();
+  const [r, setR] = useState<MonthSoFarResult | null>(null);
+  useEffect(() => {
+    let alive = true;
+    void within(loadMonthSoFar(businessId, timeZone), 20_000, { status: "failed" } as MonthSoFarResult).then((v) => alive && setR(v));
+    return () => {
+      alive = false;
+    };
+  }, [businessId, timeZone]);
+  if (!r || r.status !== "ok" || r.month <= last) return null;
+  const item = (k: "calls" | "websiteClicks" | "directions", n: number) => t(locale, K(`soFar.${k}${n === 1 ? "One" : ""}`), { count: formatCount(n, locale) });
+  const next = addMonths(r.month, 1);
+  return (
+    <p className={cn("mt-2.5 rounded-xl border px-3 py-2 text-[12.5px] leading-snug text-white/85", NAVY_2, NAVY_LINE)} data-testid="google-tab-so-far">
+      <b className="text-white">
+        {t(locale, K("soFar.line"), { month: monthName(r.month, locale).replace(/^./, (c) => c.toUpperCase()), date: shortDate(r.through, locale), list: [item("calls", r.calls), item("websiteClicks", r.websiteClicks), item("directions", r.directions)].join(", ") })}
+      </b>{" "}
+      <span className="text-white/65">{t(locale, K("soFar.note"), { month: monthName(next, locale, "short"), from: 1, to: 5 })}</span>
+    </p>
+  );
+}
+
+/** Under the levers: the levers' to-dos in exact numbers (replies, photos, posts), each with one button. */
+function ThisWeek({ props }: { props: GoogleProfileTabProps }) {
+  const locale = useLocale();
+  const { recs, type } = useTabIdeas(props);
+  const list = thisWeekRecs(recs);
+  if (list.length === 0) return null;
+  return (
+    <div className="mt-2" data-testid="google-tab-this-week">
+      <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-brass">{t(locale, K("rec.thisWeek"))}</p>
+      <ul className="mt-0.5">
+        {list.map((rec) => (
+          <RecItem key={rec.kind} rec={rec} businessId={props.businessId} premium canEdit={props.canEditGoogle === true} type={type} />
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+/** "Nov 3: replied to 10 reviews". */
+export function eventText(e: ActionEvent, locale: Locale): string {
+  const what =
+    e.kind === "listing"
+      ? (e.what ?? []).map((k) => t(locale, K(`recap.listing.${k}`))).join(", ")
+      : t(locale, K(`ev.${e.kind}${e.count === 1 ? "One" : ""}`), { count: e.count });
+  return what;
+}
+export function eventLine(date: string, events: ActionEvent[], locale: Locale): string {
+  return t(locale, K("ev.line"), { date: shortDate(date, locale), what: events.map((e) => eventText(e, locale)).join(" · ") });
+}
+
+const SINCE_METRICS = ["calls", "websiteClicks", "directions", "rate"] as const;
+
+function SinceTable({ result }: { result: { days: number; before: WindowTotals; after: WindowTotals } }) {
+  const locale = useLocale();
+  const cell = "whitespace-nowrap px-1.5 py-0.5 text-right tabular-nums";
+  return (
+    <table className="mt-1 w-full text-[12.5px]">
+      <thead>
+        <tr className="text-[11px] text-ink-mute">
+          <th className="py-0.5 pr-1.5 text-left font-semibold">{t(locale, K("since.window"), { days: result.days })}</th>
+          <th className={cn(cell, "font-semibold")}>{t(locale, K("since.before"))}</th>
+          <th className={cn(cell, "font-semibold")}>{t(locale, K("since.after"))}</th>
+          <th className={cn(cell, "pr-0 font-semibold")} />
+        </tr>
+      </thead>
+      <tbody>
+        {SINCE_METRICS.map((m) => {
+          const rate = m === "rate";
+          const b = rate ? result.before.rate : result.before[m];
+          const a = rate ? result.after.rate : result.after[m];
+          const c = change(b, a, rate ? "rate" : "count");
+          const show = (v: number | null) => (v === null ? "—" : rate ? formatRate(v, locale) : formatCount(v, locale));
+          return (
+            <tr key={m} className="border-t border-paper-line/60" data-testid={`since-row-${m}`}>
+              <td className="py-0.5 pr-1.5 text-ink-soft">{t(locale, K(`since.metric.${m}`))}</td>
+              <td className={cn(cell, "text-ink-soft")}>{show(b)}</td>
+              <td className={cn(cell, "font-semibold text-ink")}>{show(a)}</td>
+              <td className={cn(cell, "whitespace-nowrap pr-0 font-semibold", c?.dir === "up" ? "text-green" : c?.dir === "down" ? "text-red" : "text-ink-mute")} data-dir={c?.dir ?? "none"}>
+                {!c ? "" : c.dir === "same" ? t(locale, K("since.same")) : rate ? `${c.dir === "up" ? "▲" : "▼"} ${t(locale, K(`since.per100.${c.dir}`), { count: c.value })}` : `${c.dir === "up" ? "▲" : "▼"} ${formatCount(c.value, locale)}`}
+              </td>
+            </tr>
+          );
+        })}
+      </tbody>
+    </table>
+  );
+}
+
+/** "Since you did this": up to 3 recent actions, the 30 days after vs the
+ * 30 days before (read live, never stored); "Check back on {date}" under
+ * 14 days. "After", never "because". */
+function SinceCard({ businessId, connected, sample, events }: { businessId: string; connected: boolean; sample: boolean; events: ActionEvent[] }) {
+  const locale = useLocale();
+  const timeZone = useTimeZone();
+  const today = localToday(Date.now(), timeZone).date;
+  const picks = sinceActions(events);
+  const ready = picks.filter((e) => sinceStatus(e.date, today).ready).map((e) => e.date);
+  const readyKey = Array.from(new Set(ready)).sort().join(",");
+  const [data, setData] = useState<SinceResult | "loading" | null>(null);
+  useEffect(() => {
+    if (sample || !connected || !readyKey) return;
+    let alive = true;
+    setData("loading");
+    // Never stuck on "Reading…": a failed or slow read says it couldn't load.
+    void within(loadSinceNumbers(businessId, readyKey.split(",")), 20_000, { status: "failed" } as SinceResult).then((r) => alive && setData(r));
+    return () => {
+      alive = false;
+    };
+  }, [businessId, connected, sample, readyKey]);
+  const box = "mt-2.5 rounded-xl bg-white px-[13px] py-[11px] text-ink";
+  const head = (
+    <div className="flex flex-wrap items-baseline gap-x-2.5">
+      <b className="text-[14px]">{t(locale, K("since.title"))}</b>
+      {sample && <SampleTag />}
+    </div>
+  );
+  const note = <p className="mt-1.5 text-[11.5px] text-ink-mute">{t(locale, K("since.note"))}</p>;
+  if (sample) {
+    return (
+      <div className={box} data-testid="google-tab-since">
+        {head}
+        <p className="mt-1 text-[13px] font-semibold">{eventLine(SAMPLE_SINCE.event.date, [SAMPLE_SINCE.event], locale)}</p>
+        <SinceTable result={SAMPLE_SINCE.result} />
+        {note}
+      </div>
+    );
+  }
+  if (!connected) {
+    return (
+      <div className={box} data-testid="google-tab-since">
+        {head}
+        <p className="mt-1 text-[12.5px] text-ink-soft" data-testid="since-not-connected">{t(locale, K("since.notConnected"))}</p>
+      </div>
+    );
+  }
+  if (picks.length === 0) {
+    return (
+      <div className={box} data-testid="google-tab-since">
+        {head}
+        <p className="mt-1 text-[12.5px] text-ink-soft" data-testid="since-none">{t(locale, K("since.none"))}</p>
+      </div>
+    );
+  }
+  return (
+    <div className={box} data-testid="google-tab-since">
+      {head}
+      <div className="mt-1 grid items-start gap-3 sm:grid-cols-[repeat(auto-fit,minmax(240px,1fr))]">
+        {picks.map((e) => {
+          const st = sinceStatus(e.date, today);
+          const r = data && data !== "loading" && data.status === "ok" ? data.results.find((x) => x.date === e.date) : null;
+          return (
+            <div key={`${e.date}-${e.kind}`} className="min-w-0 rounded-lg border border-paper-line px-2.5 py-2" data-testid="since-action" data-ready={st.ready ? "1" : "0"}>
+              <p className="text-[13px] font-semibold leading-snug">{eventLine(e.date, [e], locale)}</p>
+              {!st.ready ? (
+                <p className="mt-0.5 text-[12.5px] text-ink-soft" data-testid="since-check-back">
+                  <b className="text-ink">{t(locale, K("since.checkBack"), { date: shortDate(st.checkBack, locale) })}</b> · {t(locale, K("since.checkBackWhy"))}
+                </p>
+              ) : data === "loading" || data === null ? (
+                <p className="mt-0.5 text-[12.5px] text-ink-mute" role="status">{t(locale, K("since.loading"))}</p>
+              ) : data.status !== "ok" ? (
+                <p className="mt-0.5 text-[12.5px] text-ink-mute" data-testid="since-failed">{t(locale, K(data.status === "not_connected" ? "since.notConnected" : "since.failed"))}</p>
+              ) : r && r.days !== null ? (
+                <SinceTable result={r} />
+              ) : (
+                <p className="mt-0.5 text-[12.5px] text-ink-mute">{t(locale, K("since.noData"))}</p>
+              )}
+            </div>
+          );
+        })}
+      </div>
+      {note}
+    </div>
   );
 }
 
@@ -1279,9 +1645,11 @@ function ideaText(idea: Idea, locale: Locale): { title: string; pill: string; re
   }
 }
 
-function IdeaCard({ idea, n }: { idea: Idea; n: number }) {
+function IdeaCard({ idea, n, rec = null, type = null, canEdit = false }: { idea: Idea; n: number; rec?: Rec | null; type?: ReturnType<typeof ideaTypeOf>; canEdit?: boolean }) {
   const locale = useLocale();
-  const x = ideaText(idea, locale);
+  const base = ideaText(idea, locale);
+  // Day 23C: Premium's one button says PostScore does it, when it can write for this place.
+  const x = rec && canEdit && DOES_FOR_YOU.includes(rec.kind) ? { ...base, button: t(locale, "dashboard.breakdown.action.doItForYou") } : base;
   const a = idea.action;
   const cls = "inline-flex h-[30px] items-center whitespace-nowrap rounded-lg border border-ink bg-ink px-3 text-[12.5px] font-semibold text-paper";
   return (
@@ -1292,6 +1660,11 @@ function IdeaCard({ idea, n }: { idea: Idea; n: number }) {
           {x.title}
           <span className="rounded-full bg-[color:color-mix(in_srgb,var(--color-green)_12%,white)] px-2 py-0.5 text-[11px] font-bold text-green">{x.pill}</span>
         </h3>
+        {rec && (
+          <p className="mt-0.5 text-[12.5px] font-semibold leading-snug text-ink" data-testid={`idea-plan-${idea.id}`}>
+            {ideaPlanLine(rec, locale, type)}
+          </p>
+        )}
         <p className="mt-0.5 line-clamp-2 text-[12.5px] leading-snug text-ink-soft">{x.reason}</p>
       </div>
       {a.kind === "editor" ? (
@@ -1311,15 +1684,16 @@ function IdeaCard({ idea, n }: { idea: Idea; n: number }) {
   );
 }
 
-function NextSection(props: GoogleProfileTabProps & { sample: boolean }) {
-  const locale = useLocale();
-  const [more, setMore] = useState(false);
-  const sampleList = sampleIdeas(props.listing.categories ?? null);
+/** Section 5's ideas and the Day 23C recommendations, from the same real data. */
+function useTabIdeas(props: GoogleProfileTabProps): { ideas: Idea[]; recs: Rec[]; type: ReturnType<typeof ideaTypeOf> } {
+  const timeZone = useTimeZone();
   const extras = props.extras ?? null;
+  const now = Date.now();
+  const type = ideaTypeOf(props.nicheId ?? null, extras?.categories ?? props.listing.categories ?? []);
   const ideas = listingIdeas({
     businessId: props.businessId,
-    now: Date.now(),
-    type: ideaTypeOf(props.nicheId ?? null, extras?.categories ?? props.listing.categories ?? []),
+    now,
+    type,
     months: props.insights ?? [],
     listing: extras ? { services: extras.services, categories: extras.categories, description: extras.description ?? null, specialPeriods: extras.specialPeriods, attributeIds: extras.attributeIds ?? null, details: extras.details ?? null } : null,
     photos: props.media?.photos ?? null,
@@ -1327,8 +1701,42 @@ function NextSection(props: GoogleProfileTabProps & { sample: boolean }) {
     messagingOn: props.messagingOn,
     bookingTurnOn: props.booking?.tracking.kind === "turn_on" ? { provider: props.booking.tracking.provider } : null,
   });
+  const details = ideas.find((i): i is Extract<Idea, { id: "details" }> => i.id === "details");
+  const services = ideas.find((i): i is Extract<Idea, { id: "services" }> => i.id === "services");
+  const input: RecInputs = {
+    type,
+    now,
+    timeZone,
+    replies: props.replyCounts ? { replied: props.replyCounts.replied, inWindow: props.replyCounts.reviewsInWindow } : null,
+    photos: props.media?.photos ?? null,
+    posts: props.media?.posts ?? null,
+    months: props.insights ?? [],
+    specialPeriods: extras?.specialPeriods ?? null,
+    description: extras && extras.description !== undefined ? extras.description : undefined,
+    missingDetails: details?.missing ?? [],
+    missingServices: services?.missing.map((m) => m.service) ?? [],
+  };
+  return { ideas, recs: recommendations(input), type };
+}
+
+/** Section 1's "This week": the levers' to-dos (replies, photos, the post). */
+export function thisWeekRecs(recs: Rec[]): Rec[] {
+  return recs.filter((r) => r.kind === "replies" || r.kind === "photos" || r.kind === "posts");
+}
+
+/** Section 5's idea → its Day 23C recommendation (the "how many / when" line). */
+const IDEA_REC: Partial<Record<Idea["id"], Rec["kind"]>> = { photos: "photos", holiday: "holiday", posts: "posts", description: "description", details: "details", services: "services" };
+
+function NextSection(props: GoogleProfileTabProps & { sample: boolean }) {
+  const locale = useLocale();
+  const [more, setMore] = useState(false);
+  const sampleList = sampleIdeas(props.listing.categories ?? null);
+  const extras = props.extras ?? null;
+  const { ideas, recs, type } = useTabIdeas(props);
   const done = doneSinceScan(props.saved?.made ?? [], props.lastScanAt);
-  const open = ideas.filter((i) => !done.includes(i.id));
+  // Already in section 1's "This week" (photos, the post): not repeated here.
+  const thisWeek = new Set(thisWeekRecs(recs).map((r) => r.kind));
+  const open = ideas.filter((i) => !done.includes(i.id) && !(IDEA_REC[i.id] && thisWeek.has(IDEA_REC[i.id]!)));
   const shown = more ? open : open.slice(0, MAX_IDEAS);
   // Practice mode with no real numbers yet: the labelled samples.
   const sample = props.sample && !extras && open.length === 0;
@@ -1355,7 +1763,7 @@ function NextSection(props: GoogleProfileTabProps & { sample: boolean }) {
       ) : (
         <div className="mt-3 flex flex-col gap-2" data-testid="google-tab-ideas">
           {shown.map((idea, i) => (
-            <IdeaCard key={idea.id} idea={idea} n={i + 1} />
+            <IdeaCard key={idea.id} idea={idea} n={i + 1} rec={recs.find((r) => r.kind === IDEA_REC[idea.id]) ?? null} type={type} canEdit={props.canEditGoogle === true} />
           ))}
           {done.map((id) => (
             <Box key={`done-${id}`} className="flex items-center justify-between gap-3 px-3.5 py-2.5 text-[13px]" data-testid={`google-tab-idea-done-${id}`}>

@@ -71,13 +71,20 @@ export async function refreshPhotosAndPosts(
     const photoTimes = media.ok ? photoTimesOf(media.items, media.capped) : undefined;
     if (media.ok) {
       const p = photoSummary(media.items);
-      Object.assign(update, { photo_count: p.count, newest_photo_at: p.newestAt, photos_checked_at: now.toISOString() });
+      Object.assign(update, { photo_count: p.count, newest_photo_at: p.newestAt, photos_checked_at: now.toISOString(), photo_categories: p.categories ?? [] });
     }
     if (posts.ok) {
       const p = postSummary(posts.items, now.getTime());
       Object.assign(update, { posts_last_30_days: p.last30, last_post_at: p.lastAt, last_post_type: p.lastType, posts_checked_at: now.toISOString() });
     }
-    if (Object.keys(update).length > 0) await admin.from("gbp_connections").update(update).eq("business_id", businessId);
+    if (Object.keys(update).length > 0) {
+      const saved = await admin.from("gbp_connections").update(update).eq("business_id", businessId);
+      // Before supabase/day23c-google-tab.sql: save without the photo types.
+      if (saved.error && (saved.error.code === "PGRST204" || saved.error.code === "42703")) {
+        delete update.photo_categories;
+        await admin.from("gbp_connections").update(update).eq("business_id", businessId);
+      }
+    }
     if (!media.ok || !posts.ok) {
       console.warn(`[gbp-media-posts] read failed`, JSON.stringify({ media: media.ok ? "ok" : media.status, posts: posts.ok ? "ok" : posts.status }));
       return { ok: false, error: `media ${media.ok ? "ok" : media.status} posts ${posts.ok ? "ok" : posts.status}`, photoTimes };
@@ -89,12 +96,15 @@ export async function refreshPhotosAndPosts(
 }
 
 export async function loadPhotosAndPosts(db: SupabaseClient, businessId: string): Promise<MediaPostsState & { stale: boolean }> {
-  const { data, error } = await db.from("gbp_connections").select("photo_count, newest_photo_at, photos_checked_at, posts_last_30_days, last_post_at, last_post_type, posts_checked_at").eq("business_id", businessId).maybeSingle();
+  const columns = "photo_count, newest_photo_at, photos_checked_at, posts_last_30_days, last_post_at, last_post_type, posts_checked_at";
+  let { data, error } = await db.from("gbp_connections").select(`${columns}, photo_categories`).eq("business_id", businessId).maybeSingle();
+  // Before supabase/day23c-google-tab.sql: without the photo types.
+  if (error && (error.code === "PGRST204" || error.code === "42703")) ({ data, error } = await db.from("gbp_connections").select(columns).eq("business_id", businessId).maybeSingle());
   if (error || !data) return { photos: null, posts: null, checkedAt: null, stale: true };
   const d = data as Record<string, unknown>;
   const checked = [d.photos_checked_at, d.posts_checked_at].filter((x): x is string => typeof x === "string").sort()[0] ?? null;
   return {
-    photos: d.photos_checked_at ? { count: Number(d.photo_count) || 0, newestAt: (d.newest_photo_at as string | null) ?? null } : null,
+    photos: d.photos_checked_at ? { count: Number(d.photo_count) || 0, newestAt: (d.newest_photo_at as string | null) ?? null, categories: Array.isArray(d.photo_categories) ? (d.photo_categories as string[]) : null } : null,
     posts: d.posts_checked_at ? { last30: Number(d.posts_last_30_days) || 0, lastAt: (d.last_post_at as string | null) ?? null, lastType: (d.last_post_type as string | null) ?? null } : null,
     checkedAt: checked,
     stale: !checked || Date.now() - Date.parse(checked) > STALE_MS,

@@ -1982,6 +1982,138 @@ export type MessageKey =
   | "dashboard.googleTab.kpi.websiteClicks"
   | "dashboard.googleTab.kpi.empty"
   | "dashboard.googleTab.worth.label"
+  | "dashboard.googleTab.s1.lastFull"
+  | "dashboard.googleTab.kpi.in.calls"
+  | "dashboard.googleTab.kpi.in.directions"
+  | "dashboard.googleTab.kpi.in.bookings"
+  | "dashboard.googleTab.kpi.in.websiteClicks"
+  | "dashboard.googleTab.soFar.line"
+  | "dashboard.googleTab.soFar.calls"
+  | "dashboard.googleTab.soFar.callsOne"
+  | "dashboard.googleTab.soFar.websiteClicks"
+  | "dashboard.googleTab.soFar.websiteClicksOne"
+  | "dashboard.googleTab.soFar.directions"
+  | "dashboard.googleTab.soFar.directionsOne"
+  | "dashboard.googleTab.soFar.note"
+  | "dashboard.googleTab.rec.photos"
+  | "dashboard.googleTab.rec.photos.missing"
+  | "dashboard.googleTab.rec.photoType.INTERIOR"
+  | "dashboard.googleTab.rec.photoType.INTERIOR.hair"
+  | "dashboard.googleTab.rec.photoType.INTERIOR.barber"
+  | "dashboard.googleTab.rec.photoType.INTERIOR.nails"
+  | "dashboard.googleTab.rec.photoType.INTERIOR.restaurant"
+  | "dashboard.googleTab.rec.photoType.INTERIOR.art"
+  | "dashboard.googleTab.rec.photoType.EXTERIOR"
+  | "dashboard.googleTab.rec.photoType.AT_WORK"
+  | "dashboard.googleTab.rec.photoType.AT_WORK.hair"
+  | "dashboard.googleTab.rec.photoType.AT_WORK.barber"
+  | "dashboard.googleTab.rec.photoType.AT_WORK.nails"
+  | "dashboard.googleTab.rec.photoType.AT_WORK.restaurant"
+  | "dashboard.googleTab.rec.photoType.AT_WORK.art"
+  | "dashboard.googleTab.rec.photoType.AT_WORK.home"
+  | "dashboard.googleTab.rec.photoType.TEAMS"
+  | "dashboard.googleTab.rec.photoType.PRODUCT"
+  | "dashboard.googleTab.rec.photoType.FOOD_AND_DRINK"
+  | "dashboard.googleTab.rec.photoType.MENU"
+  | "dashboard.googleTab.rec.replies"
+  | "dashboard.googleTab.rec.repliesOne"
+  | "dashboard.googleTab.rec.posts.day"
+  | "dashboard.googleTab.rec.posts.week"
+  | "dashboard.googleTab.rec.posts.topic"
+  | "dashboard.googleTab.rec.holiday"
+  | "dashboard.googleTab.rec.holidayToday"
+  | "dashboard.googleTab.rec.holidayBy"
+  | "dashboard.googleTab.rec.holidayByToday"
+  | "dashboard.googleTab.rec.description"
+  | "dashboard.googleTab.rec.details.both"
+  | "dashboard.googleTab.rec.details.parking"
+  | "dashboard.googleTab.rec.details.accessibility"
+  | "dashboard.googleTab.rec.services"
+  | "dashboard.googleTab.rec.servicesOne"
+  | "dashboard.googleTab.rec.thisWeek"
+  | "dashboard.googleTab.rec.steps.show"
+  | "dashboard.googleTab.rec.steps.hide"
+  | "dashboard.googleTab.rec.openGoogle"
+  | "dashboard.googleTab.rec.openInbox"
+  | "dashboard.googleTab.rec.steps.photos.1"
+  | "dashboard.googleTab.rec.steps.photos.2"
+  | "dashboard.googleTab.rec.steps.photos.3"
+  | "dashboard.googleTab.rec.steps.replies.1"
+  | "dashboard.googleTab.rec.steps.replies.2"
+  | "dashboard.googleTab.rec.steps.replies.3"
+  | "dashboard.googleTab.rec.steps.posts.1"
+  | "dashboard.googleTab.rec.steps.posts.2"
+  | "dashboard.googleTab.rec.steps.posts.3"
+  | "dashboard.googleTab.rec.steps.holiday.1"
+  | "dashboard.googleTab.rec.steps.holiday.2"
+  | "dashboard.googleTab.rec.steps.holiday.3"
+  | "dashboard.googleTab.rec.steps.description.1"
+  | "dashboard.googleTab.rec.steps.description.2"
+  | "dashboard.googleTab.rec.steps.description.3"
+  | "dashboard.googleTab.rec.steps.details.1"
+  | "dashboard.googleTab.rec.steps.details.2"
+  | "dashboard.googleTab.rec.steps.details.3"
+  | "dashboard.googleTab.rec.steps.services.1"
+  | "dashboard.googleTab.rec.steps.services.2"
+  | "dashboard.googleTab.rec.steps.services.3"
+  | "dashboard.googleTab.grow.title"
+  | "dashboard.googleTab.grow.sub"
+  | "dashboard.googleTab.grow.none"
+  | "dashboard.googleTab.grow.connect"
+  | "dashboard.googleTab.since.title"
+  | "dashboard.googleTab.since.window"
+  | "dashboard.googleTab.since.note"
+  | "dashboard.googleTab.since.checkBack"
+  | "dashboard.googleTab.since.checkBackWhy"
+  | "dashboard.googleTab.since.none"
+  | "dashboard.googleTab.since.loading"
+  | "dashboard.googleTab.since.failed"
+  | "dashboard.googleTab.since.notConnected"
+  | "dashboard.googleTab.since.noData"
+  | "dashboard.googleTab.since.metric.calls"
+  | "dashboard.googleTab.since.metric.websiteClicks"
+  | "dashboard.googleTab.since.metric.directions"
+  | "dashboard.googleTab.since.metric.rate"
+  | "dashboard.googleTab.since.before"
+  | "dashboard.googleTab.since.after"
+  | "dashboard.googleTab.since.per100.up"
+  | "dashboard.googleTab.since.per100.down"
+  | "dashboard.googleTab.since.same"
+  | "dashboard.googleTab.ev.replies"
+  | "dashboard.googleTab.ev.repliesOne"
+  | "dashboard.googleTab.ev.photos"
+  | "dashboard.googleTab.ev.photosOne"
+  | "dashboard.googleTab.ev.campaign"
+  | "dashboard.googleTab.ev.campaignOne"
+  | "dashboard.googleTab.ev.line"
+  | "dashboard.googleTab.rate.markers"
+  | "dashboard.googleTab.notConnected.since"
+  | "dashboard.googleTab.worth.howOpen"
+  | "dashboard.googleTab.worth.howClose"
+  | "dashboard.googleTab.worth.math"
+  | "dashboard.googleTab.worth.share.third"
+  | "dashboard.googleTab.worth.share.all"
+  | "dashboard.googleTab.worth.share.pct"
+  | "dashboard.googleTab.worth.counts"
+  | "dashboard.googleTab.worth.avgLabel"
+  | "dashboard.googleTab.worth.shareLabel"
+  | "dashboard.googleTab.worth.choice.default"
+  | "dashboard.googleTab.worth.choice.third"
+  | "dashboard.googleTab.worth.choice.half"
+  | "dashboard.googleTab.worth.choice.most"
+  | "dashboard.googleTab.worth.choice.own"
+  | "dashboard.googleTab.worth.tag.yours"
+  | "dashboard.googleTab.worth.tag.default"
+  | "dashboard.googleTab.worth.save"
+  | "dashboard.googleTab.worth.saved"
+  | "dashboard.googleTab.worth.saveFailed"
+  | "dashboard.googleTab.worth.notReady"
+  | "dashboard.googleTab.worth.invalidShare"
+  | "dashboard.googleTab.worth.invalidAvg"
+  | "dashboard.googleTab.worth.avgSettings"
+  | "dashboard.googleTab.worth.broughtOne"
+  | "dashboard.googleTab.worth.broughtSubOwn"
+  | "dashboard.googleTab.worth.leftRange"
   | "dashboard.googleTab.worth.estimate"
   | "dashboard.googleTab.s2.title"
   | "dashboard.googleTab.s2.empty"
@@ -7893,6 +8025,138 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.googleTab.kpi.websiteClicks": "Website clicks",
     "dashboard.googleTab.kpi.empty": "Calls, direction requests, website clicks, bookings and messages, and what they could be worth, show here once Google shares your numbers.",
     "dashboard.googleTab.worth.label": "What that could be worth",
+    "dashboard.googleTab.s1.lastFull": "{month} (last full month)",
+    "dashboard.googleTab.kpi.in.calls": "calls in {month}",
+    "dashboard.googleTab.kpi.in.directions": "direction requests in {month}",
+    "dashboard.googleTab.kpi.in.bookings": "booked in Google in {month}",
+    "dashboard.googleTab.kpi.in.websiteClicks": "website clicks in {month}",
+    "dashboard.googleTab.soFar.line": "{month} so far (through {date}): {list}.",
+    "dashboard.googleTab.soFar.calls": "{count} calls",
+    "dashboard.googleTab.soFar.callsOne": "1 call",
+    "dashboard.googleTab.soFar.websiteClicks": "{count} website clicks",
+    "dashboard.googleTab.soFar.websiteClicksOne": "1 website click",
+    "dashboard.googleTab.soFar.directions": "{count} direction requests",
+    "dashboard.googleTab.soFar.directionsOne": "1 direction request",
+    "dashboard.googleTab.soFar.note": "Full month on {month} {from}–{to}: Google's numbers arrive a few days late.",
+    "dashboard.googleTab.rec.photos": "Add {count} photos this week: {list}",
+    "dashboard.googleTab.rec.photos.missing": "Your listing has no photos of these types yet.",
+    "dashboard.googleTab.rec.photoType.INTERIOR": "inside your business",
+    "dashboard.googleTab.rec.photoType.INTERIOR.hair": "inside your salon",
+    "dashboard.googleTab.rec.photoType.INTERIOR.barber": "inside your shop",
+    "dashboard.googleTab.rec.photoType.INTERIOR.nails": "inside your salon",
+    "dashboard.googleTab.rec.photoType.INTERIOR.restaurant": "of your dining room",
+    "dashboard.googleTab.rec.photoType.INTERIOR.art": "inside your studio",
+    "dashboard.googleTab.rec.photoType.EXTERIOR": "of your storefront and sign",
+    "dashboard.googleTab.rec.photoType.AT_WORK": "of you at work",
+    "dashboard.googleTab.rec.photoType.AT_WORK.hair": "of finished work",
+    "dashboard.googleTab.rec.photoType.AT_WORK.barber": "of a fresh cut",
+    "dashboard.googleTab.rec.photoType.AT_WORK.nails": "of finished nails",
+    "dashboard.googleTab.rec.photoType.AT_WORK.restaurant": "of your kitchen at work",
+    "dashboard.googleTab.rec.photoType.AT_WORK.art": "of a class in progress",
+    "dashboard.googleTab.rec.photoType.AT_WORK.home": "of a job you finished",
+    "dashboard.googleTab.rec.photoType.TEAMS": "of your team",
+    "dashboard.googleTab.rec.photoType.PRODUCT": "of the products you use or sell",
+    "dashboard.googleTab.rec.photoType.FOOD_AND_DRINK": "of your most popular dish",
+    "dashboard.googleTab.rec.photoType.MENU": "of your menu",
+    "dashboard.googleTab.rec.replies": "Reply to your {count} newest unanswered reviews, oldest first (about {minutes} min)",
+    "dashboard.googleTab.rec.repliesOne": "Reply to your newest unanswered review (about {minutes} min)",
+    "dashboard.googleTab.rec.posts.day": "Post 1 update on {day} ({date}), the day before your busiest call days ({busiest})",
+    "dashboard.googleTab.rec.posts.week": "Post 1 update this week",
+    "dashboard.googleTab.rec.posts.topic": "Idea: {topic}.",
+    "dashboard.googleTab.rec.holiday": "Set {holiday} hours by {date}",
+    "dashboard.googleTab.rec.holidayToday": "Set {holiday} hours today ({holiday} is {date})",
+    "dashboard.googleTab.rec.holidayBy": "Do it by {date}, 2 days before {holiday}.",
+    "dashboard.googleTab.rec.holidayByToday": "Do it today: {holiday} is {date}.",
+    "dashboard.googleTab.rec.description": "Description: aim for {target}+ characters, you have {count} (about {minutes} min)",
+    "dashboard.googleTab.rec.details.both": "Add parking + accessibility, about {minutes} minutes",
+    "dashboard.googleTab.rec.details.parking": "Add parking, about 1 minute",
+    "dashboard.googleTab.rec.details.accessibility": "Add accessibility, about 1 minute",
+    "dashboard.googleTab.rec.services": "Add {count} services: {list}, about {minutes} min",
+    "dashboard.googleTab.rec.servicesOne": "Add 1 service: {list}, about 1 min",
+    "dashboard.googleTab.rec.thisWeek": "This week",
+    "dashboard.googleTab.rec.steps.show": "How to do it",
+    "dashboard.googleTab.rec.steps.hide": "Hide steps",
+    "dashboard.googleTab.rec.openGoogle": "Open on Google ↗",
+    "dashboard.googleTab.rec.openInbox": "Open the reviews inbox",
+    "dashboard.googleTab.rec.steps.photos.1": "Open your Business Profile on Google and choose Add photo.",
+    "dashboard.googleTab.rec.steps.photos.2": "Take the photos listed above in daylight, without filters, and upload them.",
+    "dashboard.googleTab.rec.steps.photos.3": "Google can take a day to show them on your listing.",
+    "dashboard.googleTab.rec.steps.replies.1": "Open Reviews on your Business Profile.",
+    "dashboard.googleTab.rec.steps.replies.2": "Start with the oldest of your newest unanswered reviews. Use their name and mention what they liked.",
+    "dashboard.googleTab.rec.steps.replies.3": "Keep each reply short: thank them and invite them back.",
+    "dashboard.googleTab.rec.steps.posts.1": "Open your Business Profile and choose Add update.",
+    "dashboard.googleTab.rec.steps.posts.2": "Add one photo and 1–2 sentences about the idea above.",
+    "dashboard.googleTab.rec.steps.posts.3": "Add a Call or Book button so people can act right away.",
+    "dashboard.googleTab.rec.steps.holiday.1": "Open your Business Profile and choose Edit profile → Hours.",
+    "dashboard.googleTab.rec.steps.holiday.2": "Under Special hours, add the holiday's date.",
+    "dashboard.googleTab.rec.steps.holiday.3": "Choose Closed, or set the hours you'll be open, and save.",
+    "dashboard.googleTab.rec.steps.description.1": "Open your Business Profile and choose Edit profile → Description.",
+    "dashboard.googleTab.rec.steps.description.2": "Say what you do, what you're best at and the area you serve.",
+    "dashboard.googleTab.rec.steps.description.3": "Leave out links and phone numbers: Google doesn't allow them there.",
+    "dashboard.googleTab.rec.steps.details.1": "Open your Business Profile and choose Edit profile → More.",
+    "dashboard.googleTab.rec.steps.details.2": "Set Parking and Accessibility to match your place.",
+    "dashboard.googleTab.rec.steps.details.3": "Save. Google's AI uses these to answer customers' questions.",
+    "dashboard.googleTab.rec.steps.services.1": "Open your Business Profile and choose Edit services.",
+    "dashboard.googleTab.rec.steps.services.2": "Add each service listed above, with a short description.",
+    "dashboard.googleTab.rec.steps.services.3": "Save. Google can show them when people search for them.",
+    "dashboard.googleTab.grow.title": "What to do on Google this week",
+    "dashboard.googleTab.grow.sub": "From your real listing. Each one comes with the steps to do it yourself.",
+    "dashboard.googleTab.grow.none": "Nothing to do on Google this week. Your photos, replies and holiday hours are up to date.",
+    "dashboard.googleTab.grow.connect": "Connect Google in Reviews to see exact counts for review replies, photos and holiday hours.",
+    "dashboard.googleTab.since.title": "Since you did this",
+    "dashboard.googleTab.since.window": "{days} days after vs {days} days before",
+    "dashboard.googleTab.since.note": "Other things also affect these numbers (season, weather, ads).",
+    "dashboard.googleTab.since.checkBack": "Check back on {date}",
+    "dashboard.googleTab.since.checkBackWhy": "The numbers after it show once 14 days have passed.",
+    "dashboard.googleTab.since.none": "Nothing done from PostScore in the last 6 months yet. Reply to reviews, add photos or update your listing, and your numbers after it show here.",
+    "dashboard.googleTab.since.loading": "Reading your Google numbers…",
+    "dashboard.googleTab.since.failed": "Couldn't load from Google right now.",
+    "dashboard.googleTab.since.notConnected": "Connect Google to see your calls, website clicks and directions after each thing you do.",
+    "dashboard.googleTab.since.noData": "Google doesn't have enough days after this yet.",
+    "dashboard.googleTab.since.metric.calls": "Calls",
+    "dashboard.googleTab.since.metric.websiteClicks": "Website clicks",
+    "dashboard.googleTab.since.metric.directions": "Directions",
+    "dashboard.googleTab.since.metric.rate": "Conversion rate",
+    "dashboard.googleTab.since.before": "Before",
+    "dashboard.googleTab.since.after": "After",
+    "dashboard.googleTab.since.per100.up": "{count} more per 100",
+    "dashboard.googleTab.since.per100.down": "{count} fewer per 100",
+    "dashboard.googleTab.since.same": "same",
+    "dashboard.googleTab.ev.replies": "replied to {count} reviews",
+    "dashboard.googleTab.ev.repliesOne": "replied to 1 review",
+    "dashboard.googleTab.ev.photos": "added {count} photos",
+    "dashboard.googleTab.ev.photosOne": "added 1 photo",
+    "dashboard.googleTab.ev.campaign": "started {count} coupons or referral cards",
+    "dashboard.googleTab.ev.campaignOne": "started 1 coupon or referral card",
+    "dashboard.googleTab.ev.line": "{date}: {what}",
+    "dashboard.googleTab.rate.markers": "What you did",
+    "dashboard.googleTab.notConnected.since": "What happened to your calls, clicks and directions after each thing you did",
+    "dashboard.googleTab.worth.howOpen": "How we calculated this",
+    "dashboard.googleTab.worth.howClose": "Hide the math",
+    "dashboard.googleTab.worth.math": "{actions} customer actions × {avg} average visit × {share} that become visits = {result}",
+    "dashboard.googleTab.worth.share.third": "a third",
+    "dashboard.googleTab.worth.share.all": "all",
+    "dashboard.googleTab.worth.share.pct": "{percent}%",
+    "dashboard.googleTab.worth.counts": "Customer actions are what Google counts: calls, direction requests, website clicks, bookings, messages and food orders. Google can't see finished sales.",
+    "dashboard.googleTab.worth.avgLabel": "Average visit",
+    "dashboard.googleTab.worth.shareLabel": "How many of these become paying visits",
+    "dashboard.googleTab.worth.choice.default": "A third to all (PostScore default)",
+    "dashboard.googleTab.worth.choice.third": "About a third",
+    "dashboard.googleTab.worth.choice.half": "About half",
+    "dashboard.googleTab.worth.choice.most": "Most (75%)",
+    "dashboard.googleTab.worth.choice.own": "My own %",
+    "dashboard.googleTab.worth.tag.yours": "Your numbers",
+    "dashboard.googleTab.worth.tag.default": "PostScore default",
+    "dashboard.googleTab.worth.save": "Save",
+    "dashboard.googleTab.worth.saved": "Saved",
+    "dashboard.googleTab.worth.saveFailed": "Couldn't save. Try again.",
+    "dashboard.googleTab.worth.notReady": "This setting isn't available yet.",
+    "dashboard.googleTab.worth.invalidShare": "Enter a number from 1 to 100.",
+    "dashboard.googleTab.worth.invalidAvg": "Enter an amount like 45.",
+    "dashboard.googleTab.worth.avgSettings": "The same value as Settings → Average visit.",
+    "dashboard.googleTab.worth.broughtOne": "Google brought you about {amount} last month",
+    "dashboard.googleTab.worth.broughtSubOwn": "{actions} customer actions × ${avg} average visit × {share} that become visits.",
+    "dashboard.googleTab.worth.leftRange": "Left on the table: ≈ {low}–{high}",
     "dashboard.googleTab.worth.estimate": "Estimate",
     "dashboard.googleTab.s2.title": "How searches became customers",
     "dashboard.googleTab.s2.empty": "How many people saw your listing on Search and Maps, how many then called, booked, visited your site or asked for directions, and the last 6 months.",
@@ -14091,6 +14355,138 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.googleTab.kpi.websiteClicks": "Clics al sitio web",
     "dashboard.googleTab.kpi.empty": "Las llamadas, solicitudes de indicaciones, clics al sitio web, reservas y mensajes, y lo que podrían valer, aparecen aquí cuando Google comparta sus números.",
     "dashboard.googleTab.worth.label": "Lo que eso podría valer",
+    "dashboard.googleTab.s1.lastFull": "{month} (último mes completo)",
+    "dashboard.googleTab.kpi.in.calls": "llamadas en {month}",
+    "dashboard.googleTab.kpi.in.directions": "solicitudes de indicaciones en {month}",
+    "dashboard.googleTab.kpi.in.bookings": "reservas en Google en {month}",
+    "dashboard.googleTab.kpi.in.websiteClicks": "clics al sitio web en {month}",
+    "dashboard.googleTab.soFar.line": "{month} hasta ahora (hasta el {date}): {list}.",
+    "dashboard.googleTab.soFar.calls": "{count} llamadas",
+    "dashboard.googleTab.soFar.callsOne": "1 llamada",
+    "dashboard.googleTab.soFar.websiteClicks": "{count} clics al sitio web",
+    "dashboard.googleTab.soFar.websiteClicksOne": "1 clic al sitio web",
+    "dashboard.googleTab.soFar.directions": "{count} solicitudes de indicaciones",
+    "dashboard.googleTab.soFar.directionsOne": "1 solicitud de indicaciones",
+    "dashboard.googleTab.soFar.note": "El mes completo llega entre el {from} y el {to} de {month}: los números de Google llegan con unos días de retraso.",
+    "dashboard.googleTab.rec.photos": "Agregue {count} fotos esta semana: {list}",
+    "dashboard.googleTab.rec.photos.missing": "Su ficha aún no tiene fotos de estos tipos.",
+    "dashboard.googleTab.rec.photoType.INTERIOR": "del interior de su negocio",
+    "dashboard.googleTab.rec.photoType.INTERIOR.hair": "del interior de su salón",
+    "dashboard.googleTab.rec.photoType.INTERIOR.barber": "del interior de su barbería",
+    "dashboard.googleTab.rec.photoType.INTERIOR.nails": "del interior de su salón",
+    "dashboard.googleTab.rec.photoType.INTERIOR.restaurant": "de su comedor",
+    "dashboard.googleTab.rec.photoType.INTERIOR.art": "del interior de su estudio",
+    "dashboard.googleTab.rec.photoType.EXTERIOR": "de su fachada y su letrero",
+    "dashboard.googleTab.rec.photoType.AT_WORK": "de usted trabajando",
+    "dashboard.googleTab.rec.photoType.AT_WORK.hair": "de un trabajo terminado",
+    "dashboard.googleTab.rec.photoType.AT_WORK.barber": "de un corte recién hecho",
+    "dashboard.googleTab.rec.photoType.AT_WORK.nails": "de unas uñas terminadas",
+    "dashboard.googleTab.rec.photoType.AT_WORK.restaurant": "de su cocina en acción",
+    "dashboard.googleTab.rec.photoType.AT_WORK.art": "de una clase en curso",
+    "dashboard.googleTab.rec.photoType.AT_WORK.home": "de un trabajo que terminó",
+    "dashboard.googleTab.rec.photoType.TEAMS": "de su equipo",
+    "dashboard.googleTab.rec.photoType.PRODUCT": "de los productos que usa o vende",
+    "dashboard.googleTab.rec.photoType.FOOD_AND_DRINK": "de su plato más popular",
+    "dashboard.googleTab.rec.photoType.MENU": "de su menú",
+    "dashboard.googleTab.rec.replies": "Responda sus {count} reseñas más recientes sin respuesta, empezando por la más antigua (unos {minutes} min)",
+    "dashboard.googleTab.rec.repliesOne": "Responda su reseña más reciente sin respuesta (unos {minutes} min)",
+    "dashboard.googleTab.rec.posts.day": "Publique 1 novedad el {day} ({date}), el día antes de sus días con más llamadas ({busiest})",
+    "dashboard.googleTab.rec.posts.week": "Publique 1 novedad esta semana",
+    "dashboard.googleTab.rec.posts.topic": "Idea: {topic}.",
+    "dashboard.googleTab.rec.holiday": "Configure su horario de {holiday} antes del {date}",
+    "dashboard.googleTab.rec.holidayToday": "Configure su horario de {holiday} hoy ({holiday} es el {date})",
+    "dashboard.googleTab.rec.holidayBy": "Hágalo antes del {date}, 2 días antes de {holiday}.",
+    "dashboard.googleTab.rec.holidayByToday": "Hágalo hoy: {holiday} es el {date}.",
+    "dashboard.googleTab.rec.description": "Descripción: apunte a {target} caracteres o más; ahora tiene {count} (unos {minutes} min)",
+    "dashboard.googleTab.rec.details.both": "Agregue estacionamiento + accesibilidad, unos {minutes} minutos",
+    "dashboard.googleTab.rec.details.parking": "Agregue estacionamiento, aproximadamente 1 minuto",
+    "dashboard.googleTab.rec.details.accessibility": "Agregue accesibilidad, aproximadamente 1 minuto",
+    "dashboard.googleTab.rec.services": "Agregue {count} servicios: {list}, unos {minutes} min",
+    "dashboard.googleTab.rec.servicesOne": "Agregue 1 servicio: {list}, aproximadamente 1 min",
+    "dashboard.googleTab.rec.thisWeek": "Esta semana",
+    "dashboard.googleTab.rec.steps.show": "Cómo hacerlo",
+    "dashboard.googleTab.rec.steps.hide": "Ocultar pasos",
+    "dashboard.googleTab.rec.openGoogle": "Abrir en Google ↗",
+    "dashboard.googleTab.rec.openInbox": "Abrir la bandeja de reseñas",
+    "dashboard.googleTab.rec.steps.photos.1": "Abra su Perfil de Empresa en Google y elija Agregar foto.",
+    "dashboard.googleTab.rec.steps.photos.2": "Tome las fotos de la lista con luz natural, sin filtros, y súbalas.",
+    "dashboard.googleTab.rec.steps.photos.3": "Google puede tardar un día en mostrarlas en su ficha.",
+    "dashboard.googleTab.rec.steps.replies.1": "Abra Reseñas en su Perfil de Empresa.",
+    "dashboard.googleTab.rec.steps.replies.2": "Empiece por la más antigua de sus reseñas recientes sin respuesta. Use su nombre y mencione lo que le gustó.",
+    "dashboard.googleTab.rec.steps.replies.3": "Que cada respuesta sea breve: agradezca e invite a volver.",
+    "dashboard.googleTab.rec.steps.posts.1": "Abra su Perfil de Empresa y elija Agregar novedad.",
+    "dashboard.googleTab.rec.steps.posts.2": "Agregue una foto y 1 o 2 frases sobre la idea de arriba.",
+    "dashboard.googleTab.rec.steps.posts.3": "Agregue un botón de Llamar o Reservar para que la gente actúe enseguida.",
+    "dashboard.googleTab.rec.steps.holiday.1": "Abra su Perfil de Empresa y elija Editar perfil → Horario.",
+    "dashboard.googleTab.rec.steps.holiday.2": "En Horario especial, agregue la fecha del día festivo.",
+    "dashboard.googleTab.rec.steps.holiday.3": "Elija Cerrado, o indique el horario en que abrirá, y guarde.",
+    "dashboard.googleTab.rec.steps.description.1": "Abra su Perfil de Empresa y elija Editar perfil → Descripción.",
+    "dashboard.googleTab.rec.steps.description.2": "Diga qué hace, en qué se destaca y a qué zona atiende.",
+    "dashboard.googleTab.rec.steps.description.3": "No incluya enlaces ni números de teléfono: Google no los permite ahí.",
+    "dashboard.googleTab.rec.steps.details.1": "Abra su Perfil de Empresa y elija Editar perfil → Más.",
+    "dashboard.googleTab.rec.steps.details.2": "Indique el Estacionamiento y la Accesibilidad de su local.",
+    "dashboard.googleTab.rec.steps.details.3": "Guarde. La IA de Google los usa para responder preguntas de los clientes.",
+    "dashboard.googleTab.rec.steps.services.1": "Abra su Perfil de Empresa y elija Editar servicios.",
+    "dashboard.googleTab.rec.steps.services.2": "Agregue cada servicio de la lista, con una breve descripción.",
+    "dashboard.googleTab.rec.steps.services.3": "Guarde. Google puede mostrarlos cuando la gente los busque.",
+    "dashboard.googleTab.grow.title": "Qué hacer en Google esta semana",
+    "dashboard.googleTab.grow.sub": "A partir de su ficha real. Cada uno incluye los pasos para hacerlo usted mismo.",
+    "dashboard.googleTab.grow.none": "Nada que hacer en Google esta semana. Sus fotos, respuestas y horarios festivos están al día.",
+    "dashboard.googleTab.grow.connect": "Conecte Google en Reseñas para ver cifras exactas de respuestas, fotos y horarios festivos.",
+    "dashboard.googleTab.since.title": "Desde que hizo esto",
+    "dashboard.googleTab.since.window": "{days} días después frente a {days} días antes",
+    "dashboard.googleTab.since.note": "Otras cosas también influyen en estas cifras (temporada, clima, anuncios).",
+    "dashboard.googleTab.since.checkBack": "Vuelva a consultar el {date}",
+    "dashboard.googleTab.since.checkBackWhy": "Las cifras posteriores aparecen cuando pasan 14 días.",
+    "dashboard.googleTab.since.none": "Aún no ha hecho nada desde PostScore en los últimos 6 meses. Responda reseñas, agregue fotos o actualice su ficha, y aquí verá sus cifras después.",
+    "dashboard.googleTab.since.loading": "Leyendo sus cifras de Google…",
+    "dashboard.googleTab.since.failed": "No se pudo cargar desde Google en este momento.",
+    "dashboard.googleTab.since.notConnected": "Conecte Google para ver sus llamadas, clics al sitio web e indicaciones después de cada cosa que haga.",
+    "dashboard.googleTab.since.noData": "Google aún no tiene suficientes días posteriores.",
+    "dashboard.googleTab.since.metric.calls": "Llamadas",
+    "dashboard.googleTab.since.metric.websiteClicks": "Clics al sitio web",
+    "dashboard.googleTab.since.metric.directions": "Indicaciones",
+    "dashboard.googleTab.since.metric.rate": "Tasa de conversión",
+    "dashboard.googleTab.since.before": "Antes",
+    "dashboard.googleTab.since.after": "Después",
+    "dashboard.googleTab.since.per100.up": "{count} más por cada 100",
+    "dashboard.googleTab.since.per100.down": "{count} menos por cada 100",
+    "dashboard.googleTab.since.same": "igual",
+    "dashboard.googleTab.ev.replies": "respondió {count} reseñas",
+    "dashboard.googleTab.ev.repliesOne": "respondió 1 reseña",
+    "dashboard.googleTab.ev.photos": "agregó {count} fotos",
+    "dashboard.googleTab.ev.photosOne": "agregó 1 foto",
+    "dashboard.googleTab.ev.campaign": "inició {count} cupones o tarjetas de referidos",
+    "dashboard.googleTab.ev.campaignOne": "inició 1 cupón o tarjeta de referidos",
+    "dashboard.googleTab.ev.line": "{date}: {what}",
+    "dashboard.googleTab.rate.markers": "Lo que hizo",
+    "dashboard.googleTab.notConnected.since": "Qué pasó con sus llamadas, clics e indicaciones después de cada cosa que hizo",
+    "dashboard.googleTab.worth.howOpen": "Cómo lo calculamos",
+    "dashboard.googleTab.worth.howClose": "Ocultar el cálculo",
+    "dashboard.googleTab.worth.math": "{actions} acciones de clientes × {avg} de visita promedio × {share} que se convierten en visitas = {result}",
+    "dashboard.googleTab.worth.share.third": "un tercio",
+    "dashboard.googleTab.worth.share.all": "todas",
+    "dashboard.googleTab.worth.share.pct": "{percent} %",
+    "dashboard.googleTab.worth.counts": "Las acciones de clientes son lo que Google cuenta: llamadas, solicitudes de indicaciones, clics al sitio web, reservas, mensajes y pedidos de comida. Google no puede ver las ventas concretadas.",
+    "dashboard.googleTab.worth.avgLabel": "Visita promedio",
+    "dashboard.googleTab.worth.shareLabel": "Cuántas de estas se convierten en visitas pagadas",
+    "dashboard.googleTab.worth.choice.default": "Entre un tercio y todas (valor predeterminado de PostScore)",
+    "dashboard.googleTab.worth.choice.third": "Más o menos un tercio",
+    "dashboard.googleTab.worth.choice.half": "Más o menos la mitad",
+    "dashboard.googleTab.worth.choice.most": "La mayoría (75 %)",
+    "dashboard.googleTab.worth.choice.own": "Mi propio %",
+    "dashboard.googleTab.worth.tag.yours": "Sus cifras",
+    "dashboard.googleTab.worth.tag.default": "Valor predeterminado de PostScore",
+    "dashboard.googleTab.worth.save": "Guardar",
+    "dashboard.googleTab.worth.saved": "Guardado",
+    "dashboard.googleTab.worth.saveFailed": "No se pudo guardar. Inténtelo de nuevo.",
+    "dashboard.googleTab.worth.notReady": "Este ajuste aún no está disponible.",
+    "dashboard.googleTab.worth.invalidShare": "Escriba un número del 1 al 100.",
+    "dashboard.googleTab.worth.invalidAvg": "Escriba un monto como 45.",
+    "dashboard.googleTab.worth.avgSettings": "Es el mismo valor que Configuración → Visita promedio.",
+    "dashboard.googleTab.worth.broughtOne": "Google le trajo unos {amount} el mes pasado",
+    "dashboard.googleTab.worth.broughtSubOwn": "{actions} acciones de clientes × {avg} dólares de visita promedio × {share} que se convierten en visitas.",
+    "dashboard.googleTab.worth.leftRange": "Lo que se quedó sobre la mesa: ≈ {low}–{high}",
     "dashboard.googleTab.worth.estimate": "Estimación",
     "dashboard.googleTab.s2.title": "Cómo las búsquedas se convirtieron en clientes",
     "dashboard.googleTab.s2.empty": "Cuántas personas vieron su ficha en la Búsqueda y en Maps, cuántas luego llamaron, reservaron, visitaron su sitio o pidieron indicaciones, y los últimos 6 meses.",

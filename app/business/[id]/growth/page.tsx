@@ -185,6 +185,49 @@ export default async function GrowthPage({ params, searchParams = {} }: { params
         })()
       : null;
 
+  // Day 23C, Grow/Free: this week's Google to-dos (exact counts and dates),
+  // each with the steps to do it yourself — from what's already read for
+  // this business (0 Places calls): the reply check, the stored photo/post
+  // summaries and monthly numbers, and the real listing when connected.
+  const growRecs =
+    !hasPremium(plan) && isGoogleTabParam(searchParams.tab)
+      ? await (async () => {
+          const { recommendations } = await import("@/lib/googleRecommendations");
+          const { ideaTypeOf, listingIdeas } = await import("@/lib/listingIdeas");
+          const db = createClient();
+          const timeZone = business.time_zone ?? DEFAULT_BUSINESS_TIMEZONE;
+          const now = Date.now();
+          const media = gbpConnected ? await loadPhotosAndPosts(db, params.id).catch(() => null) : null;
+          const extras = gbpConnected ? await listingExtras(createAdminClient(), params.id).catch(() => null) : null;
+          const stored = gbpConnected ? await loadInsights(db, params.id).catch(() => null) : null;
+          const months = stored?.ok ? stored.months : [];
+          const type = ideaTypeOf((row as { niche_id?: string | null }).niche_id ?? null, extras?.categories ?? row.categories ?? []);
+          // Not connected: photos only when the scan's photo check isn't at full points (no dates to go by).
+          const photoCheck = scored.result.breakdown.checks.find((c) => c.id === "completeness.photos");
+          const photos = media?.photos ?? (photoCheck && photoCheck.earnedPoints !== null && photoCheck.earnedPoints < photoCheck.maxPoints ? { count: 0, newestAt: null } : null);
+          const ideas = extras
+            ? listingIdeas({ businessId: params.id, now, type, months, listing: { services: extras.services, categories: extras.categories, description: extras.description ?? null, specialPeriods: extras.specialPeriods, attributeIds: extras.attributeIds ?? null, details: extras.details ?? null }, photos: null, posts: null, messagingOn: null, bookingTurnOn: null })
+            : [];
+          const details = ideas.find((i) => i.id === "details");
+          const services = ideas.find((i) => i.id === "services");
+          const replyCounts = gbpStatus.status === "ok" ? gbpStatus.replyCounts : null;
+          const list = recommendations({
+            type,
+            now,
+            timeZone,
+            replies: replyCounts ? { replied: replyCounts.replied, inWindow: replyCounts.reviewsInWindow } : null,
+            photos,
+            posts: media?.posts ?? null,
+            months,
+            specialPeriods: extras?.specialPeriods ?? null,
+            description: extras && extras.description !== undefined ? extras.description : undefined,
+            missingDetails: details?.id === "details" ? details.missing : [],
+            missingServices: services?.id === "services" ? services.missing.map((m) => m.service) : [],
+          });
+          return { list, type, connected: gbpConnected };
+        })().catch(() => null)
+      : null;
+
   // Premium's Google Profile tab: its own saved data, only while it's open.
   const googleTab: GoogleProfileTabProps | null =
     hasPremium(plan) && isGoogleTabParam(searchParams.tab)
@@ -213,6 +256,9 @@ export default async function GrowthPage({ params, searchParams = {} }: { params
           // Holiday hours, services and categories from the real listing (cached read).
           const extras = gbpConnected ? await listingExtras(createAdminClient(), params.id) : null;
           const averageVisit = gbpConnected ? await loadAverageVisit(db, params.id) : null;
+          // Day 23C: the owner's "how many become paying visits", and what they did, by day.
+          const visitShare = gbpConnected ? await (await import("@/lib/averageVisit.server")).loadVisitShare(db, params.id) : null;
+          const actionEvents = gbpConnected || practice ? await (await import("@/lib/googleActions.server")).loadActionEvents(db, params.id, { timeZone: business.time_zone ?? DEFAULT_BUSINESS_TIMEZONE, practice }).catch(() => []) : [];
           const website = reportCategories(scored.result.breakdown.categories).find((_, i) => scored.result.breakdown.categories[i].id === "website");
           const hasWebsite = scored.result.breakdown.checks.find((c) => c.id === "website.has_website")?.earnedPoints !== 0;
           return {
@@ -233,6 +279,8 @@ export default async function GrowthPage({ params, searchParams = {} }: { params
             insights: stored?.ok ? stored.months : [],
             insightsState: gbpConnected ? insightsState : "ready",
             averageVisit,
+            visitShare,
+            actionEvents,
             practiceSource,
             booking: bookingState,
             media: media ? { photos: media.photos, posts: media.posts, checkedAt: media.checkedAt } : null,
@@ -307,7 +355,7 @@ export default async function GrowthPage({ params, searchParams = {} }: { params
         businessName={business.name}
         profile={profile}
         breakdown={scored.result.breakdown}
-        googleProfile={googleProfile}
+        googleProfile={{ ...googleProfile, recs: growRecs }}
         googleTab={googleTab}
         bookingTask={bookingState?.tracking.kind === "turn_on" ? { provider: bookingState.tracking.provider, still: bookingState.tracking.still } : null}
         hoursCheck={actionPlanResult.status === "ok" ? await loadHoursCheck(params.id, scored.scoringBusiness ?? scored.business, actionPlanResult.tasks).catch(() => null) : null}

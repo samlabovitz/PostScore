@@ -405,8 +405,8 @@ describe("the tab: real numbers replace the empty states", () => {
     // Both months' own ratios, never just one %, and the change in points.
     expect(words).toContain("October: 11.8% · 83 of 704 people");
     expect(words).toContain("September: 10.1% · 69 of 680 people ▲ 2 more customers per 100 people than the month before");
-    expect(words).toMatch(/Calls 31 ▲6 vs Sep/);
-    expect(words).toMatch(/Website clicks 14 ▲1 vs Sep/);
+    expect(words).toMatch(/31 calls in October ▲6 vs September/);
+    expect(words).toMatch(/14 website clicks in October ▲1 vs September/);
     expect(words).toContain("October 2026 · compared with September");
     expect(words).toMatch(/Updates on the 1st of every month · next: Dec 1/);
     expect(words).not.toContain("Your conversion rate appears after");
@@ -504,6 +504,41 @@ describe("the tab: real numbers replace the empty states", () => {
     expect(text(render({ insights: hx }, "es"))).toContain("septiembre: 24,6 % · 146 de 594 personas ▼ 3 clientes menos por cada 100 personas que el mes anterior");
   });
 
+  test("Day 23C: the month is named — 'October (last full month) · vs September' and '30 calls in October · ▲4 vs September' on every tile (EN + ES)", () => {
+    const hx = [month("2026-09", [366, 135, 73, 20], { calls: 26, directions: 74, websiteClicks: 46, bookings: 0 }), month("2026-10", [437, 150, 85, 32], { calls: 30, directions: 72, websiteClicks: 50, bookings: 0 })];
+    const en = text(render({ insights: hx }));
+    expect(en).toContain("October (last full month) · vs September");
+    expect(en).toContain("30 calls in October ▲4 vs September");
+    expect(en).toContain("72 direction requests in October ▼2 vs September");
+    expect(en).toContain("0 booked in Google in October = vs September");
+    expect(en).toContain("50 website clicks in October ▲4 vs September");
+    const es = text(render({ insights: hx }, "es"));
+    expect(es).toContain("octubre (último mes completo) · frente a septiembre");
+    expect(es).toContain("30 llamadas en octubre ▲4 frente a septiembre");
+  });
+
+  test("Day 23C: section 5 doesn't repeat what section 1's 'This week' lists (the photos, the post)", () => {
+    const hx = [month("2026-10", [437, 150, 85, 32], { calls: 30, directions: 72, websiteClicks: 50, bookings: 0 })];
+    const html = render({
+      insights: hx,
+      media: { photos: { count: 4, newestAt: "2026-09-01T00:00:00Z" }, posts: { last30: 0, lastAt: null, lastType: null }, checkedAt: "2026-11-19T00:00:00Z" },
+      extras: { specialPeriods: [], services: ["Haircut"], categories: ["Hair salon"], description: "Hair salon", attributeIds: [], details: null },
+    });
+    expect(html).toContain('data-testid="rec-photos"');
+    expect(html).toContain('data-testid="rec-posts"');
+    expect(html).not.toContain('data-testid="google-tab-idea-photos"');
+    expect(html).not.toContain('data-testid="google-tab-idea-posts"');
+    expect(html).toContain('data-testid="google-tab-idea-description"');
+  });
+
+  test("Day 23C: lever tiles never cut their words off (no line-clamp or truncate), five across from lg", () => {
+    const html = render({ insights: [] });
+    const grid = html.split('data-testid="google-tab-lever-grid"')[0].split("<div").pop()!;
+    expect(grid).toContain("lg:grid-cols-[repeat(5,minmax(0,1fr))]");
+    const tiles = html.split('data-testid="google-tab-lever-grid"')[1].split('data-testid="google-tab-recap"')[0];
+    expect(tiles).not.toMatch(/line-clamp|truncate/);
+  });
+
   test("what it could be worth: a range (a third to all of the actions) and what's left on the table at the best rate", () => {
     // Range math + rounding: $50 steps, $100 above $5,000.
     expect(roundMoney(1260)).toBe(1250);
@@ -524,7 +559,8 @@ describe("the tab: real numbers replace the empty states", () => {
     // round(704 × 146/594) − 152 = 173 − 152 = 21 more customers; × $45 = $945 → $950.
     expect(leftOnTable(hx, 45)).toEqual({ kind: "missed", best: { month: "2026-09", rate: 24.6 }, extra: 21, missed: 950 });
     const words = text(render({ insights: hx, averageVisit: 45 }));
-    expect(words).toContain("Left on the table: ≈ $950");
+    // Day 23C: at the same share as "Google brought you" — a third to all by default.
+    expect(words).toContain("Left on the table: ≈ $300–$950");
     expect(words).toContain("At your best rate (September, 24.6%), the same 704 viewers would have meant about 21 more customers. The levers above are how you get there.");
     expect(render({ insights: hx, averageVisit: 45 })).toContain('href="#google-tab-levers"');
     expect(render({ insights: hx, averageVisit: 45 })).toContain('title="Not every call or direction request becomes a sale. Change your average visit in Settings."');
