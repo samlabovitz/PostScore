@@ -1,4 +1,5 @@
 import { Fragment } from "react";
+import { viewLocale } from "@/lib/viewLocale.server";
 import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
 import { IconArrowLeft, IconLogout } from "@tabler/icons-react";
@@ -21,7 +22,7 @@ import { cancelAtPeriodEndAction } from "@/app/actions/subscription";
 import { hasActiveSubscription } from "@/lib/subscription";
 import { getPlan } from "@/lib/premium";
 import { REFUND_POLICY_SHORT, legalHref } from "@/lib/legal/policies";
-import { normalizeLocale, t, type MessageKey } from "@/lib/i18n";
+import { t, type MessageKey } from "@/lib/i18n";
 import { NichePicker } from "@/components/niche/NichePicker";
 import { loadBusinessNiche } from "@/lib/businessNiche.server";
 import { ScanningLine } from "@/components/website/ScanningLine";
@@ -50,7 +51,7 @@ export default async function SettingsPage({ params, searchParams = {} }: { para
   if (summary.status === "not_found") notFound();
 
   const { business } = summary;
-  const locale = normalizeLocale(business.language);
+  const locale = viewLocale(business.language);
   const lang = locale === "es" ? "es" : "en";
   const plan = await getPlan();
   const supabase = createClient();

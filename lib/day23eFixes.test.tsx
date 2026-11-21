@@ -115,7 +115,7 @@ describe("10. service names spell-checked before anything is published", () => {
   });
 });
 
-const post = (p: Partial<PostDraftState>): PostDraftState => ({ status: "ok", text: "Hi", setText: vi.fn(), ctas: [], cta: "NONE", setCta: vi.fn(), photos: [], photoName: null, setPhotoName: vi.fn(), left: null, fallback: false, publish: { canEdit: true, practice: true }, latest: null, setLatest: vi.fn(), another: vi.fn(), anotherBusy: false, anotherLimit: false, problems: [], load: vi.fn(), blockedToday: null, setBlockedToday: vi.fn(), topic: "hair", offer: null, flags: [], fixFlag: vi.fn(), keep: [], keepWord: vi.fn(), fromFacts: vi.fn(), ...p });
+const post = (p: Partial<PostDraftState>): PostDraftState => ({ status: "ok", text: "Hi", setText: vi.fn(), ctas: [], cta: "NONE", setCta: vi.fn(), photos: [], photoName: null, setPhotoName: vi.fn(), left: null, fallback: false, publish: { canEdit: true, practice: true }, latest: null, setLatest: vi.fn(), another: vi.fn(), anotherBusy: false, anotherLimit: false, problems: [], load: vi.fn(), blockedToday: null, setBlockedToday: vi.fn(), topic: "hair", offer: null, flags: [], fixFlag: vi.fn(), keep: [], keepWord: vi.fn(), custom: vi.fn(), type: "update", setType: vi.fn(), types: ["update"], ...p });
 
 describe("4–6. Approve all: only what can go now; failures on their own row; All done", () => {
   test("a post already up today, a spelling question or a failure is not counted or sent", () => {

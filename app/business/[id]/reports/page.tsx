@@ -10,7 +10,7 @@ import { ReportsView } from "./ReportsView";
 import { getLastScanAt, syncScoreSnapshot } from "@/app/actions/scoring";
 import { getLocalBenchmark, getPreviousCompetitorRank } from "@/app/actions/competitors";
 import { compactWeekLabel, shareHeadline } from "@/lib/reports/reportPdf";
-import { normalizeLocale } from "@/lib/i18n";
+import { viewLocale } from "@/lib/viewLocale.server";
 import { createClient } from "@/lib/supabase/server";
 import { getWeeklyRecapWithClient } from "@/lib/weekly/weeklyData.server";
 import { weekEndDay } from "@/lib/weekly/weeks";
@@ -57,7 +57,7 @@ export default async function ReportsPage({ params, searchParams }: { params: { 
   const recap = reports.recap;
   const previousRank = benchmark.status === "ok" ? await getPreviousCompetitorRank(params.id, benchmark.benchmark.scanId) : null;
   const headline = shareHeadline({
-    locale: normalizeLocale(summary.business.language),
+    locale: viewLocale(summary.business.language),
     timeZone: reports.timeZone,
     generatedAt: new Date().toISOString(),
     business: { name: summary.business.name ?? "" },
@@ -74,7 +74,7 @@ export default async function ReportsPage({ params, searchParams }: { params: { 
     rank: benchmark.status === "ok" ? { rank: benchmark.benchmark.rank, of: benchmark.benchmark.peerCount, noun: benchmark.benchmark.competitorNoun, previousRank } : null,
   });
 
-  const locale = normalizeLocale(summary.business.language);
+  const locale = viewLocale(summary.business.language);
   const b = summary.business;
   const profile = resolveBizProfile(b.category, b.primary_type, b.business_type_override, locale, b.categories, b.name, b.biz_type_resolved);
   // Formatted here once, so the client renders exactly the server's text.

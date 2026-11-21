@@ -1,5 +1,6 @@
 "use server";
 
+import { viewLocale } from "@/lib/viewLocale.server";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { withLiveListingFor } from "@/lib/ownerListing.server";
 import { createClient } from "@/lib/supabase/server";
@@ -34,7 +35,7 @@ import { businessRowToScoringInput, scoreBusiness, OWNER_SCORING_COLUMNS } from 
 import { withSavedScore } from "@/lib/savedScore";
 import { latestSavedScore } from "@/lib/savedScore.server";
 import type { BusinessScoringInput, BusinessScoringRow, ScoreBreakdown, Suggestion } from "@/lib/scoring";
-import { DEFAULT_LOCALE, normalizeLocale, type Locale } from "@/lib/i18n";
+import { DEFAULT_LOCALE, type Locale } from "@/lib/i18n";
 import type { Plan } from "@/lib/plan";
 import { scoreOnHold } from "@/lib/businessStatus";
 import { orderByUrgency, urgentCheckIds, urgentIssues, type UrgentIssue } from "@/lib/urgency";
@@ -250,7 +251,7 @@ export async function markTaskDone(businessId: string, checkId: string): Promise
   // Day 23 2d-4: Google's values as read now, never the saved columns.
   const business = await withLiveListingFor(supabase, businessId, saved as typeof saved & { listing_mode?: string | null });
 
-  const locale = normalizeLocale(business.language);
+  const locale = viewLocale(business.language);
   const input = businessRowToScoringInput(business as unknown as BusinessScoringRow);
   // Day 23 2d-1: the points still to win are the saved scan's (the score
   // the owner sees), with today's breakdown only as a fallback.

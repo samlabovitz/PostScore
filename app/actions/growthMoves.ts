@@ -76,8 +76,11 @@ export async function getGrowthMoveSignals(
   const medianCompetitorPhotoCount = median(photoCounts);
   const hasWebsiteCheck = breakdown.checks.find((c) => c.id === "website.has_website");
 
+  const { isPremiumPlan } = await import("@/lib/plan");
+  const { getPlan } = await import("@/lib/premium");
   const signals: GrowthMoveSignals = {
     businessId,
+    photoUploadHref: isPremiumPlan(await getPlan()) ? `/business/${businessId}/growth?tab=google#edit-photos` : null,
     referralOk: profileTools.referralOk,
     couponsOk: profileTools.couponsOk,
     pricingOk: profileTools.pricingOk,

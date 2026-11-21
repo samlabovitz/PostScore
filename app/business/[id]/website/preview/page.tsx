@@ -3,10 +3,11 @@
 // gets "not found" (the business row is read through RLS). It's never
 // indexed, never downloadable from our UI, and always watermarked.
 
+import { viewLocale } from "@/lib/viewLocale.server";
 import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
 import { getBusinessSummary } from "@/app/actions/businesses";
-import { normalizeLocale, t } from "@/lib/i18n";
+import { t } from "@/lib/i18n";
 import { LocaleProvider } from "@/lib/i18n";
 import { StarterPreviewFrame } from "./StarterPreviewFrame";
 import { loadUpgradeContext } from "@/lib/upgradePromos.server";
@@ -21,7 +22,7 @@ export default async function StarterPreviewPage({ params }: { params: { id: str
   const summary = await getBusinessSummary(params.id);
   if (summary.status === "unauthenticated") redirect("/login");
   if (summary.status !== "ok") notFound();
-  const locale = normalizeLocale(summary.business.language);
+  const locale = viewLocale(summary.business.language);
   // For "Download with Grow" (the side-by-side plans box). DB only.
   const upgrade = await loadUpgradeContext(params.id, "website");
   return (

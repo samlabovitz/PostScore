@@ -546,7 +546,7 @@ const LEVER_ICON: Record<LeverId, ReactNode> = {
 
 /** The chip's short label: "Reviews · 0%", "Photos · 2 mo", "Posts · none", "Deals · none", "Website · 29/30". */
 export function leverShort(lever: Lever, locale: Locale): string {
-  const status = lever.id === "deals" && lever.status === "running" && lever.params.count === 1 ? "runningOne" : lever.status;
+  const status = lever.id === "deals" && lever.status === "running" && lever.params.count === 1 ? "runningOne" : lever.id === "photos" && lever.status === "newest" && lever.params.months === 1 ? "newestOne" : lever.status;
   return `${t(locale, K(`lever.short.${lever.id}.title`))} · ${t(locale, K(`lever.short.${lever.id}.${status}`), lever.params)}`;
 }
 
@@ -739,7 +739,7 @@ function WorthBox({ businessId, months, last, averageVisit, visitShare = null, s
   const money = (v: number) => `$${formatCount(v, locale)}`;
   const shareWord = (v: number) => (Math.abs(v - 1 / 3) < 0.005 ? t(locale, K("worth.share.third")) : v === 1 ? t(locale, K("worth.share.all")) : t(locale, K("worth.share.pct"), { percent: formatCount(sharePercent(v), locale) }));
   const toggle = (
-    <button type="button" onClick={() => setOpen(!open)} aria-expanded={open} data-testid="google-tab-worth-how" className="inline-flex min-h-[44px] items-center text-[13px] font-semibold text-white underline decoration-brass underline-offset-2">
+    <button type="button" onClick={() => setOpen(!open)} aria-expanded={open} data-testid="google-tab-worth-how" className="inline-flex min-h-[44px] items-center text-[13px] font-semibold text-white underline decoration-brass underline-offset-2 lg:min-h-[36px]">
       {t(locale, K(open ? "worth.howClose" : "worth.howOpen"))}
     </button>
   );
@@ -754,7 +754,7 @@ function WorthBox({ businessId, months, last, averageVisit, visitShare = null, s
       mathLines={math ? (math.source === "default" ? [math.shares[0], math.shares[1]] : [math.shares[0]]).map((sh, i) => t(locale, K("worth.math"), { actions: formatCount(acted, locale), avg: money(math.averageVisit), share: shareWord(sh), result: money(Math.round(math.exact[i])) })) : []}
     />
   );
-  const strip = "rounded-xl bg-ink px-5 py-3 text-white";
+  const strip = "rounded-xl bg-ink px-5 py-3 text-white lg:px-4 lg:py-2";
   if (!math) {
     return (
       <div className={strip} data-testid="google-tab-worth">
@@ -998,7 +998,7 @@ function LastMonthSection(props: GoogleProfileTabProps & { months: InsightsMonth
                     </a>
                   ) : null;
                 return (
-                  <Box key={k} className="flex min-w-0 flex-col gap-1 p-4" data-testid={`google-tab-kpi-${k}`}>
+                  <Box key={k} className="flex min-w-0 flex-col gap-1 p-4 lg:px-3.5 lg:py-3" data-testid={`google-tab-kpi-${k}`}>
                     <span className="flex items-start justify-between gap-2">
                       <b className="font-serif text-[28px] font-semibold leading-none text-ink">{formatCount(last[k], locale)}</b>
                       {note && (
@@ -1030,7 +1030,7 @@ function LastMonthSection(props: GoogleProfileTabProps & { months: InsightsMonth
         {last && <WorthBox businessId={props.businessId} months={months} last={last} averageVisit={averageVisit} visitShare={sample ? null : (props.visitShare ?? null)} sample={sample} />}
 
         {/* 4. What to do this week: the levers as status chips, Approve all, the to-dos. */}
-        <Box className="p-5 sm:p-6">
+        <Box className="p-5 sm:p-6 lg:px-5 lg:py-4">
           <ThisWeek props={props} chips={<LeverChips levers={ls} />} />
         </Box>
 
@@ -1059,7 +1059,7 @@ function LeverChips({ levers: ls }: { levers: Lever[] }) {
               onClick={() => setOpen(open === lever.id ? null : lever.id)}
               aria-expanded={open === lever.id}
               title={t(locale, K(`lever.${lever.id}.why`))}
-              className={cn("inline-flex min-h-[44px] items-center gap-2 whitespace-nowrap rounded-full border px-3.5 text-[13px] text-ink", open === lever.id ? "border-ink" : "border-paper-line hover:border-ink")}
+              className={cn("inline-flex min-h-[44px] items-center gap-2 whitespace-nowrap rounded-full border px-3.5 text-[13px] text-ink lg:min-h-[32px] lg:px-3", open === lever.id ? "border-ink" : "border-paper-line hover:border-ink")}
               data-testid={`lever-${lever.id}`}
             >
               <span className="text-brass">{LEVER_ICON[lever.id]}</span>
@@ -1136,7 +1136,7 @@ function SoFarLine({ businessId, last }: { businessId: string; last: string }) {
   const item = (k: "calls" | "websiteClicks" | "directions", n: number) => t(locale, K(`soFar.${k}${n === 1 ? "One" : ""}`), { count: formatCount(n, locale) });
   const next = addMonths(r.month, 1);
   return (
-    <p className="px-4 text-[13px] leading-snug text-ink-soft" data-testid="google-tab-so-far">
+    <p className="px-4 text-[13px] leading-snug text-ink-soft lg:px-3.5" data-testid="google-tab-so-far">
       <b className="font-semibold text-ink">
         {t(locale, K("soFar.line"), { month: monthName(r.month, locale).replace(/^./, (c) => c.toUpperCase()), date: shortDate(r.through, locale), list: [item("calls", r.calls), item("websiteClicks", r.websiteClicks), item("directions", r.directions)].join(", ") })}
       </b>{" "}
@@ -1175,7 +1175,10 @@ function SinceTable({ result }: { result: { days: number; before: WindowTotals; 
     <table className="mt-2 w-full text-[13px]">
       <thead>
         <tr className="text-[13px] text-ink-mute">
-          <th className="py-0.5 pr-1.5 text-left font-semibold">{t(locale, K("since.window"), { days: result.days })}</th>
+          <th className="py-0.5 pr-1.5 text-left font-semibold">
+            <span className="sm:hidden">{t(locale, K("since.windowShort"), { days: result.days })}</span>
+            <span className="hidden sm:inline">{t(locale, K("since.window"), { days: result.days })}</span>
+          </th>
           <th className={cn(cell, "font-semibold")}>{t(locale, K("since.before"))}</th>
           <th className={cn(cell, "font-semibold")}>{t(locale, K("since.after"))}</th>
           <th className={cn(cell, "pr-0 font-semibold")} />
@@ -1195,7 +1198,17 @@ function SinceTable({ result }: { result: { days: number; before: WindowTotals; 
               <td className={cn(cell, "font-semibold text-ink")}>{show(a)}</td>
               {/* The change may wrap on a phone ("▼ 4 menos por cada 100") — never cut off. */}
               <td className={cn("px-1.5 py-0.5 pr-0 text-right font-semibold tabular-nums", c?.dir === "up" ? "text-green" : c?.dir === "down" ? "text-red" : "text-ink-mute")} data-dir={c?.dir ?? "none"}>
-                {!c ? "" : c.dir === "same" ? t(locale, K("since.same")) : rate ? `${c.dir === "up" ? "▲" : "▼"} ${t(locale, K(`since.per100.${c.dir}`), { count: c.value })}` : `${c.dir === "up" ? "▲" : "▼"} ${formatCount(c.value, locale)}`}
+                {!c ? "" : c.dir === "same" ? (
+                  t(locale, K("since.same"))
+                ) : rate ? (
+                  <>
+                    {/* Phones: "▼ 4" with its label under it; wider: one line. */}
+                    <span className="whitespace-nowrap">{`${c.dir === "up" ? "▲" : "▼"} ${c.value}`}</span>
+                    <span className="block text-[12px] font-normal sm:ml-1 sm:inline">{t(locale, K(`since.per100Label.${c.dir}`))}</span>
+                  </>
+                ) : (
+                  `${c.dir === "up" ? "▲" : "▼"} ${formatCount(c.value, locale)}`
+                )}
               </td>
             </tr>
           );
@@ -1226,7 +1239,7 @@ function SinceCard({ businessId, connected, sample, events, recap = null }: { bu
       alive = false;
     };
   }, [businessId, connected, sample, readyKey]);
-  const box = "flex flex-col gap-3 rounded-xl border border-paper-deep bg-white p-5 text-ink shadow-card sm:p-6";
+  const box = "flex flex-col gap-3 rounded-xl border border-paper-deep bg-white p-5 text-ink shadow-card sm:p-6 lg:px-5 lg:py-4";
   const head = (
     <>
       <div className="flex flex-wrap items-baseline gap-x-2.5">
@@ -1266,15 +1279,15 @@ function SinceCard({ businessId, connected, sample, events, recap = null }: { bu
   return (
     <div className={box} data-testid="google-tab-since">
       {head}
-      <div className="grid items-start gap-3 lg:grid-cols-3">
-        {/* Cards with before/after numbers first (two-thirds wide), "Check back on…" ones beside and after them. */}
+      <div className="grid items-start gap-3 sm:grid-cols-2">
+        {/* Cards with before/after numbers first (full width), then the "Check back on…" ones. */}
         {[...picks].sort((a, b) => Number(sinceStatus(b.date, today).ready) - Number(sinceStatus(a.date, today).ready)).map((e) => {
           const st = sinceStatus(e.date, today);
           const r = data && data !== "loading" && data.status === "ok" ? data.results.find((x) => x.date === e.date) : null;
           return (
-            // A card with before/after numbers gets two-thirds of the row; "Check back on…" stays compact.
-            <div key={`${e.date}-${e.kind}`} className={cn("min-w-0 rounded-xl border border-paper-line p-4", st.ready && "lg:col-span-2")} data-testid="since-action" data-ready={st.ready ? "1" : "0"}>
-              <p className="text-[15px] font-semibold leading-snug">{eventLine(e.date, [e], locale)}</p>
+            // A card with before/after numbers takes the full width; "Check back on…" cards sit 2 per row below it.
+            <div key={`${e.date}-${e.kind}`} className={cn("min-w-0 rounded-xl border border-paper-line p-4 lg:p-3", st.ready && "sm:col-span-2")} data-testid="since-action" data-ready={st.ready ? "1" : "0"}>
+              <p className="text-[15px] font-medium leading-snug">{eventLine(e.date, [e], locale)}</p>
               {!st.ready ? (
                 <p className="mt-1 text-[13px] text-ink-soft" data-testid="since-check-back">
                   <b className="text-ink">{t(locale, K("since.checkBack"), { date: shortDate(st.checkBack, locale) })}</b> · {t(locale, K("since.checkBackWhy"))}
@@ -1876,8 +1889,11 @@ export type LiveValues = { description: LiveValue; booking: LiveValue };
 
 /** The description and booking link, read from Google after the page loads
  * (the editors' own read-only open calls; practice mode: the sample Google). */
-function useLiveValues(businessId: string): LiveValues {
-  const [live, setLive] = useState<LiveValues>({ description: { kind: "loading" }, booking: { kind: "loading" } });
+/** `listingDescription`: the description from the page's own listing read (the same read the
+ * answers and the editor use) — shown as is, never a second read that could fail on its own. */
+function useLiveValues(businessId: string, listingDescription?: string | null): LiveValues {
+  const known: LiveValue | null = listingDescription === undefined ? null : listingDescription ? { kind: "value", value: listingDescription } : { kind: "none" };
+  const [live, setLive] = useState<LiveValues>({ description: known ?? { kind: "loading" }, booking: { kind: "loading" } });
   useEffect(() => {
     let alive = true;
     void (async () => {
@@ -1889,9 +1905,9 @@ function useLiveValues(businessId: string): LiveValues {
           return null;
         }
       };
-      const [profile, order] = await Promise.all([safe(() => openProfileEdits(businessId)), safe(() => openOrderLink(businessId))]);
+      const [profile, order] = await Promise.all([known ? Promise.resolve(null) : safe(() => openProfileEdits(businessId)), safe(() => openOrderLink(businessId))]);
       if (!alive) return;
-      const description: LiveValue = profile?.status === "ok" ? (profile.description ? { kind: "value", value: profile.description } : { kind: "none" }) : { kind: "error" };
+      const description: LiveValue = known ?? (profile?.status === "ok" ? (profile.description ? { kind: "value", value: profile.description } : { kind: "none" }) : { kind: "error" });
       const own = order?.status === "ok" ? (order.links.find((l) => l.editable) ?? order.links[0] ?? null) : null;
       const booking: LiveValue = order?.status === "none" ? { kind: "notOffered" } : order?.status === "ok" ? (own ? { kind: "value", value: own.uri } : { kind: "none" }) : { kind: "error" };
       setLive({ description, booking });
@@ -1899,7 +1915,8 @@ function useLiveValues(businessId: string): LiveValues {
     return () => {
       alive = false;
     };
-  }, [businessId]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- `known` follows listingDescription
+  }, [businessId, listingDescription]);
   return live;
 }
 
@@ -1923,7 +1940,7 @@ function ListingSection(props: GoogleProfileTabProps) {
     extras: props.extras ?? null,
   });
   const counts = listingCounts(groups);
-  const live = useLiveValues(props.businessId);
+  const live = useLiveValues(props.businessId, props.extras ? props.extras.description : undefined);
   const [open, setOpen] = useState<Editor | null>(null);
   // "#edit-services?add=Balayage": section 5's missing services, pre-filled.
   const [prefill, setPrefill] = useState<string[]>([]);

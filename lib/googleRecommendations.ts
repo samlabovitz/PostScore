@@ -78,12 +78,12 @@ export const MAX_REPLIES = 10;
 export const MINUTES_PER_REPLY = 2;
 
 /** "Reply to your {N} newest unanswered reviews, oldest first (about {N×2} min)". null: all replied / not checked. */
-export function replyPlan(replies: { replied: number; inWindow: number } | null): { count: number; minutes: number; left: number } | null {
+export function replyPlan(replies: { replied: number; inWindow: number } | null): { count: number; minutes: number; left: number; replied: number; total: number } | null {
   if (!replies) return null;
   const unanswered = Math.max(0, replies.inWindow - replies.replied);
   if (unanswered === 0) return null;
   const count = Math.min(MAX_REPLIES, unanswered);
-  return { count, minutes: count * MINUTES_PER_REPLY, left: unanswered - count };
+  return { count, minutes: count * MINUTES_PER_REPLY, left: unanswered - count, replied: replies.replied, total: replies.inWindow };
 }
 
 // ---------------------------------------------------------------------------

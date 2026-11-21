@@ -192,7 +192,7 @@ export interface FaqEntry {
 export function faqEntries(f: AnswerFacts, locale: "en" | "es"): FaqEntry[] {
   const es = locale === "es";
   const out: FaqEntry[] = [];
-  if (f.hours && f.hours.length) out.push({ q: es ? `¿Cuál es el horario de ${f.name}?` : `What are ${f.name}'s hours?`, a: f.hours.join("; ") + "." });
+  if (f.hours && f.hours.length) out.push({ q: es ? `¿Cuál es el horario de ${f.name}?` : `What are ${f.name}'s hours?`, a: f.hours.join("; ").replace(/\.?$/, ".") });
   if (f.parking.length) out.push({ q: es ? "¿Hay estacionamiento?" : "Is there parking?", a: (es ? "Sí, hay " : "Yes, there's ") + list(f.parking, locale) + "." });
   if (f.payments.length) out.push({ q: es ? "¿Qué formas de pago aceptan?" : "What payment methods do you accept?", a: (es ? "Aceptamos " : "We accept ") + list(f.payments, locale) + "." });
   if (f.accessibility.length) out.push({ q: es ? "¿Es accesible para sillas de ruedas?" : "Is it wheelchair accessible?", a: (es ? "Sí, hay " : "Yes, there's ") + list(f.accessibility, locale) + "." });

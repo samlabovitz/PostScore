@@ -14,21 +14,21 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { CopyBlock } from "@/components/ui/CopyBlock";
 import { openPostDraft, postStatusAction, publishPostAction, undoPostAction, writeAnotherPost, type LatestPost, type OpenPostDraftResult } from "@/app/actions/gbpPosts";
-import { POST_MAX, STORY_TOPICS, postProblems, type PostCta, type PostKind, type PostOffer, type PostPhoto, type PostProblem, type PostTopic } from "@/lib/gbpPosts";
+import { POST_MAX, STORY_TOPICS, postProblems, type PostCta, type PostKind, type PostOffer, type PostPhoto, type PostProblem, type PostTopic, type PostType } from "@/lib/gbpPosts";
 import { applySpellingFix, spellingFlags, type SpellingFlag } from "@/lib/serviceSpelling";
 import { formatShortDate, t, type MessageKey, useLocale, useTimeZone } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
 const W = (key: string) => `dashboard.googleTab.w.${key}` as MessageKey;
 
-/** Every action button: at least 44px tall, 14px text. */
-export const W_BUTTON = "inline-flex min-h-[44px] shrink-0 items-center justify-center whitespace-nowrap rounded-lg border border-ink bg-ink px-4 text-[14px] font-semibold text-paper disabled:opacity-60";
-export const W_BUTTON_SOFT = "inline-flex min-h-[44px] shrink-0 items-center justify-center whitespace-nowrap rounded-lg border border-paper-line bg-white px-4 text-[14px] font-semibold text-ink hover:border-ink disabled:opacity-60";
+/** Buttons, 14px text: 44px tall on phones (tap targets); on desktop a primary is 40px, a secondary 36px. */
+export const W_BUTTON = "inline-flex min-h-[44px] shrink-0 items-center justify-center whitespace-nowrap rounded-lg border border-ink bg-ink px-4 text-[14px] font-semibold text-paper disabled:opacity-60 lg:min-h-[40px] lg:px-3.5";
+export const W_BUTTON_SOFT = "inline-flex min-h-[44px] shrink-0 items-center justify-center whitespace-nowrap rounded-lg border border-paper-line bg-white px-4 text-[14px] font-semibold text-ink hover:border-ink disabled:opacity-60 lg:min-h-[36px] lg:px-3";
 
 export interface PostDraftState {
   status: "idle" | "loading" | "ok" | "failed";
   text: string;
-  setText: (v: string) => void;
+  setText: (v: string | ((x: string) => string)) => void;
   ctas: Array<{ type: PostCta; url: string | null }>;
   cta: PostCta;
   setCta: (v: PostCta) => void;
@@ -51,8 +51,13 @@ export interface PostDraftState {
   fixFlag: (flag: SpellingFlag) => void;
   keep: string[];
   keepWord: (word: string) => void;
-  /** A post about something real: written only from the owner's 1–2 facts. */
-  fromFacts: (facts: string) => Promise<void>;
+  /** "Tell PostScore what you want": a new draft of this type from the owner's request (same rules). */
+  custom: (request: string) => Promise<void>;
+  /** The post's type: Update, Q&A ("Your questions, answered") or Offer (the running coupon). */
+  type: PostType;
+  setType: (t: PostType) => void;
+  /** The types this business has: Q&A with 3+ confirmed answers, Offer with a running coupon. */
+  types: PostType[];
   latest: LatestPost | null;
   setLatest: (v: LatestPost | null) => void;
   another: () => Promise<void>;
@@ -63,10 +68,13 @@ export interface PostDraftState {
 }
 
 /** The week's draft. `auto`: load at once (Premium's This week); otherwise on `load()`. */
-export function usePostDraft(businessId: string, opts: { day: string | null; auto: boolean; initialText?: string | null; promoId?: string | null }): PostDraftState {
+export function usePostDraft(businessId: string, opts: { day: string | null; auto: boolean; initialText?: string | null; initialType?: PostType; promoId?: string | null }): PostDraftState {
   const timeZone = useTimeZone();
   const [status, setStatus] = useState<PostDraftState["status"]>("idle");
-  const [text, setText] = useState(opts.initialText ?? "");
+  const [type, setType] = useState<PostType>(opts.initialType ?? "update");
+  const [texts, setTexts] = useState<Record<PostType, string>>({ update: "", qa: "", offer: "", [opts.initialType ?? "update"]: opts.initialText ?? "" } as Record<PostType, string>);
+  const text = texts[type];
+  const setText = useCallback((v: string | ((x: string) => string)) => setTexts((m) => ({ ...m, [type]: typeof v === "function" ? v(m[type]) : v })), [type]);
   const [data, setData] = useState<Extract<OpenPostDraftResult, { status: "ok" }> | null>(null);
   const [cta, setCta] = useState<PostCta>("NONE");
   const [photoName, setPhotoName] = useState<string | null>(null);
@@ -87,7 +95,8 @@ export function usePostDraft(businessId: string, opts: { day: string | null; aut
       .then((r) => {
         if (r.status !== "ok") return setStatus("failed");
         setData(r);
-        if (!opts.initialText) setText(r.text);
+        setTexts((m) => ({ update: m.update || r.drafts.update, qa: m.qa || r.drafts.qa || "", offer: m.offer || r.drafts.offer || "" }));
+        if (!opts.initialType) setType(r.defaultType);
         setFallback(!opts.initialText && r.fallback);
         setLeft(r.left);
         setCta(r.ctas[0]?.type ?? "NONE");
@@ -97,16 +106,16 @@ export function usePostDraft(businessId: string, opts: { day: string | null; aut
         setStatus("ok");
       })
       .catch(() => setStatus("failed"));
-  }, [businessId, timeZone, opts.day, opts.initialText, opts.promoId]);
+  }, [businessId, timeZone, opts.day, opts.initialText, opts.initialType, opts.promoId]);
 
   useEffect(() => {
     if (opts.auto) load();
   }, [opts.auto, load]);
 
-  const write = useCallback(async (facts: string | null) => {
+  const write = useCallback(async (request: string | null) => {
     setAnotherBusy(true);
     try {
-      const r = await writeAnotherPost(businessId, timeZone, opts.day, facts, opts.promoId ?? null);
+      const r = await writeAnotherPost(businessId, timeZone, opts.day, request, opts.promoId ?? null, type);
       if (r.status === "ok") {
         setText(r.text);
         setFallback(r.fallback);
@@ -118,8 +127,9 @@ export function usePostDraft(businessId: string, opts: { day: string | null; aut
     } finally {
       setAnotherBusy(false);
     }
-  }, [businessId, timeZone, opts.day, opts.promoId]);
+  }, [businessId, timeZone, opts.day, opts.promoId, type, setText]);
   const another = useCallback(() => write(null), [write]);
+  const types: PostType[] = data ? (["update", ...(data.drafts.qa ? ["qa"] : []), ...(data.drafts.offer ? ["offer"] : [])] as PostType[]) : [type];
   const flags = spellingFlags(text, { services: data?.serviceNames ?? [], keep, prose: true, ownerTerms: data?.priceNames ?? [] });
 
   return {
@@ -138,12 +148,15 @@ export function usePostDraft(businessId: string, opts: { day: string | null; aut
     blockedToday,
     setBlockedToday,
     topic: data?.topic ?? null,
-    offer: data?.offer ?? null,
+    offer: type === "offer" ? (data?.offer ?? null) : null,
     flags,
     fixFlag: (flag) => setText((x) => applySpellingFix(x, flag)),
     keep,
     keepWord: (word) => setKeep((k) => (k.includes(word) ? k : [...k, word])),
-    fromFacts: (facts) => write(facts),
+    custom: (request) => write(request),
+    type,
+    setType,
+    types,
     latest,
     setLatest,
     another,
@@ -248,7 +261,8 @@ function AnotherButton({ state }: { state: PostDraftState }) {
 }
 
 /** Premium: the editable preview with "Publish to Google". */
-export function PostPreview({ businessId, state, kind = "week", standalonePublish = true }: { businessId: string; state: PostDraftState; kind?: PostKind; standalonePublish?: boolean }) {
+/** `showBlocked`: say "Posted today · next post tomorrow" here (off when the row above already says it). */
+export function PostPreview({ businessId, state, kind = "week", standalonePublish = true, showBlocked = true }: { businessId: string; state: PostDraftState; kind?: PostKind; standalonePublish?: boolean; showBlocked?: boolean }) {
   const locale = useLocale();
   const timeZone = useTimeZone();
   const [publishing, setPublishing] = useState(false);
@@ -261,7 +275,7 @@ export function PostPreview({ businessId, state, kind = "week", standalonePublis
   const publish = async () => {
     setPublishing(true);
     setError(null);
-    const r = await publishPostAction(businessId, { text: state.text, cta: state.cta, photoName: state.photoName, kind, timeZone, promoId: state.offer?.promoId ?? null, keep: state.keep }).catch(() => null);
+    const r = await publishPostAction(businessId, { text: state.text, cta: state.cta, photoName: state.photoName, kind: state.type === "qa" ? "qa" : kind, timeZone, promoId: state.offer?.promoId ?? null, keep: state.keep }).catch(() => null);
     setPublishing(false);
     if (!r) return setError(t(locale, W("failed.generic")));
     if (r.status === "published") return state.setLatest(r.latest);
@@ -274,6 +288,7 @@ export function PostPreview({ businessId, state, kind = "week", standalonePublis
 
   return (
     <div className="flex flex-col gap-4" data-testid={`post-preview-${kind}`}>
+      <TypePicker state={state} disabled={!!live} />
       {state.fallback && <p className="text-[13px] text-ink-mute">{t(locale, W("post.fallback"))}</p>}
       {state.offer && (
         <p className="rounded-lg bg-paper px-3 py-2.5 text-[13px] text-ink-soft" data-testid="post-offer">
@@ -347,14 +362,14 @@ export function PostPreview({ businessId, state, kind = "week", standalonePublis
               {publishing ? t(locale, W("post.publishing")) : t(locale, W("post.publish"))}
             </button>
           )}
-          {state.publish && state.blockedToday && (
+          {state.publish && state.blockedToday && showBlocked && (
             <span className="text-[13px] font-semibold text-brass" data-testid="post-blocked-today">
               {t(locale, W(state.blockedToday === "posted_today" ? "tomorrow.posted" : "tomorrow.cap"))}
             </span>
           )}
         </div>
       )}
-      {!live && !state.offer && <FactsBox state={state} />}
+      {!live && <PostRequest state={state} />}
       {state.publish && !canEdit && <p className="text-[13px] text-ink-mute" data-testid="post-read-only">{t(locale, W("readOnly"))}</p>}
       {error && <p className="text-[13px] text-red" data-testid="post-error">{error}</p>}
     </div>
@@ -369,14 +384,15 @@ export function PostDraftCopy({ state }: { state: PostDraftState }) {
   if (state.status === "idle" || state.status === "loading") return <p className="text-[13px] text-ink-mute" data-testid="post-loading">{t(locale, W("post.loading"))}</p>;
   if (state.status === "failed") return <p className="text-[13px] text-ink-mute" data-testid="post-failed">{t(locale, W("post.failed"))}</p>;
   return (
-    <div className="flex flex-col gap-2" data-testid="post-copy">
+    <div className="flex flex-col gap-3" data-testid="post-copy">
+      <TypePicker state={state} disabled={false} />
       {state.offer && <p className="rounded-lg bg-paper px-3 py-2 text-[13px] text-ink-soft" data-testid="post-offer">{t(locale, W("post.offer.grow"), { offer: state.offer.offer, code: state.offer.code })}</p>}
       {!state.offer && <p className="text-[13px] text-ink-soft">{t(locale, W("post.grow.note"))}</p>}
       {/* A likely typo is fixed or kept before the text can be copied. */}
       <PostSpelling state={state} />
       {state.flags.length === 0 ? <CopyBlock text={state.text} rows={5} /> : <p className="whitespace-pre-wrap rounded-lg border border-paper-line bg-paper px-3 py-2 text-[13px]">{state.text}</p>}
-      {!state.offer && <FactsBox state={state} />}
       <AnotherButton state={state} />
+      <PostRequest state={state} />
     </div>
   );
 }
@@ -403,27 +419,75 @@ function PostSpelling({ state }: { state: PostDraftState }) {
 }
 
 /** A post about something real: the owner's 1–2 facts, and PostAI writes only from those. */
-function FactsBox({ state }: { state: PostDraftState }) {
+/** "Tell PostScore what you want": a short request with example chips (tap one to start from it).
+ * Same rules as every draft — no invented events, prices or results (a real story only from facts typed
+ * here), Google's rules, spelling. Grow: 3 custom drafts a week; Premium: unlimited. Shared by the post,
+ * the Q&A post and the description (components/gbp/AnswersPreview.tsx). */
+export function RequestBox({ chips, onWrite, busy, limited, testId, openLabel }: { chips: string[]; onWrite: (request: string) => void | Promise<void>; busy: boolean; limited: boolean; testId: string; openLabel?: string }) {
   const locale = useLocale();
-  const [facts, setFacts] = useState("");
+  const [request, setRequest] = useState("");
   const [open, setOpen] = useState(false);
-  const story = state.topic !== null && STORY_TOPICS.includes(state.topic);
-  if (state.left === 0 || state.anotherLimit) return null;
+  if (limited) return null;
   return (
-    <div className="flex flex-col gap-1.5" data-testid="post-facts">
+    <div className="flex flex-col gap-2" data-testid={testId}>
       {!open ? (
-        <button type="button" onClick={() => setOpen(true)} className="w-fit text-left text-[12.5px] font-semibold text-ink underline underline-offset-2" data-testid="post-facts-open">
-          {t(locale, W(story ? `post.facts.open.${state.topic}` : "post.facts.open.default"))}
+        <button type="button" onClick={() => setOpen(true)} className="inline-flex min-h-[44px] w-fit items-center text-left text-[13px] font-semibold text-ink underline underline-offset-2" data-testid={`${testId}-open`}>
+          {openLabel ?? t(locale, W("req.open"))}
         </button>
       ) : (
         <>
-          <p className="text-[13px] text-ink-soft">{t(locale, W("post.facts.note"))}</p>
-          <textarea value={facts} onChange={(e) => setFacts(e.target.value)} rows={2} maxLength={300} placeholder={t(locale, W(story ? `post.facts.placeholder.${state.topic}` : "post.facts.placeholder.default"))} className="w-full rounded-lg border border-paper-line bg-white px-3 py-2 text-[13px] outline-none focus:border-ink" data-testid="post-facts-text" />
-          <button type="button" onClick={() => void state.fromFacts(facts)} disabled={state.anotherBusy || facts.trim().length < 8} className={cn(W_BUTTON_SOFT, "w-fit")} data-testid="post-facts-write">
-            {state.anotherBusy ? t(locale, W("post.writing")) : t(locale, W("post.facts.write"))}
+          <p className="text-[13px] font-semibold text-ink-soft">{t(locale, W("req.title"))}</p>
+          <div className="flex flex-wrap gap-2">
+            {chips.map((c) => (
+              <button key={c} type="button" onClick={() => setRequest(c)} className="inline-flex min-h-[44px] items-center rounded-full border border-paper-line bg-white px-3.5 text-[13px] text-ink hover:border-ink" data-testid={`${testId}-chip`}>
+                {c}
+              </button>
+            ))}
+          </div>
+          <textarea value={request} onChange={(e) => setRequest(e.target.value)} rows={2} maxLength={300} placeholder={t(locale, W("req.placeholder"))} className="w-full rounded-lg border border-paper-line bg-white px-3.5 py-2.5 text-[14px] outline-none focus:border-ink" data-testid={`${testId}-text`} />
+          <p className="text-[13px] text-ink-mute">{t(locale, W("req.note"))}</p>
+          <button type="button" onClick={() => void onWrite(request)} disabled={busy || request.trim().length < 3} className={cn(W_BUTTON_SOFT, "w-fit")} data-testid={`${testId}-write`}>
+            {busy ? t(locale, W("post.writing")) : t(locale, W("req.write"))}
           </button>
         </>
       )}
+    </div>
+  );
+}
+
+/** The post's request box: chips for the type shown (an update's chips include a real before-and-after, written only from facts the owner types). */
+function PostRequest({ state }: { state: PostDraftState }) {
+  const locale = useLocale();
+  const story = state.topic !== null && STORY_TOPICS.includes(state.topic) ? state.topic : "default";
+  const chips =
+    state.type === "qa"
+      ? [t(locale, W("req.chip.qa.prices")), t(locale, W("req.chip.qa.visit")), t(locale, W("req.chip.shorter"))]
+      : state.type === "offer"
+        ? [t(locale, W("req.chip.offer.urgent")), t(locale, W("req.chip.shorter")), t(locale, W("req.chip.friendlier"))]
+        : [t(locale, W(`req.chip.story.${story}`)), t(locale, W("req.chip.booking")), t(locale, W("req.chip.shorter")), t(locale, W("req.chip.friendlier"))];
+  return <RequestBox chips={chips} onWrite={state.custom} busy={state.anotherBusy} limited={state.left === 0 || state.anotherLimit} testId="post-request" openLabel={state.type === "update" ? t(locale, W(story === "default" ? "post.facts.open.default" : `post.facts.open.${story}`)) : undefined} />;
+}
+
+/** Update · Q&A · Offer — the types this business has. */
+function TypePicker({ state, disabled }: { state: PostDraftState; disabled: boolean }) {
+  const locale = useLocale();
+  if (state.types.length < 2) return null;
+  return (
+    <div className="flex flex-wrap gap-2" role="radiogroup" aria-label={t(locale, W("post.type.label"))} data-testid="post-types">
+      {state.types.map((ty) => (
+        <button
+          key={ty}
+          type="button"
+          role="radio"
+          aria-checked={state.type === ty}
+          disabled={disabled}
+          onClick={() => state.setType(ty)}
+          className={cn("inline-flex min-h-[44px] items-center rounded-lg border-2 px-4 text-[14px] font-semibold", state.type === ty ? "border-ink bg-ink text-paper" : "border-paper-line bg-white text-ink hover:border-ink")}
+          data-testid={`post-type-${ty}`}
+        >
+          {t(locale, W(`post.type.${ty}`))}
+        </button>
+      ))}
     </div>
   );
 }

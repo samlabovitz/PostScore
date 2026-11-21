@@ -11,7 +11,7 @@
 //   - done ✓.
 // "All done this week ✓" once nothing ready is left.
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { recText, RecPremiumButton } from "@/components/gbp/GoogleRecs";
 import { AnswersPreview, useAnswers, type AnswersState } from "@/components/gbp/AnswersPreview";
 import { ApproveAll, type ItemFailures } from "@/components/gbp/ApproveAll";
@@ -111,10 +111,10 @@ export function WeekItem({ rec, state, type, businessId, canEdit, children, fail
   const [retrying, setRetrying] = useState(false);
   const x = itemText(rec, locale, type);
   return (
-    <li className="flex flex-col gap-3 border-t border-paper-line py-4 first:border-t-0 first:pt-1 last:pb-0" data-testid={`week-${rec.kind}`} data-state={state}>
+    <li id={weekAnchor(rec.kind)} className="flex scroll-mt-[112px] flex-col gap-3 border-t border-paper-line py-4 first:border-t-0 first:pt-1 last:pb-0 nav:scroll-mt-14 lg:gap-2 lg:py-2.5" data-testid={`week-${rec.kind}`} data-state={state}>
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
         <div className="min-w-0">
-          <p className="text-[15px] font-semibold leading-snug text-ink">{x.text}</p>
+          <p className="text-[15px] font-medium leading-snug text-ink">{x.text}</p>
           {x.sub && <p className="mt-0.5 text-[13px] leading-snug text-ink-mute">{x.sub}</p>}
         </div>
         <div className="flex shrink-0 flex-wrap items-center gap-2.5">
@@ -129,7 +129,7 @@ export function WeekItem({ rec, state, type, businessId, canEdit, children, fail
               {t(locale, W(open ? "hide" : "preview"))}
             </button>
           ) : (
-            <RecPremiumButton rec={rec} businessId={businessId} canEdit={canEdit} className="h-11 px-4 text-[14px]" />
+            <RecPremiumButton rec={rec} businessId={businessId} canEdit={canEdit} className="h-11 px-4 text-[14px] lg:h-10 lg:px-3.5" />
           )}
         </div>
       </div>
@@ -157,8 +157,17 @@ export function WeekItem({ rec, state, type, businessId, canEdit, children, fail
   );
 }
 
-const ROW_BUTTON = "inline-flex min-h-[44px] shrink-0 items-center justify-center whitespace-nowrap rounded-lg border border-paper-line bg-white px-4 text-[14px] font-semibold text-ink hover:border-ink disabled:opacity-60";
-const ROW_BUTTON_SOLID = "inline-flex min-h-[44px] shrink-0 items-center justify-center whitespace-nowrap rounded-lg border border-ink bg-ink px-4 text-[14px] font-semibold text-paper";
+/** A to-do's own anchor: "#this-week-post" opens the post preview (the Posts chip, the listing's Posts row). */
+const ANCHOR: Partial<Record<Rec["kind"], string>> = { posts: "this-week-post", replies: "this-week-replies", answers: "this-week-answers", photos: "this-week-photos" };
+export const weekAnchor = (kind: Rec["kind"]) => ANCHOR[kind] ?? `this-week-${kind}`;
+export function kindFromHash(hash: string): Rec["kind"] | null {
+  const id = hash.replace(/^#/, "");
+  return (Object.entries(ANCHOR).find(([, a]) => a === id)?.[0] as Rec["kind"] | undefined) ?? null;
+}
+
+/** A row's button: 44px on phones; on desktop a secondary ("Preview / edit") is 36px, a primary ("Upload your photos") 40px. */
+const ROW_BUTTON = "inline-flex min-h-[44px] shrink-0 items-center justify-center whitespace-nowrap rounded-lg border border-paper-line bg-white px-4 text-[14px] font-semibold text-ink hover:border-ink disabled:opacity-60 lg:min-h-[36px] lg:px-3";
+const ROW_BUTTON_SOLID = "inline-flex min-h-[44px] shrink-0 items-center justify-center whitespace-nowrap rounded-lg border border-ink bg-ink px-4 text-[14px] font-semibold text-paper lg:min-h-[40px] lg:px-3.5";
 
 /** The item's sentence; the post's and answers' in Day 23E words. */
 export function itemText(rec: Rec, locale: ReturnType<typeof useLocale>, type: IdeaType | null): { text: string; sub: string | null } {
@@ -188,6 +197,29 @@ export function ThisWeekList({ businessId, recs, type, canEdit, practice, title,
   const answers = useAnswers(businessId, { auto: has("answers"), suggest: answersRec?.plan.suggest ?? [] });
   const [failures, setFailures] = useState<ItemFailures>({});
   const [openKind, setOpenKind] = useState<Rec["kind"] | null>(null);
+  // "#this-week-post" (and the others): open that to-do and bring it into view — on load, on a hash
+  // change, and on a second tap of the same link (no hash change then).
+  useEffect(() => {
+    const open = (hash: string) => {
+      const kind = kindFromHash(hash);
+      if (!kind) return;
+      setOpenKind(kind);
+      requestAnimationFrame(() => document.getElementById(weekAnchor(kind))?.scrollIntoView({ block: "start" }));
+    };
+    open(window.location.hash);
+    const onHash = () => open(window.location.hash);
+    const onClick = (e: MouseEvent) => {
+      const a = (e.target as HTMLElement | null)?.closest?.("a");
+      const href = a?.getAttribute("href");
+      if (href && href.startsWith("#") && href === window.location.hash) open(href);
+    };
+    window.addEventListener("hashchange", onHash);
+    document.addEventListener("click", onClick);
+    return () => {
+      window.removeEventListener("hashchange", onHash);
+      document.removeEventListener("click", onClick);
+    };
+  }, []);
   if (list.length === 0 && !title) return null;
   const onFailure = (kind: keyof ItemFailures, reason: string | null) => setFailures((f) => ({ ...f, [kind]: reason ?? undefined }));
 
@@ -226,7 +258,7 @@ export function ThisWeekList({ businessId, recs, type, canEdit, practice, title,
 
   const row = (rec: Rec) => {
     const state = stateOf(rec);
-    const child = rec.kind === "replies" ? <RepliesPreview businessId={businessId} state={replies} /> : rec.kind === "posts" ? <PostPreview businessId={businessId} state={post} /> : rec.kind === "answers" ? <AnswersPreview businessId={businessId} state={answers} /> : null;
+    const child = rec.kind === "replies" ? <RepliesPreview businessId={businessId} state={replies} /> : rec.kind === "posts" ? <PostPreview businessId={businessId} state={post} showBlocked={false} /> : rec.kind === "answers" ? <AnswersPreview businessId={businessId} state={answers} /> : null;
     const tomorrow = rec.kind === "posts" && post.blockedToday === "posted_today" ? t(locale, W("tomorrow.posted")) : undefined;
     return (
       <WeekItem key={rec.kind} rec={rec} state={state} type={type} businessId={businessId} canEdit={canEdit} failure={failures[rec.kind as keyof ItemFailures]} onRetry={retry[rec.kind]} tomorrow={tomorrow} open={openKind === rec.kind} onToggle={() => setOpenKind(openKind === rec.kind ? null : rec.kind)}>
@@ -237,7 +269,7 @@ export function ThisWeekList({ businessId, recs, type, canEdit, practice, title,
 
   const heading = title ?? <p className="text-[13px] font-bold uppercase tracking-[0.12em] text-brass">{t(locale, "dashboard.googleTab.rec.thisWeek")}</p>;
   return (
-    <div className="flex flex-col gap-4" data-testid="google-tab-this-week" id="google-tab-this-week">
+    <div className="flex flex-col gap-4 lg:gap-3" data-testid="google-tab-this-week" id="google-tab-this-week">
       {allDone || list.length === 0 ? (
         <div className="flex flex-wrap items-center justify-between gap-3">
           {heading}

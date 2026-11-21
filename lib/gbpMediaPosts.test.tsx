@@ -49,7 +49,7 @@ describe("the levers and rows from real photos and posts", () => {
 
   test("posts lever: “{N} in 30 days” / “none in 30 days” → Post (red at 0, amber at 1) / Done (green at 2+), to the post ideas", () => {
     const none = lever({ photos: null, posts: { last30: 0, lastAt: null, lastType: null }, checkedAt: null }, "posts");
-    expect([none.status, none.pill, none.tone, none.href]).toEqual(["none", "post", "bad", "/business/b1/growth#ways-to-grow"]);
+    expect([none.status, none.pill, none.tone, none.href]).toEqual(["none", "post", "bad", "#this-week-post"]);
     expect(lever({ photos: null, posts: { last30: 1, lastAt: "2026-11-10T00:00:00Z", lastType: "STANDARD" }, checkedAt: null }, "posts")).toMatchObject({ pill: "post", tone: "warn" });
     expect(lever({ photos: null, posts: { last30: 2, lastAt: "2026-11-10T00:00:00Z", lastType: "STANDARD" }, checkedAt: null }, "posts")).toMatchObject({ pill: "done", tone: "ok" });
   });

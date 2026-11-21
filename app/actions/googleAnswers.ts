@@ -74,7 +74,7 @@ export async function openAnswers(businessId: string): Promise<OpenAnswersResult
   const db = createClient();
   const { data: row } = await db.from("businesses").select("id, place_id, listing_mode, language").eq("id", businessId).maybeSingle();
   if (!row) return { status: "blocked", reason: "not_found" };
-  const [{ getPlan }, { isPremiumPlan }, { createAdminClient }, { normalizeLocale }] = await Promise.all([import("@/lib/premium"), import("@/lib/plan"), import("@/lib/supabase/admin"), import("@/lib/i18n")]);
+  const [{ getPlan }, { isPremiumPlan }, { createAdminClient }, { viewLocale }] = await Promise.all([import("@/lib/premium"), import("@/lib/plan"), import("@/lib/supabase/admin"), import("@/lib/viewLocale.server")]);
   const plan = await getPlan();
   if (plan === "free") return { status: "blocked", reason: "free" };
   const premium = isPremiumPlan(plan);
@@ -135,12 +135,12 @@ export async function openAnswers(businessId: string): Promise<OpenAnswersResult
         const { weekFromGoogle } = await import("@/lib/gbpProfileEdits");
         const { hoursLines } = await import("@/lib/googleAnswers");
         const week = real?.ok ? weekFromGoogle((real.listing.location.regularHours?.periods ?? []) as never) : null;
-        if (week) return hoursLines(week, normalizeLocale(row.language));
-        return normalizeLocale(row.language) === "en" && Array.isArray(shown.opening_hours) && shown.opening_hours.length ? shown.opening_hours : null;
+        if (week) return hoursLines(week, viewLocale(row.language));
+        return viewLocale(row.language) === "en" && Array.isArray(shown.opening_hours) && shown.opening_hours.length ? shown.opening_hours : null;
       })(),
       bookingUrl: booking && booking.kind !== "none" ? booking.uri : null,
     },
-    locale: normalizeLocale(row.language),
+    locale: viewLocale(row.language),
   };
 }
 

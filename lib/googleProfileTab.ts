@@ -296,17 +296,19 @@ export function levers(input: LeverInputs): Lever[] {
   // Posts: "{N} in 30 days" / "none in 30 days" → "Post" (red at 0, amber at 1) / "Done" (green at 2+).
   const posts: Lever = ((): Lever => {
     const p = input.media?.posts;
-    const href = `/business/${id}/growth#ways-to-grow`;
+    // This week's post, opened (components/gbp/ThisWeekList.tsx).
+    const href = "#this-week-post";
     if (!p) return { id: "posts", status: "soon", pill: "soon", params: {}, tone: "neutral", href };
     if (p.last30 === 0) return { id: "posts", status: "none", pill: "post", params: {}, tone: "bad", href };
     return { id: "posts", status: "count", pill: p.last30 >= 2 ? "done" : "post", params: { count: p.last30 }, tone: p.last30 >= 2 ? "ok" : "warn", href };
   })();
   const deals: Lever =
     input.couponsRunning > 0
-      ? { id: "deals", status: "running", pill: "running", params: { count: input.couponsRunning }, tone: "ok", href: `/business/${id}/campaigns` }
-      : { id: "deals", status: "none", pill: "start", params: {}, tone: "bad", href: `/business/${id}/campaigns?tab=coupons` };
+      ? { id: "deals", status: "running", pill: "running", params: { count: input.couponsRunning }, tone: "ok", href: `/business/${id}/campaigns?tab=coupons#new-offer` }
+      : { id: "deals", status: "none", pill: "start", params: {}, tone: "bad", href: `/business/${id}/campaigns?tab=coupons#new-offer` };
   const website: Lever = ((): Lever => {
-    const href = `/business/${id}/website`;
+    // The Website page's own fix list (or the starter site when there's no website).
+    const href = input.website ? `/business/${id}/website#website-checks` : `/business/${id}/website#starter-site`;
     if (!input.website) return { id: "website", status: "none", pill: "start", params: {}, tone: "bad", href };
     const { earned, of, fixes } = input.website;
     const params = { earned: Math.round(earned), of, count: fixes };
@@ -739,7 +741,7 @@ function photosRow(input: ListingInput): ListingRow {
 function postsRow(input: ListingInput): ListingRow {
   const p = input.media?.posts;
   if (!p) return { id: "posts", status: "soon", value: null, note: null, action: null };
-  const action = { kind: "link" as const, href: `/business/${input.businessId}/growth#ways-to-grow`, external: false };
+  const action = { kind: "link" as const, href: "#this-week-post", external: false };
   if (p.last30 === 0) return { id: "posts", status: "warn", value: null, note: null, action, meta: { kind: "none", lastAt: p.lastAt ?? "" } };
   return { id: "posts", status: "ok", value: String(p.last30), note: null, action, meta: { kind: "count", lastAt: p.lastAt ?? "" } };
 }

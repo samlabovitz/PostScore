@@ -131,7 +131,7 @@ describe("Approve all: one approval for the sitting", () => {
     expect(await inSitting({ approvalsSince: async (...args: string[]) => (args.length >= 0 ? null : []) }, start).approvalsSince("b1", "")).toBeNull();
   });
 
-  const post = (p: Partial<PostDraftState>): PostDraftState => ({ status: "ok", text: "Hi", setText: vi.fn(), ctas: [], cta: "NONE", setCta: vi.fn(), photos: [], photoName: null, setPhotoName: vi.fn(), left: null, fallback: false, publish: { canEdit: true, practice: true }, latest: null, setLatest: vi.fn(), another: vi.fn(), anotherBusy: false, anotherLimit: false, problems: [], load: vi.fn(), blockedToday: null, setBlockedToday: vi.fn(), topic: "hair", offer: null, flags: [], fixFlag: vi.fn(), keep: [], keepWord: vi.fn(), fromFacts: vi.fn(), ...p });
+  const post = (p: Partial<PostDraftState>): PostDraftState => ({ status: "ok", text: "Hi", setText: vi.fn(), ctas: [], cta: "NONE", setCta: vi.fn(), photos: [], photoName: null, setPhotoName: vi.fn(), left: null, fallback: false, publish: { canEdit: true, practice: true }, latest: null, setLatest: vi.fn(), another: vi.fn(), anotherBusy: false, anotherLimit: false, problems: [], load: vi.fn(), blockedToday: null, setBlockedToday: vi.fn(), topic: "hair", offer: null, flags: [], fixFlag: vi.fn(), keep: [], keepWord: vi.fn(), custom: vi.fn(), type: "update", setType: vi.fn(), types: ["update"], ...p });
   const replies = (p: Partial<WeekRepliesState>): WeekRepliesState => ({ status: "ok", items: [], canPost: true, practice: true, more: 0, setText: vi.fn(), setInclude: vi.fn(), ready: [], post: vi.fn(), load: vi.fn(), ...p });
   const answers = (p: Partial<AnswersState>): AnswersState => ({ status: "ok", data: { status: "ok", premium: true, canEdit: true, practice: true, plan: { missing: ["description", "details"], details: ["parking"], services: null, minutes: 6 }, listing: { description: "Hair salon", services: [], details: [] }, descriptionDraft: null, ownerPrices: [], facts: { name: "HX", city: null, hours: null, bookingUrl: null }, locale: "en" }, description: "", setDescription: vi.fn(), services: [], setService: vi.fn(), addService: vi.fn(), picks: {}, setPick: vi.fn(), unanswered: 0, flags: [], fixFlag: vi.fn(), keepWord: vi.fn(), payload: {}, ready: [], needsYou: [], results: null, setResults: vi.fn(), load: vi.fn(), ...p });
 
@@ -169,7 +169,8 @@ describe("Approve all: one approval for the sitting", () => {
       );
     const en = html("en");
     expect(en).toContain('data-testid="approve-all-button"');
-    expect(en).toContain("Approve all (0)");
+    // Drafts still loading in a static render: disabled, never a misleading "(0)".
+    expect(en).toContain("Approve all (getting ready…)");
     expect(en).toContain("Nothing goes to Google until you approve.");
     expect(en).toContain("Getting drafts ready…");
     expect(en).toContain('data-testid="week-replies"');
@@ -181,7 +182,7 @@ describe("Approve all: one approval for the sitting", () => {
     expect(en).toContain('href="#edit-photos"');
     expect(en).toContain("Post 1 update on Google this week");
     const es = html("es");
-    expect(es).toContain("Aprobar todo (0)");
+    expect(es).toContain("Aprobar todo (preparando…)");
     expect(es).toContain("Le toca a usted · 5 min");
     expect(es).toContain("Responda las preguntas frecuentes de sus clientes");
   });

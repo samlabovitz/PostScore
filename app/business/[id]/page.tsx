@@ -25,7 +25,7 @@ import { getWebsiteLinkUndoForPage } from "@/app/actions/gbpWebsiteLink";
 import { shownWebsite } from "@/lib/businessWebsite";
 import { isPremiumPlan } from "@/lib/plan";
 import { resolveBizProfile } from "@/config/bizProfiles";
-import { normalizeLocale } from "@/lib/i18n";
+import { viewLocale } from "@/lib/viewLocale.server";
 import { BusinessScoreView } from "./BusinessScoreView";
 import { featureMapFor } from "@/lib/postaiFeatureMap";
 import { postaiPageQuestions } from "@/lib/postaiDock";
@@ -76,7 +76,7 @@ export default async function BusinessPage({ params, searchParams = {} }: { para
     notFound();
   }
 
-  const locale = normalizeLocale(summary.business.language);
+  const locale = viewLocale(summary.business.language);
   const profile = resolveBizProfile(
     summary.business.category,
     summary.business.primary_type,

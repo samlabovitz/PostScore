@@ -62,6 +62,8 @@ export interface CompetitorPhotoSignal {
 
 export interface GrowthMoveSignals {
   businessId: string;
+  /** Premium: where photos are uploaded (the Google Profile tab's Add photos, opened). Else the Overview's photo steps. */
+  photoUploadHref?: string | null;
   /** Whether suggesting a referral program is appropriate for this
    * business's type at all — the exact same flag that already hides
    * the Growth page's own "Refer a friend" tab (BizProfile.referralOk,
@@ -232,7 +234,7 @@ export function buildGrowthMoves(signals: GrowthMoveSignals, locale: Locale = DE
       meta: null,
       why: t(locale, "dashboard.growth.moves.startCoupon.why"),
       howTo: t(locale, "dashboard.growth.moves.startCoupon.howTo"),
-      href: `${campaignsHref}?tab=coupons`,
+      href: `${campaignsHref}?tab=coupons#new-offer`,
       signal: "no promo row has ever been created for this business",
     });
   }
@@ -286,7 +288,7 @@ export function buildGrowthMoves(signals: GrowthMoveSignals, locale: Locale = DE
       // Overview page, where the completeness.photos action-plan task
       // already carries the real step-by-step instructions, rather than
       // re-explaining them here or linking back to this same page.
-      href: `/business/${signals.businessId}`,
+      href: signals.photoUploadHref ?? `/business/${signals.businessId}`,
       signal: `latest competitor scan's median photo count (${competitorMedian}) is higher than this business's own (${yourPhotos}), both under the ${PHOTO_COMPARISON_CAP}-photo comparison cap`,
     });
   }

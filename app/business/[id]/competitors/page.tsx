@@ -7,7 +7,7 @@ import { Card } from "@/components/ui/Card";
 import { getCompetitors } from "@/app/actions/competitors";
 import { CompetitorsView } from "./CompetitorsView";
 import { getLastScanAt, scoreBusinessById } from "@/app/actions/scoring";
-import { normalizeLocale } from "@/lib/i18n";
+import { viewLocale } from "@/lib/viewLocale.server";
 import { competitorPageLines } from "@/lib/competitorSchedule";
 import { withLiveCompetitorValues } from "@/lib/placesLive.server";
 import { withLiveListing } from "@/lib/placesLive";
@@ -81,7 +81,7 @@ export default async function CompetitorsPage({ params }: { params: { id: string
         <CompetitorsView businessId={params.id} data={data} liveUnavailable={live?.unavailable ?? false} fullScore={scored.status === "ok" ? scored.result.breakdown.total : null} />
         {/* When competitors update, by plan (lib/competitorScanPolicy.ts). */}
         <p data-testid="competitors-schedule" className="-mt-2 text-[12.5px] text-ink-mute">
-          {competitorPageLines(upgrade.plan, fetched.latest?.createdAt ?? null, normalizeLocale(fetched.language), fetched.timeZone, new Date()).join(" ")}
+          {competitorPageLines(upgrade.plan, fetched.latest?.createdAt ?? null, viewLocale(fetched.language), fetched.timeZone, new Date()).join(" ")}
         </p>
       </div>
     </DashboardShell>

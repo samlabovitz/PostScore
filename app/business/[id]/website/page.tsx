@@ -1,4 +1,5 @@
 import { createAdminClient } from "@/lib/supabase/admin";
+import { viewLocale } from "@/lib/viewLocale.server";
 import { withSignedScreenshots } from "@/lib/screenshotStorage.server";
 import { notFound, redirect } from "next/navigation";
 import type { ReactNode } from "react";
@@ -16,7 +17,7 @@ import { WebsiteScoreBreakdown, WebsiteScoreCompact } from "./WebsiteScoreBreakd
 import { getLastScanAt } from "@/app/actions/scoring";
 import { getWebsiteRecheckStatus } from "@/app/actions/websiteRecheck";
 import { WebsiteRecheck } from "@/components/scoring/WebsiteRecheck";
-import { formatShortDate, normalizeLocale, t } from "@/lib/i18n";
+import { formatShortDate, t } from "@/lib/i18n";
 import { HackedSiteBanner } from "@/components/scoring/HackedSiteBanner";
 import { hackSignsFor } from "@/lib/siteSecurity";
 import { socialPagePlatform } from "@/lib/websiteTrust";
@@ -46,7 +47,7 @@ export default async function WebsitePage({ params }: { params: { id: string } }
   }
 
   const { data, builderOffer } = result;
-  const locale = normalizeLocale(data.language);
+  const locale = viewLocale(data.language);
   // The generator's own "Site language" selector (StarterSiteBuilder)
   // defaults to this same locale but the owner can switch it — so the
   // profile/FAQ are resolved once per language here, and the client

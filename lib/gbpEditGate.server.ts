@@ -8,7 +8,7 @@ import "server-only";
 import { createClient } from "@/lib/supabase/server";
 import { getPlan } from "@/lib/premium";
 import { isPremiumPlan, type Plan } from "@/lib/plan";
-import { normalizeLocale } from "@/lib/i18n";
+import { viewLocale } from "@/lib/viewLocale.server";
 import { isBusinessArchived } from "@/lib/businessArchive.server";
 import type { GbpEditError, GbpEditTarget } from "@/lib/gbpAttributes.server";
 
@@ -57,6 +57,6 @@ export async function gbpEditGate(businessId: string, options: { requirePremium:
     admin,
     tokens,
     business: business as { id: string; language: string | null; website: string | null; verified_website_url: string | null; place_id: string | null },
-    target: { businessId, userId: user.id, locationName: conn.google_location_id, accessToken: token.accessToken, locale: normalizeLocale(business.language) },
+    target: { businessId, userId: user.id, locationName: conn.google_location_id, accessToken: token.accessToken, locale: viewLocale(business.language) },
   };
 }

@@ -84,7 +84,8 @@ describe("6. the levers' chips: short labels, the detail on tap", () => {
   });
   test("one row at desktop width: chips never wrap their own words", () => {
     const src = readFileSync("components/gbp/GoogleProfileTab.tsx", "utf8");
-    expect(src).toContain('"inline-flex min-h-[44px] items-center gap-2 whitespace-nowrap rounded-full border px-3.5 text-[13px] text-ink"');
+    // 44px tap targets on phones; 32px chips on desktop.
+    expect(src).toContain('"inline-flex min-h-[44px] items-center gap-2 whitespace-nowrap rounded-full border px-3.5 text-[13px] text-ink lg:min-h-[32px] lg:px-3"');
   });
 });
 
@@ -98,14 +99,29 @@ describe("7. step 2: services missing a price first (max 6), new ones on top", (
   });
 });
 
+describe("desktop tightening: 36px secondary / 40px primary buttons, 44px on phones; rows a third shorter", () => {
+  test("the buttons and rows", () => {
+    const week = readFileSync("components/gbp/ThisWeekList.tsx", "utf8");
+    expect(week).toMatch(/const ROW_BUTTON = "inline-flex min-h-\[44px\][^"]*lg:min-h-\[36px\]/);
+    expect(week).toMatch(/const ROW_BUTTON_SOLID = "inline-flex min-h-\[44px\][^"]*lg:min-h-\[40px\]/);
+    expect(week).toContain("lg:gap-2 lg:py-2.5");
+    expect(week).toContain('<p className="text-[15px] font-medium leading-snug text-ink">{x.text}</p>');
+    const post = readFileSync("components/gbp/PostPreview.tsx", "utf8");
+    expect(post).toMatch(/export const W_BUTTON = "[^"]*min-h-\[44px\][^"]*lg:min-h-\[40px\]/);
+    expect(post).toMatch(/export const W_BUTTON_SOFT = "[^"]*min-h-\[44px\][^"]*lg:min-h-\[36px\]/);
+    const recs = readFileSync("components/gbp/GoogleRecs.tsx", "utf8");
+    expect(recs).toMatch(/const BUTTON_OUTLINE = "[^"]*min-h-\[44px\][^"]*lg:min-h-\[36px\]/);
+  });
+});
+
 describe("4, 5, 11. the hero's ⓘ, the 'so far' line, the 'Since' cards", () => {
   const src = readFileSync("components/gbp/GoogleProfileTab.tsx", "utf8");
   test("the ⓘ opens above, over everything (never under the dark card or over 'Updates on the 1st')", () => {
     expect(src).toContain('"absolute bottom-full z-50 mb-2');
   });
-  test("'November so far' lines up with the tiles' text; a card with numbers gets two-thirds of the row", () => {
-    expect(src).toContain('<p className="px-4 text-[13px] leading-snug text-ink-soft" data-testid="google-tab-so-far">');
-    expect(src).toContain('st.ready && "lg:col-span-2"');
+  test("'November so far' lines up with the tiles' text; a card with numbers gets the full width", () => {
+    expect(src).toContain('<p className="px-4 text-[13px] leading-snug text-ink-soft lg:px-3.5" data-testid="google-tab-so-far">');
+    expect(src).toContain('st.ready && "sm:col-span-2"');
   });
 });
 

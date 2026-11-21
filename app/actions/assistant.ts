@@ -1,5 +1,6 @@
 "use server";
 
+import { viewLocale } from "@/lib/viewLocale.server";
 import { createClient } from "@/lib/supabase/server";
 import { isBusinessArchived } from "@/lib/businessArchive.server";
 import { getBusinessSummary } from "@/app/actions/businesses";
@@ -47,7 +48,7 @@ import {
   type AssistantScoreHistoryEntry,
   type AssistantWeeklyRoutineSummary,
 } from "@/lib/assistant";
-import { formatShortDate, normalizeLocale, t, type Locale } from "@/lib/i18n";
+import { formatShortDate, t, type Locale } from "@/lib/i18n";
 import { confirmFreeAiWithClient, releaseFreeAiWithClient, reserveFreeAi } from "@/lib/freeAiUsage.server";
 import { featureMapFor, featureMapText } from "@/lib/postaiFeatureMap";
 import { postaiMonth, postaiMonthlyLeft, postaiMonthlyLimit } from "@/lib/postaiLimits";
@@ -126,7 +127,7 @@ async function loadContext(businessId: string): Promise<LoadContextResult> {
     return { status: "not_found" };
   }
 
-  const locale = normalizeLocale(summaryResult.business.language);
+  const locale = viewLocale(summaryResult.business.language);
   const timeZone = summaryResult.business.time_zone ?? undefined;
   // "business": the same language as `locale` (both from the business's
   // own row) — and the same call the Overview makes, so one request scores once.

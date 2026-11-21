@@ -131,7 +131,7 @@ describe("the five levers: status and pill", () => {
     expect(words(one({ couponsRunning: 1 }, "deals")).status).toBe("1 running");
     const two = one({ couponsRunning: 2 }, "deals");
     expect([words(two).status, words(two).pill, two.tone]).toEqual(["2 running", "Running", "ok"]);
-    expect(none.href).toBe("/business/b1/campaigns?tab=coupons");
+    expect(none.href).toBe("/business/b1/campaigns?tab=coupons#new-offer");
   });
 
   test("Website: “{score} / 30”, “{N} fix”, green from 27", () => {

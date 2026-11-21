@@ -2086,6 +2086,42 @@ export type MessageKey =
   | "dashboard.googleTab.ev.campaign"
   | "dashboard.googleTab.ev.campaignOne"
   | "dashboard.googleTab.ev.line"
+  | "dashboard.googleTab.rec.replies.sub"
+  | "dashboard.googleTab.rec.replies.subOne"
+  | "dashboard.googleTab.w.approveAll.gettingReady"
+  | "dashboard.googleTab.w.approveAll.what"
+  | "dashboard.googleTab.w.approveAll.what.replies"
+  | "dashboard.googleTab.w.approveAll.what.replyOne"
+  | "dashboard.googleTab.w.approveAll.what.post"
+  | "dashboard.googleTab.w.approveAll.what.answers"
+  | "dashboard.googleTab.w.req.open"
+  | "dashboard.googleTab.w.req.title"
+  | "dashboard.googleTab.w.req.placeholder"
+  | "dashboard.googleTab.w.req.note"
+  | "dashboard.googleTab.w.req.write"
+  | "dashboard.googleTab.w.req.chip.shorter"
+  | "dashboard.googleTab.w.req.chip.friendlier"
+  | "dashboard.googleTab.w.req.chip.booking"
+  | "dashboard.googleTab.w.req.chip.story.hair"
+  | "dashboard.googleTab.w.req.chip.story.home"
+  | "dashboard.googleTab.w.req.chip.story.restaurant"
+  | "dashboard.googleTab.w.req.chip.story.art"
+  | "dashboard.googleTab.w.req.chip.story.default"
+  | "dashboard.googleTab.w.req.chip.qa.prices"
+  | "dashboard.googleTab.w.req.chip.qa.visit"
+  | "dashboard.googleTab.w.req.chip.offer.urgent"
+  | "dashboard.googleTab.w.req.chip.desc.specialties"
+  | "dashboard.googleTab.w.req.chip.desc.area"
+  | "dashboard.googleTab.w.post.type.label"
+  | "dashboard.googleTab.w.post.type.update"
+  | "dashboard.googleTab.w.post.type.qa"
+  | "dashboard.googleTab.w.post.type.offer"
+  | "dashboard.googleTab.w.ans.qa.open"
+  | "dashboard.googleTab.w.ans.extra.qa"
+  | "dashboard.googleTab.since.windowShort"
+  | "dashboard.googleTab.since.per100Label.up"
+  | "dashboard.googleTab.since.per100Label.down"
+  | "dashboard.googleTab.lever.short.photos.newestOne"
   | "dashboard.googleTab.w.ans.services.showAll"
   | "dashboard.googleTab.lever.short.reviews.title"
   | "dashboard.googleTab.lever.short.photos.title"
@@ -8327,6 +8363,42 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.googleTab.ev.campaign": "started {count} coupons or referral cards",
     "dashboard.googleTab.ev.campaignOne": "started 1 coupon or referral card",
     "dashboard.googleTab.ev.line": "{date}: {what}",
+    "dashboard.googleTab.rec.replies.sub": "{replied} of your last {total} reviews have a reply",
+    "dashboard.googleTab.rec.replies.subOne": "{replied} of your last review has a reply",
+    "dashboard.googleTab.w.approveAll.gettingReady": "Approve all (getting ready…)",
+    "dashboard.googleTab.w.approveAll.what": "Will send: {list}",
+    "dashboard.googleTab.w.approveAll.what.replies": "{count} review replies",
+    "dashboard.googleTab.w.approveAll.what.replyOne": "1 review reply",
+    "dashboard.googleTab.w.approveAll.what.post": "this week's post",
+    "dashboard.googleTab.w.approveAll.what.answers": "the answers",
+    "dashboard.googleTab.w.req.open": "Tell PostScore what you want →",
+    "dashboard.googleTab.w.req.title": "Tell PostScore what you want",
+    "dashboard.googleTab.w.req.placeholder": "e.g. Invite people to book online and keep it short",
+    "dashboard.googleTab.w.req.note": "PostScore adds no events, prices or results you didn't give, and keeps Google's rules.",
+    "dashboard.googleTab.w.req.write": "Write it",
+    "dashboard.googleTab.w.req.chip.shorter": "Make it shorter",
+    "dashboard.googleTab.w.req.chip.friendlier": "Friendlier tone",
+    "dashboard.googleTab.w.req.chip.booking": "Invite people to book online",
+    "dashboard.googleTab.w.req.chip.story.hair": "A real before-and-after: ",
+    "dashboard.googleTab.w.req.chip.story.home": "A recent job: ",
+    "dashboard.googleTab.w.req.chip.story.restaurant": "This week's special: ",
+    "dashboard.googleTab.w.req.chip.story.art": "Our next class: ",
+    "dashboard.googleTab.w.req.chip.story.default": "Something new: ",
+    "dashboard.googleTab.w.req.chip.qa.prices": "Focus on prices",
+    "dashboard.googleTab.w.req.chip.qa.visit": "Focus on parking and payments",
+    "dashboard.googleTab.w.req.chip.offer.urgent": "Say when it ends",
+    "dashboard.googleTab.w.req.chip.desc.specialties": "Mention our specialties",
+    "dashboard.googleTab.w.req.chip.desc.area": "Mention the area we serve",
+    "dashboard.googleTab.w.post.type.label": "Post type",
+    "dashboard.googleTab.w.post.type.update": "Update",
+    "dashboard.googleTab.w.post.type.qa": "Your questions, answered",
+    "dashboard.googleTab.w.post.type.offer": "Offer",
+    "dashboard.googleTab.w.ans.qa.open": "Optional: a \"Your questions, answered\" post",
+    "dashboard.googleTab.w.ans.extra.qa": "3–5 of these answers as one post on your listing.",
+    "dashboard.googleTab.since.windowShort": "{days} days before → after",
+    "dashboard.googleTab.since.per100Label.up": "more per 100",
+    "dashboard.googleTab.since.per100Label.down": "fewer per 100",
+    "dashboard.googleTab.lever.short.photos.newestOne": "1 mo",
     "dashboard.googleTab.w.ans.services.showAll": "Show all {count} services",
     "dashboard.googleTab.lever.short.reviews.title": "Reviews",
     "dashboard.googleTab.lever.short.photos.title": "Photos",
@@ -14852,6 +14924,42 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.googleTab.ev.campaign": "inició {count} cupones o tarjetas de referidos",
     "dashboard.googleTab.ev.campaignOne": "inició 1 cupón o tarjeta de referidos",
     "dashboard.googleTab.ev.line": "{date}: {what}",
+    "dashboard.googleTab.rec.replies.sub": "{replied} de sus últimas {total} reseñas tienen respuesta",
+    "dashboard.googleTab.rec.replies.subOne": "{replied} de su última reseña tiene respuesta",
+    "dashboard.googleTab.w.approveAll.gettingReady": "Aprobar todo (preparando…)",
+    "dashboard.googleTab.w.approveAll.what": "Se enviará: {list}",
+    "dashboard.googleTab.w.approveAll.what.replies": "{count} respuestas a reseñas",
+    "dashboard.googleTab.w.approveAll.what.replyOne": "1 respuesta a reseña",
+    "dashboard.googleTab.w.approveAll.what.post": "la publicación de esta semana",
+    "dashboard.googleTab.w.approveAll.what.answers": "las respuestas",
+    "dashboard.googleTab.w.req.open": "Dígale a PostScore lo que quiere →",
+    "dashboard.googleTab.w.req.title": "Dígale a PostScore lo que quiere",
+    "dashboard.googleTab.w.req.placeholder": "p. ej., Invite a reservar en línea y que sea breve",
+    "dashboard.googleTab.w.req.note": "PostScore no agrega eventos, precios ni resultados que usted no haya dado, y respeta las reglas de Google.",
+    "dashboard.googleTab.w.req.write": "Escribirlo",
+    "dashboard.googleTab.w.req.chip.shorter": "Más breve",
+    "dashboard.googleTab.w.req.chip.friendlier": "Tono más cercano",
+    "dashboard.googleTab.w.req.chip.booking": "Invite a reservar en línea",
+    "dashboard.googleTab.w.req.chip.story.hair": "Un antes y después real: ",
+    "dashboard.googleTab.w.req.chip.story.home": "Un trabajo reciente: ",
+    "dashboard.googleTab.w.req.chip.story.restaurant": "El especial de esta semana: ",
+    "dashboard.googleTab.w.req.chip.story.art": "Nuestra próxima clase: ",
+    "dashboard.googleTab.w.req.chip.story.default": "Algo nuevo: ",
+    "dashboard.googleTab.w.req.chip.qa.prices": "Enfóquese en los precios",
+    "dashboard.googleTab.w.req.chip.qa.visit": "Enfóquese en estacionamiento y pagos",
+    "dashboard.googleTab.w.req.chip.offer.urgent": "Diga cuándo termina",
+    "dashboard.googleTab.w.req.chip.desc.specialties": "Mencione nuestras especialidades",
+    "dashboard.googleTab.w.req.chip.desc.area": "Mencione la zona que atendemos",
+    "dashboard.googleTab.w.post.type.label": "Tipo de publicación",
+    "dashboard.googleTab.w.post.type.update": "Novedad",
+    "dashboard.googleTab.w.post.type.qa": "Sus preguntas, respondidas",
+    "dashboard.googleTab.w.post.type.offer": "Oferta",
+    "dashboard.googleTab.w.ans.qa.open": "Opcional: una publicación \"Sus preguntas, respondidas\"",
+    "dashboard.googleTab.w.ans.extra.qa": "De 3 a 5 de estas respuestas en una publicación de su ficha.",
+    "dashboard.googleTab.since.windowShort": "{days} días antes → después",
+    "dashboard.googleTab.since.per100Label.up": "más por cada 100",
+    "dashboard.googleTab.since.per100Label.down": "menos por cada 100",
+    "dashboard.googleTab.lever.short.photos.newestOne": "1 mes",
     "dashboard.googleTab.w.ans.services.showAll": "Mostrar los {count} servicios",
     "dashboard.googleTab.lever.short.reviews.title": "Reseñas",
     "dashboard.googleTab.lever.short.photos.title": "Fotos",
@@ -14861,7 +14969,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.googleTab.lever.short.reviews.replied": "{percent} %",
     "dashboard.googleTab.lever.short.reviews.notChecked": "sin revisar",
     "dashboard.googleTab.lever.short.reviews.noRecent": "sin nuevas",
-    "dashboard.googleTab.lever.short.photos.newest": "{months} m",
+    "dashboard.googleTab.lever.short.photos.newest": "{months} meses",
     "dashboard.googleTab.lever.short.photos.none": "ninguna",
     "dashboard.googleTab.lever.short.photos.soon": "pronto",
     "dashboard.googleTab.lever.short.posts.count": "{count}",

@@ -1,5 +1,6 @@
 "use server";
 
+import { viewLocale } from "@/lib/viewLocale.server";
 import { withLiveListingFor } from "@/lib/ownerListing.server";
 import { createClient } from "@/lib/supabase/server";
 import { resolveBizProfile } from "@/config/bizProfiles";
@@ -17,7 +18,7 @@ import {
   type PricingAssessmentPayload,
 } from "@/lib/pricing";
 import { callAnthropicMessage } from "@/lib/anthropicClient";
-import { normalizeLocale, t, type Locale } from "@/lib/i18n";
+import { t, type Locale } from "@/lib/i18n";
 import { getPlan } from "@/lib/premium";
 import { priceLevelToSymbol } from "@/lib/priceLevel";
 import { getLatestCompetitorSnapshot } from "@/app/actions/competitors";
@@ -285,7 +286,7 @@ export async function assessPricing(businessId: string): Promise<AssessPricingRe
   // Free: the AI price check (Anthropic + Places) never runs.
   if ((await getPlan()) === "free") {
     const { data: row } = await supabase.from("businesses").select("language").eq("id", businessId).maybeSingle();
-    return { status: "error", message: t(normalizeLocale(row?.language), "dashboard.free.priceCheckLocked") };
+    return { status: "error", message: t(viewLocale(row?.language), "dashboard.free.priceCheckLocked") };
   }
 
   const [{ data: business, error: businessError }, pricesResult] = await Promise.all([
@@ -314,7 +315,7 @@ export async function assessPricing(businessId: string): Promise<AssessPricingRe
   }
 
   const row = business as PricingBusinessRow;
-  const locale = normalizeLocale(row.language);
+  const locale = viewLocale(row.language);
   const services = pricesResult.prices.map((p) => ({ service: p.service, price: p.price, size: p.size ?? null }));
 
   // Part B: real competitor price-level context from the latest saved

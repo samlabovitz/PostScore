@@ -67,8 +67,8 @@ describe("photos: count + types the listing is missing", () => {
 
 describe("review replies", () => {
   test("the newest unanswered, at most 10, about 2 minutes each", () => {
-    expect(replyPlan({ replied: 0, inWindow: 20 })).toEqual({ count: 10, minutes: 20, left: 10 });
-    expect(replyPlan({ replied: 17, inWindow: 20 })).toEqual({ count: 3, minutes: 6, left: 0 });
+    expect(replyPlan({ replied: 0, inWindow: 20 })).toEqual({ count: 10, minutes: 20, left: 10, replied: 0, total: 20 });
+    expect(replyPlan({ replied: 17, inWindow: 20 })).toEqual({ count: 3, minutes: 6, left: 0, replied: 17, total: 20 });
     expect(replyPlan({ replied: 20, inWindow: 20 })).toBeNull();
     expect(replyPlan(null)).toBeNull();
     expect(recText({ kind: "replies", plan: replyPlan({ replied: 0, inWindow: 20 })! }, "en", null).text).toBe("Reply to your 10 newest unanswered reviews, oldest first (about 20 min)");
@@ -141,7 +141,7 @@ describe("one button: Premium does it, Grow gets the steps", () => {
     );
   const photos: Rec = { kind: "photos", plan: { count: 3, types: ["INTERIOR", "AT_WORK", "TEAMS"], fromMissing: false } };
   const posts: Rec = { kind: "posts", plan: { weekday: 1, date: "2026-11-23", busiest: "midweek", topic: "hair" } };
-  const replies: Rec = { kind: "replies", plan: { count: 10, minutes: 20, left: 10 } };
+  const replies: Rec = { kind: "replies", plan: { count: 10, minutes: 20, left: 10, replied: 0, total: 20 } };
 
   test("the rule", () => {
     expect(recButton("photos", { premium: true, canEdit: true })).toEqual({ kind: "do_it" });

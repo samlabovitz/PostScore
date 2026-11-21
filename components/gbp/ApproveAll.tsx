@@ -34,9 +34,17 @@ export function answersReady(answers: AnswersState | null | undefined, failed = 
   return !!answers && !failed && answers.data?.canEdit === true && answers.ready.length > 0;
 }
 
-export function approveCount(parts: { replies?: WeekRepliesState | null; post?: PostDraftState | null; answers?: AnswersState | null; failures?: ItemFailures }): number {
+/** What Approve all will send now, item by item: each unique ready reply, the post, the answers.
+ * Never what's blocked (a post already up today, the day's limit, a spelling question, a failure, posting off). */
+export function approveItems(parts: { replies?: WeekRepliesState | null; post?: PostDraftState | null; answers?: AnswersState | null; failures?: ItemFailures }): { replies: number; post: boolean; answers: boolean } {
   const f = parts.failures ?? {};
-  return (parts.replies?.canPost ? parts.replies.ready.length : 0) + (postReady(parts.post, !!f.posts) ? 1 : 0) + (answersReady(parts.answers, !!f.answers) ? 1 : 0);
+  const replies = parts.replies?.canPost ? new Set(parts.replies.ready).size : 0;
+  return { replies, post: postReady(parts.post, !!f.posts), answers: answersReady(parts.answers, !!f.answers) };
+}
+
+export function approveCount(parts: { replies?: WeekRepliesState | null; post?: PostDraftState | null; answers?: AnswersState | null; failures?: ItemFailures }): number {
+  const i = approveItems(parts);
+  return i.replies + (i.post ? 1 : 0) + (i.answers ? 1 : 0);
 }
 
 export function ApproveAll({
@@ -67,10 +75,16 @@ export function ApproveAll({
   const [progress, setProgress] = useState<{ done: number; of: number } | null>(null);
   const [summary, setSummary] = useState<{ sent: number; failed: number } | null>(null);
   const count = approveCount({ replies, post, answers, failures });
+  const items = approveItems({ replies, post, answers, failures });
+  const what = [
+    items.replies ? t(locale, W(items.replies === 1 ? "approveAll.what.replyOne" : "approveAll.what.replies"), { count: items.replies }) : null,
+    items.post ? t(locale, W("approveAll.what.post")) : null,
+    items.answers ? t(locale, W("approveAll.what.answers")) : null,
+  ].filter(Boolean);
   const loading = [replies, post, answers].some((s) => s && (s.status === "idle" || s.status === "loading"));
 
   const run = async () => {
-    const replyIds = replies?.canPost ? [...replies.ready] : [];
+    const replyIds = replies?.canPost ? Array.from(new Set(replies.ready)) : [];
     const withPost = postReady(post, !!failures.posts);
     const withAnswers = answersReady(answers, !!failures.answers);
     const of = replyIds.length + (withPost ? 1 : 0) + (withAnswers ? 1 : 0);
@@ -139,16 +153,21 @@ export function ApproveAll({
   };
 
   return (
-    <div className="flex flex-col gap-1.5" data-testid="approve-all">
+    <div className="flex flex-col gap-1.5 lg:gap-0.5" data-testid="approve-all">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="min-w-0">{title}</div>
         <div className="flex flex-wrap items-center gap-2.5">
-          {loading && <span className="text-[13px] text-ink-mute">{t(locale, W("preparing"))}</span>}
-          <button type="button" onClick={run} disabled={!canEdit || count === 0 || progress !== null} className={W_BUTTON} data-testid="approve-all-button" data-count={count}>
-            {progress ? t(locale, W("approveAll.sending"), { done: progress.done, count: progress.of }) : t(locale, W("approveAll"), { count })}
+          {/* While drafts load: disabled, "Approve all (getting ready…)" — the final count once ready, never a misleading "(0)". */}
+          <button type="button" onClick={run} disabled={!canEdit || loading || count === 0 || progress !== null} className={W_BUTTON} data-testid="approve-all-button" data-count={count} data-loading={loading ? "1" : "0"}>
+            {progress ? t(locale, W("approveAll.sending"), { done: progress.done, count: progress.of }) : loading ? t(locale, W("approveAll.gettingReady")) : t(locale, W("approveAll"), { count })}
           </button>
         </div>
       </div>
+      {what.length > 0 && !progress && (
+        <p className="text-[13px] font-semibold text-ink-soft" data-testid="approve-all-what">
+          {t(locale, W("approveAll.what"), { list: what.join(" · ") })}
+        </p>
+      )}
       <p className="text-[13px] text-ink-mute">{t(locale, W("approveAll.note"))}</p>
       {practice && <p className="text-[13px] font-semibold text-brass" data-testid="approve-all-practice">{t(locale, W("practice"))}</p>}
       {!canEdit && <p className="text-[13px] text-ink-mute" data-testid="approve-all-off">{t(locale, W("readOnly"))}</p>}

@@ -9,7 +9,7 @@ import { getActiveReferral } from "@/app/actions/referrals";
 import { getPrintStudioData } from "@/app/actions/printStudio";
 import { resolveBizProfile } from "@/config/bizProfiles";
 import { getPlan } from "@/lib/premium";
-import { normalizeLocale } from "@/lib/i18n";
+import { viewLocale } from "@/lib/viewLocale.server";
 import { CampaignsView } from "./CampaignsView";
 import { createClient } from "@/lib/supabase/server";
 import { loadBusinessNiche } from "@/lib/businessNiche.server";
@@ -32,7 +32,7 @@ export default async function CampaignsPage({ params }: { params: { id: string }
   if (summary.status === "not_found") notFound();
 
   const { business } = summary;
-  const locale = normalizeLocale(business.language);
+  const locale = viewLocale(business.language);
   const profile = resolveBizProfile(business.category, business.primary_type, business.business_type_override, locale, business.categories, business.name, business.biz_type_resolved);
   // Labelled by the saved niche when there is one ("Art & pottery classes").
   const shownProfile = { ...profile, label: ownerTypeName((await loadBusinessNiche(createClient(), params.id))?.resolved.nicheId, profile.label, locale) };

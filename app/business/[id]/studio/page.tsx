@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { viewLocale } from "@/lib/viewLocale.server";
 import { notFound, redirect } from "next/navigation";
 import { IconCircle, IconCircleCheckFilled } from "@tabler/icons-react";
 import { Card } from "@/components/ui/Card";
@@ -11,7 +12,7 @@ import { getAddons, getPlan } from "@/lib/premium";
 import { PostStudioFeatures, PostStudioOptions } from "@/components/studio/PostStudioOptions";
 import { postStudioPriceKey } from "@/lib/navPlans";
 import { hasPostStudio, leaveHref, siteChecklist } from "@/lib/postStudio";
-import { LocaleProvider, normalizeLocale, t, type MessageKey } from "@/lib/i18n";
+import { LocaleProvider, t, type MessageKey } from "@/lib/i18n";
 
 /**
  * PostStudio: a focused full-screen page (no sidebar) opened from the
@@ -31,7 +32,7 @@ export default async function PostStudioPage({ params, searchParams = {} }: { pa
   if (result.status === "not_found") notFound();
 
   const { data } = result;
-  const locale = normalizeLocale(data.language);
+  const locale = viewLocale(data.language);
   const tr = (key: MessageKey, vars?: Record<string, string | number>) => t(locale, key, vars);
   const name = data.businessName ?? tr("dashboard.common.businessNameFallback");
   const profile = resolveBizProfile(data.category, data.primaryType, data.businessTypeOverride, locale, data.categories, data.businessName, data.bizTypeResolved);

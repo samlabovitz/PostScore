@@ -177,3 +177,33 @@ export async function tagOrigin(admin: SupabaseClient, businessId: string, sitti
     // A label only — never fails the change.
   }
 }
+
+/** The confirmed facts for "Your questions, answered" and the website FAQ, from the listing as Google
+ * shows it now (one cached read): what's set to yes (natural words), the hours in the business's
+ * language, services with their Google prices, the booking link. Nothing guessed; null when unreadable. */
+export async function confirmedAnswerFacts(admin: SupabaseClient, businessId: string, name: string, locale: "en" | "es"): Promise<import("@/lib/googleAnswers").AnswerFacts | null> {
+  const { readRealListingCached } = await import("@/lib/gbpRealListing.server");
+  const read = await readRealListingCached(admin, businessId).catch(() => null);
+  if (!read?.ok) return null;
+  const [{ customerDetailsEditorRows }, { detailPhrase, hoursLines }, { weekFromGoogle }, { bookingLink }] = await Promise.all([
+    import("@/lib/gbpAttributes"),
+    import("@/lib/googleAnswers"),
+    import("@/lib/gbpProfileEdits"),
+    import("@/lib/bookingPartners"),
+  ]);
+  const loc = read.listing.location as unknown as Record<string, unknown>;
+  const rows = (read.listing.offered ?? []).length ? customerDetailsEditorRows(read.listing.offered!, read.listing.attributes as never, []) : [];
+  const yes = (part: string) => rows.filter((r) => r.part === part && r.current === true).map((r) => detailPhrase(r.id, r.label, locale));
+  const week = weekFromGoogle((read.listing.location.regularHours?.periods ?? []) as never);
+  const booking = bookingLink(read.listing.placeActionLinks);
+  return {
+    name,
+    city: null,
+    hours: week ? hoursLines(week, locale) : null,
+    parking: yes("parking"),
+    accessibility: yes("accessibility"),
+    payments: yes("payment"),
+    services: (await servicesFrom((read.listing.location.serviceItems ?? []) as ServiceItem[], serviceTypesOf(loc))).map((s) => ({ name: s.name, price: s.googlePrice })),
+    bookingUrl: booking.kind === "none" ? null : booking.uri,
+  };
+}

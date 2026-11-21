@@ -14,7 +14,7 @@
 // Free never calls these (its post item is unchanged).
 
 import { revalidatePath } from "next/cache";
-import { GROW_POST_REDRAFTS, savedDraftUsable, cleanPostText, ctaChoices, offerTemplate, postProblems, postSystemPrompt, postTemplate, postUserMessage, weekStartOf, type PostCta, type PostOffer, type PostPhoto, type PostProblem, type PostTopic } from "@/lib/gbpPosts";
+import { GROW_POST_REDRAFTS, savedDraftUsable, cleanPostText, ctaChoices, isPostType, offerTemplate, postProblems, postSystemPrompt, postTemplate, postUserMessage, qaPostText, requestGivesStory, weekStartOf, type PostCta, type PostOffer, type PostPhoto, type PostProblem, type PostTopic, type PostType } from "@/lib/gbpPosts";
 import type { SpellingFlag } from "@/lib/serviceSpelling";
 import type { GbpEditBlock } from "@/lib/gbpEditGate.server";
 import type { LatestPost } from "@/lib/gbpPostsPublish.server";
@@ -27,10 +27,14 @@ type Blocked = { status: "blocked"; reason: GbpEditBlock | "not_found" | "free" 
 export type OpenPostDraftResult =
   | {
       status: "ok";
-      text: string;
+      /** The draft for each post type: an update (a general invitation), a Q&A ("Your questions, answered",
+       * from confirmed facts; null with fewer than 3 answers), the running coupon as an offer (null without one). */
+      drafts: { update: string; qa: string | null; offer: string | null };
+      /** The type shown first: the offer when a coupon is running, else the update. */
+      defaultType: PostType;
       /** PostAI couldn't write one that keeps Google's rules: the plain draft. */
       fallback: boolean;
-      /** Grow: "Write another" left this week; null: unlimited (Premium). */
+      /** Grow: custom drafts ("Write another", "Tell PostScore what you want") left this week; null: unlimited (Premium). */
       left: number | null;
       ctas: Array<{ type: PostCta; url: string | null }>;
       topic: PostTopic;
@@ -38,7 +42,7 @@ export type OpenPostDraftResult =
       serviceNames: string[];
       /** The owner's price list names (checked for typos, not trusted). */
       priceNames: string[];
-      /** An active coupon: the draft is about it, and Premium publishes it as a Google Offer post. */
+      /** An active coupon: the offer type, and Premium publishes it as a Google Offer post. */
       offer: PostOffer | null;
       /** Premium on a connected listing (or practice mode). `blockedToday`: can't go to Google today. */
       publish: { canEdit: boolean; practice: boolean; photos: PostPhoto[]; latest: LatestPost | null; blockedToday: "posted_today" | "daily_cap" | null } | null;
@@ -53,8 +57,8 @@ const cleanZone = async (timeZone: unknown) => (await import("@/lib/gbpPostsPubl
 
 /** "Wednesday, Nov 26" from the page — prompt context only. */
 const cleanDay = (day: unknown) => (typeof day === "string" ? day.replace(/[^A-Za-z0-9ÁÉÍÓÚÑÜáéíóúñü ,.]/g, "").slice(0, 40) || null : null);
-/** The owner's 1–2 facts for a real story (what, when, for whom). */
-const cleanFacts = (facts: unknown) => (typeof facts === "string" ? facts.replace(/\s+/g, " ").trim().slice(0, 300) || null : null);
+/** The owner's request ("Tell PostScore what you want"), at most 300 characters. */
+const cleanRequest = (request: unknown) => (typeof request === "string" ? request.replace(/\s+/g, " ").trim().slice(0, 300) || null : null);
 const cleanPromo = (id: unknown) => (typeof id === "string" && /^[0-9a-f-]{36}$/i.test(id) ? id : null);
 
 async function owner(businessId: string) {
@@ -67,24 +71,46 @@ async function owner(businessId: string) {
   return { db, admin: createAdminClient(), plan, premium: isPremiumPlan(plan) };
 }
 
-/** PostAI's draft, checked like the owner's own text — plus, for a draft,
- * no invented story unless the owner gave the facts; the plain draft otherwise. */
-async function draft(inputs: import("@/lib/gbpPostsContext.server").DraftInputs, day: string | null, extra: { ownerFacts?: string | null; offer?: PostOffer | null } = {}): Promise<{ text: string; fallback: boolean }> {
+type Inputs = import("@/lib/gbpPostsContext.server").DraftInputs;
+
+/** PostAI's draft, checked like the owner's own text — plus, for a draft, no invented story unless the
+ * owner's request gives the facts of one; the plain draft otherwise. */
+async function draft(inputs: Inputs, day: string | null, extra: { offer?: PostOffer | null; request?: string | null } = {}): Promise<{ text: string; fallback: boolean }> {
   const { callAnthropicMessage } = await import("@/lib/anthropicClient");
+  const story = requestGivesStory(extra.request);
   for (let attempt = 0; attempt < 2; attempt++) {
     try {
       const raw = await callAnthropicMessage({
-        system: postSystemPrompt(inputs.locale, "week", !!extra.ownerFacts, !!extra.offer),
-        userMessage: postUserMessage(inputs.facts, inputs.topic, { day, ownerFacts: extra.ownerFacts, offer: extra.offer }),
+        system: postSystemPrompt(inputs.locale, "week", story, !!extra.offer, !!extra.request),
+        userMessage: postUserMessage(inputs.facts, inputs.topic, { day, offer: extra.offer, request: extra.request, ownerFacts: story ? extra.request : null }),
         maxTokens: 400,
       });
       const text = cleanPostText(raw.trim().replace(/^["“]|["”]$/g, "")) ?? "";
-      if (text && text.length <= 700 && postProblems(text, { aiDraft: true, ownerFacts: extra.ownerFacts ?? (extra.offer ? extra.offer.offer : null) }).length === 0) return { text, fallback: false };
+      if (text && text.length <= 700 && postProblems(text, { aiDraft: true, ownerFacts: story ? extra.request : extra.offer ? extra.offer.offer : null }).length === 0) return { text, fallback: false };
     } catch {
       break;
     }
   }
   return { text: extra.offer ? offerTemplate(extra.offer, inputs.facts.name, inputs.locale) : postTemplate(inputs.topic, inputs.locale, inputs.facts), fallback: true };
+}
+
+/** "Your questions, answered" by PostAI from the confirmed pairs (and the owner's request); the plain pairs otherwise. */
+async function qaDraft(inputs: Inputs, entries: Array<{ q: string; a: string }>, request: string | null): Promise<{ text: string; fallback: boolean } | null> {
+  const plain = qaPostText(entries, inputs.locale);
+  if (!plain) return null;
+  const { callAnthropicMessage } = await import("@/lib/anthropicClient");
+  try {
+    const raw = await callAnthropicMessage({
+      system: postSystemPrompt(inputs.locale, "qa", false, false, !!request),
+      userMessage: postUserMessage(inputs.facts, inputs.topic, { day: null, answers: entries.map((e) => `${e.q} — ${e.a}`), request }),
+      maxTokens: 600,
+    });
+    const text = cleanPostText(raw.trim().replace(/^["“]|["”]$/g, "")) ?? "";
+    if (text && postProblems(text, { aiDraft: true }).length === 0) return { text, fallback: false };
+  } catch {
+    // the plain pairs below
+  }
+  return { text: plain, fallback: true };
 }
 
 async function savedDraft(admin: import("@supabase/supabase-js").SupabaseClient, businessId: string, week: string, language: string): Promise<string | null | "missing"> {
@@ -95,14 +121,15 @@ async function savedDraft(admin: import("@supabase/supabase-js").SupabaseClient,
   return rows.find(savedDraftUsable)?.text ?? null;
 }
 
-async function anotherCount(admin: import("@supabase/supabase-js").SupabaseClient, businessId: string, week: string): Promise<number> {
-  const { count, error } = await admin.from("post_drafts").select("id", { count: "exact", head: true }).eq("business_id", businessId).eq("week_start", week).eq("kind", "another");
-  return error ? (memAnother.get(`${businessId}|${week}`) ?? 0) : (count ?? 0);
+/** Custom drafts this week (Grow: 3) — "Write another" and "Tell PostScore what you want", for any post type or the description. */
+async function customDraftsUsed(admin: import("@supabase/supabase-js").SupabaseClient, businessId: string, week: string): Promise<number> {
+  const { count, error } = await admin.from("post_drafts").select("id", { count: "exact", head: true }).eq("business_id", businessId).eq("week_start", week).in("kind", ["another", "qa", "offer", "description"]);
+  return Math.max(error ? 0 : (count ?? 0), memAnother.get(`${businessId}|${week}`) ?? 0);
 }
 
-async function saveDraft(admin: import("@supabase/supabase-js").SupabaseClient, businessId: string, week: string, kind: "week" | "another", text: string, language: string) {
-  memDrafts.set(`${businessId}|${week}|${language}`, text);
-  if (kind === "another") memAnother.set(`${businessId}|${week}`, (memAnother.get(`${businessId}|${week}`) ?? 0) + 1);
+async function saveDraft(admin: import("@supabase/supabase-js").SupabaseClient, businessId: string, week: string, kind: "week" | "another" | "qa" | "offer" | "description", text: string, language: string) {
+  if (kind === "week" || kind === "another") memDrafts.set(`${businessId}|${week}|${language}`, text);
+  if (kind !== "week") memAnother.set(`${businessId}|${week}`, (memAnother.get(`${businessId}|${week}`) ?? 0) + 1);
   await admin.from("post_drafts").insert({ business_id: businessId, week_start: week, kind, text: text.slice(0, 1500), language });
 }
 
@@ -129,7 +156,14 @@ async function blockedToday(c: Ctx, timeZone: string): Promise<"posted_today" | 
   return approvals && approvalAllowed(approvals, now + 61_000) === "daily_cap" ? "daily_cap" : null;
 }
 
-/** This week's draft — or, with an active coupon (or `promoId`), the offer's. */
+/** The confirmed Q&A pairs (the same as the website FAQ), in the page's language. */
+async function qaEntries(admin: import("@supabase/supabase-js").SupabaseClient, businessId: string, inputs: Inputs) {
+  const [{ confirmedAnswerFacts }, { faqEntries }] = await Promise.all([import("@/lib/googleAnswers.server"), import("@/lib/googleAnswers")]);
+  const facts = await confirmedAnswerFacts(admin, businessId, inputs.facts.name, inputs.locale).catch(() => null);
+  return facts ? faqEntries(facts, inputs.locale) : [];
+}
+
+/** This week's drafts: the update (a general invitation, kept for the week), the Q&A, and the running coupon's offer. */
 export async function openPostDraft(businessId: string, timeZone: unknown, day: unknown = null, promoId: unknown = null): Promise<OpenPostDraftResult> {
   const o = await owner(businessId);
   if (!o) return { status: "blocked", reason: "not_found" };
@@ -140,31 +174,31 @@ export async function openPostDraft(businessId: string, timeZone: unknown, day: 
   const zone = await cleanZone(timeZone);
   const week = weekStartOf(Date.now(), zone);
   const offer = await loadActiveOffer(o.db, businessId, cleanPromo(promoId)).catch(() => null);
-  let text: string | null;
   let fallback = false;
+  // The update: this week's saved draft (in this language), else a new one.
+  const saved = await savedDraft(o.admin, businessId, week, inputs.locale);
+  let update = saved === "missing" ? (memDrafts.get(`${businessId}|${week}|${inputs.locale}`) ?? null) : saved;
+  if (update && postProblems(update, { aiDraft: true }).length) update = null;
+  if (!update) {
+    const d = await draft(inputs, cleanDay(day));
+    update = d.text;
+    fallback = d.fallback;
+    await saveDraft(o.admin, businessId, week, "week", update, inputs.locale).catch(() => null);
+  }
+  // The offer: kept in memory by coupon and language (it changes when the coupon does).
+  let offerText: string | null = null;
   if (offer) {
-    // The offer's draft: kept in memory by coupon and language (it changes when the coupon does).
     const key = `offer|${offer.promoId}|${offer.offer}|${offer.code}|${offer.expiry}|${inputs.locale}`;
-    text = memDrafts.get(key) ?? null;
-    if (text && postProblems(text, { aiDraft: true, ownerFacts: offer.offer }).length) text = null;
-    if (!text) {
-      const d = await draft(inputs, cleanDay(day), { offer });
-      text = d.text;
-      fallback = d.fallback;
-      memDrafts.set(key, text);
-    }
-  } else {
-    const saved = await savedDraft(o.admin, businessId, week, inputs.locale);
-    text = saved === "missing" ? (memDrafts.get(`${businessId}|${week}|${inputs.locale}`) ?? null) : saved;
-    if (text && postProblems(text, { aiDraft: true }).length) text = null;
-    if (!text) {
-      const d = await draft(inputs, cleanDay(day));
-      text = d.text;
-      fallback = d.fallback;
-      await saveDraft(o.admin, businessId, week, "week", text, inputs.locale).catch(() => null);
+    offerText = memDrafts.get(key) ?? null;
+    if (offerText && postProblems(offerText, { aiDraft: true, ownerFacts: offer.offer }).length) offerText = null;
+    if (!offerText) {
+      offerText = (await draft(inputs, cleanDay(day), { offer })).text;
+      memDrafts.set(key, offerText);
     }
   }
-  const left = o.premium ? null : Math.max(0, GROW_POST_REDRAFTS - (await anotherCount(o.admin, businessId, week)));
+  // The Q&A: the confirmed pairs as they are (no AI until "Write another").
+  const qa = qaPostText(await qaEntries(o.admin, businessId, inputs), inputs.locale);
+  const left = o.premium ? null : Math.max(0, GROW_POST_REDRAFTS - (await customDraftsUsed(o.admin, businessId, week)));
   const ctas = ctaChoices(inputs.links);
   let publish: Extract<OpenPostDraftResult, { status: "ok" }>["publish"] = null;
   if (o.premium) {
@@ -176,27 +210,81 @@ export async function openPostDraft(businessId: string, timeZone: unknown, day: 
       publish = { canEdit: c.canEdit, practice: c.practice, photos: photos?.ok ? photos.data : [], latest: await latest(c).catch(() => null), blockedToday: await blockedToday(c, zone).catch(() => null) };
     }
   }
-  return { status: "ok", text, fallback, left, ctas, topic: inputs.topic, serviceNames: inputs.serviceNames, priceNames: inputs.facts.prices.map((p) => p.service), offer, publish };
+  return {
+    status: "ok",
+    drafts: { update, qa, offer: offerText },
+    defaultType: offer ? "offer" : "update",
+    fallback,
+    left,
+    ctas,
+    topic: inputs.topic,
+    serviceNames: inputs.serviceNames,
+    priceNames: inputs.facts.prices.map((p) => p.service),
+    offer,
+    publish,
+  };
 }
 
-export type WriteAnotherResult = { status: "ok"; text: string; fallback: boolean; left: number | null } | { status: "limit" } | Blocked;
+export type WriteAnotherResult = { status: "ok"; text: string; fallback: boolean; left: number | null } | { status: "limit" } | { status: "none" } | Blocked;
 
-/** "Write another" — or, with the owner's 1–2 facts, a post about what really happened (written only from those). */
-export async function writeAnotherPost(businessId: string, timeZone: unknown, day: unknown = null, ownerFacts: unknown = null, promoId: unknown = null): Promise<WriteAnotherResult> {
+/** "Write another" — or "Tell PostScore what you want" (`request`) — for the post type shown. Same rules:
+ * no invented events, prices or results (a real story only from facts the owner gives), Google's post rules.
+ * Grow: 3 custom drafts a week; Premium: unlimited. */
+export async function writeAnotherPost(businessId: string, timeZone: unknown, day: unknown = null, request: unknown = null, promoId: unknown = null, type: unknown = "update"): Promise<WriteAnotherResult> {
   const o = await owner(businessId);
   if (!o) return { status: "blocked", reason: "not_found" };
   if (o.plan === "free") return { status: "blocked", reason: "free" };
   const week = weekStartOf(Date.now(), await cleanZone(timeZone));
-  const used = await anotherCount(o.admin, businessId, week);
+  const used = await customDraftsUsed(o.admin, businessId, week);
   if (!o.premium && used >= GROW_POST_REDRAFTS) return { status: "limit" };
   const { loadDraftInputs, loadActiveOffer } = await import("@/lib/gbpPostsContext.server");
   const inputs = await loadDraftInputs(o.db, o.admin, businessId);
   if (!inputs) return { status: "blocked", reason: "not_found" };
-  const facts = cleanFacts(ownerFacts);
-  const offer = facts ? null : await loadActiveOffer(o.db, businessId, cleanPromo(promoId)).catch(() => null);
-  const d = await draft(inputs, cleanDay(day), { ownerFacts: facts, offer });
-  await saveDraft(o.admin, businessId, week, "another", d.text, inputs.locale).catch(() => null);
+  const req = cleanRequest(request);
+  const kind: PostType = isPostType(type) ? type : "update";
+  let d: { text: string; fallback: boolean } | null;
+  if (kind === "qa") d = await qaDraft(inputs, await qaEntries(o.admin, businessId, inputs), req);
+  else if (kind === "offer") {
+    const offer = await loadActiveOffer(o.db, businessId, cleanPromo(promoId)).catch(() => null);
+    d = offer ? await draft(inputs, cleanDay(day), { offer, request: req }) : null;
+  } else d = await draft(inputs, cleanDay(day), { request: req });
+  if (!d) return { status: "none" };
+  await saveDraft(o.admin, businessId, week, kind === "update" ? "another" : kind, d.text, inputs.locale).catch(() => null);
   return { status: "ok", text: d.text, fallback: d.fallback, left: o.premium ? null : Math.max(0, GROW_POST_REDRAFTS - used - 1) };
+}
+
+/** "Tell PostScore what you want" for the description (the answers' step 1): PostAI under Google's
+ * description rules, from what PostScore knows plus the owner's request. Grow: counts toward the 3. */
+export async function redraftDescription(businessId: string, request: unknown, timeZone: unknown): Promise<WriteAnotherResult> {
+  const o = await owner(businessId);
+  if (!o) return { status: "blocked", reason: "not_found" };
+  if (o.plan === "free") return { status: "blocked", reason: "free" };
+  const week = weekStartOf(Date.now(), await cleanZone(timeZone));
+  const used = await customDraftsUsed(o.admin, businessId, week);
+  if (!o.premium && used >= GROW_POST_REDRAFTS) return { status: "limit" };
+  const [{ loadDraftInputs }, { descriptionProblems, descriptionSystemPrompt }, { callAnthropicMessage }] = await Promise.all([import("@/lib/gbpPostsContext.server"), import("@/lib/gbpProfileEdits"), import("@/lib/anthropicClient")]);
+  const inputs = await loadDraftInputs(o.db, o.admin, businessId);
+  if (!inputs) return { status: "blocked", reason: "not_found" };
+  const f = inputs.facts;
+  const req = cleanRequest(request);
+  const facts = [`Name: ${f.name}`, f.category ? `Category: ${f.category}` : null, f.city ? `City: ${f.city}` : null, [...f.services, ...inputs.serviceNames].length ? `Services: ${Array.from(new Set([...f.services, ...inputs.serviceNames])).slice(0, 15).join(", ")}` : null, f.differentiator ? `What sets it apart (the owner's words): ${f.differentiator.slice(0, 300)}` : null].filter(Boolean);
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      const raw = await callAnthropicMessage({
+        system: `${descriptionSystemPrompt(inputs.locale)}\nFollow the owner's request between <owner_request> tags (what to mention, the tone, the length) — but add no fact that isn't in the facts or the request itself.`,
+        userMessage: `<facts>\n${facts.join("\n")}\n</facts>${req ? `\n\n<owner_request>\n${req}\n</owner_request>` : ""}\n\nWrite at least 300 characters.`,
+        maxTokens: 400,
+      });
+      const text = raw.trim().replace(/^["“]|["”]$/g, "");
+      if (text && descriptionProblems(text).length === 0 && postProblems(text, { aiDraft: true, ownerFacts: requestGivesStory(req) ? req : null }).length === 0) {
+        await saveDraft(o.admin, businessId, week, "description", text, inputs.locale).catch(() => null);
+        return { status: "ok", text, fallback: false, left: o.premium ? null : Math.max(0, GROW_POST_REDRAFTS - used - 1) };
+      }
+    } catch {
+      break;
+    }
+  }
+  return { status: "error", error: "unavailable" };
 }
 
 export type PublishPostActionResult =

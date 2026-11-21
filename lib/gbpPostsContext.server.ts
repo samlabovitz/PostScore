@@ -10,6 +10,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { GoogleWriteContext, GoogleWriteBlocked } from "@/lib/gbpWriteContext.server";
 import type { PostTarget } from "@/lib/gbpPosts.server";
 import type { PostFacts, PostOffer, PostTopic } from "@/lib/gbpPosts";
+import { applySpellingFix, spellingFlags } from "@/lib/serviceSpelling";
 
 export type PostContext =
   | (Extract<GoogleWriteContext, { ok: true }> & { post: PostTarget; postFetch: typeof fetch; refreshToken: () => Promise<string | null> })
@@ -36,6 +37,11 @@ export async function postContext(businessId: string): Promise<PostContext> {
     return t.status === "ok" ? t.accessToken : null;
   };
   return { ...c, post: { businessId, userId: c.target.userId, parent: `${conn.google_account_id}/${conn.google_location_id}`, accessToken: c.target.accessToken, languageCode }, postFetch: fetch, refreshToken };
+}
+
+/** A service name with its likely typos fixed ("baylage" → "balayage"), against common names and the listing's own. */
+export function spelledRight(name: string, listed: string[]): string {
+  return spellingFlags(name, { services: listed }).reduce((n, f) => applySpellingFix(n, f), name);
 }
 
 export interface DraftInputs {
@@ -66,17 +72,17 @@ export async function loadActiveOffer(db: SupabaseClient, businessId: string, pr
 export async function loadDraftInputs(db: SupabaseClient, admin: SupabaseClient, businessId: string): Promise<DraftInputs | null> {
   const { data } = await db.from("businesses").select("id, place_id, listing_mode, niche_id, services, differentiator, language").eq("id", businessId).maybeSingle();
   if (!data) return null;
-  const [{ withLiveListingFor }, { withOwnerDetailsFor }, { normalizeLocale }, { extractCityFromAddress }, { ideaTypeOf }] = await Promise.all([
+  const [{ withLiveListingFor }, { withOwnerDetailsFor }, { viewLocale }, { extractCityFromAddress }, { ideaTypeOf }] = await Promise.all([
     import("@/lib/ownerListing.server"),
     import("@/lib/ownerDetails.server"),
-    import("@/lib/i18n"),
+    import("@/lib/viewLocale.server"),
     import("@/lib/websiteTrust"),
     import("@/lib/listingIdeas"),
   ]);
   const live = (await withLiveListingFor(admin, businessId, data).catch(() => data)) as typeof data & { name?: string | null; address?: string | null };
   const b = (await withOwnerDetailsFor(admin, businessId, live).catch(() => live)) as Record<string, unknown>;
   const str = (v: unknown) => (typeof v === "string" && v.trim() ? v.trim() : null);
-  const locale = normalizeLocale(str(b.language));
+  const locale = viewLocale(str(b.language));
   // The real listing (connected owners): categories, services, the booking link.
   const real = await (async () => {
     const { readRealListingCached } = await import("@/lib/gbpRealListing.server");
@@ -107,7 +113,9 @@ export async function loadDraftInputs(db: SupabaseClient, admin: SupabaseClient,
       category: categories[0] ?? str(b.category),
       city: address ? (extractCityFromAddress(address) ?? null) : null,
       services,
-      prices: ((prices ?? []) as Array<{ service: string; price: number }>).filter((p) => p.service && Number(p.price) > 0).map((p) => ({ service: p.service, price: `$${Number(p.price)}` })),
+      // A likely typo in the owner's price list ("baylage") is spelled right in what PostAI reads — the
+      // draft is Ready; the price list itself is flagged where the owner can fix it (the answers' step 2).
+      prices: ((prices ?? []) as Array<{ service: string; price: number }>).filter((p) => p.service && Number(p.price) > 0).map((p) => ({ service: spelledRight(p.service, listed), price: `$${Number(p.price)}` })),
       differentiator: str(b.differentiator),
       hasBooking: !!booking,
     },

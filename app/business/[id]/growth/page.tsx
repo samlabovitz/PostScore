@@ -30,7 +30,7 @@ import { businessRowToScoringInput } from "@/lib/scoring";
 import { buildPriceCheckMove } from "@/lib/growthMoves";
 import { buildWeeklyChecklistItems, weekStartFor } from "@/lib/weeklyChecklist";
 import { resolveBizProfile } from "@/config/bizProfiles";
-import { normalizeLocale } from "@/lib/i18n";
+import { viewLocale } from "@/lib/viewLocale.server";
 import { GrowthView } from "./GrowthView";
 import { canConnectGbp, getPlan, hasPremium } from "@/lib/premium";
 import { SEARCH_DEMAND_EXAMPLE } from "@/lib/gbp/searchDemand";
@@ -76,7 +76,7 @@ export default async function GrowthPage({ params, searchParams = {} }: { params
   }
 
   const { business } = summary;
-  const locale = normalizeLocale(business.language);
+  const locale = viewLocale(business.language);
   const profile = resolveBizProfile(
     business.category,
     business.primary_type,

@@ -7,7 +7,7 @@ import { Card } from "@/components/ui/Card";
 import { getBusinessSummary } from "@/app/actions/businesses";
 import { getPrices, getPricingAssessment } from "@/app/actions/pricing";
 import { resolveBizProfile } from "@/config/bizProfiles";
-import { normalizeLocale } from "@/lib/i18n";
+import { viewLocale } from "@/lib/viewLocale.server";
 import { PricingView } from "./PricingView";
 import { getLastScanAt } from "@/app/actions/scoring";
 import { StaleScanNotice } from "@/components/scoring/StaleScanNotice";
@@ -41,7 +41,7 @@ export default async function PricingPage({ params }: { params: { id: string } }
   }
 
   const { business } = summary;
-  const locale = normalizeLocale(business.language);
+  const locale = viewLocale(business.language);
   const profile = resolveBizProfile(
     business.category,
     business.primary_type,

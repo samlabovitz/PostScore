@@ -1,5 +1,6 @@
 "use server";
 
+import { viewLocale } from "@/lib/viewLocale.server";
 import { loadOwnerDetails, withOwnerDetailsFor } from "@/lib/ownerDetails.server";
 import { gradedWebsite, listingLinkBroken } from "@/lib/businessWebsite";
 import { createClient } from "@/lib/supabase/server";
@@ -20,7 +21,7 @@ import {
   type StarterSiteTemplateData,
 } from "@/lib/starterSiteScoring";
 import { resolveBizProfile } from "@/config/bizProfiles";
-import { normalizeLocale, type Locale } from "@/lib/i18n";
+import { type Locale } from "@/lib/i18n";
 import { sanitizeOwnerHours, type OwnerHours } from "@/lib/ownerHours";
 import { sanitizeStarterSiteDetails, type StarterSiteDetails } from "@/lib/starterSiteDetails";
 import { businessTimeZone } from "@/lib/businessTimeZone";
@@ -273,7 +274,7 @@ export async function getWebsitePageData(businessId: string): Promise<GetWebsite
   const siteRow = { website: data.website, verified_website_url: verifiedWebsiteUrl, owner_website_url: ownerWebsite?.url ?? null, website_analysis_json: data.website_analysis_json };
   const graded = gradedWebsite(siteRow);
   const gradedSite = graded ? { ...graded, listingBroken: listingLinkBroken(siteRow) } : null;
-  const locale = normalizeLocale(data.language);
+  const locale = viewLocale(data.language);
   const profile = resolveBizProfile(
     data.category,
     data.primary_type,

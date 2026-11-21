@@ -72,6 +72,8 @@ export function CouponsSection({
 
       <PlanStrip plan={plan} />
 
+      {/* "Deals → Go there" lands here: the new-offer designer. */}
+      <div id="new-offer" className="scroll-mt-20" />
       <CouponBuilder
         businessId={businessId}
         plan={plan}

@@ -250,9 +250,9 @@ export async function draftProfileDescription(businessId: string): Promise<Draft
     .maybeSingle();
   // Day 23 2d-4: the listing's facts as Google shows them now (Business Profile — this is a connected owner).
   const b = (data ? await withOwnerDetailsFor(c.admin, businessId, await withLiveListingFor(c.admin, businessId, data)) : {}) as Record<string, unknown>;
-  const { normalizeLocale } = await import("@/lib/i18n");
+  const { viewLocale } = await import("@/lib/viewLocale.server");
   const { extractCityFromAddress } = await import("@/lib/websiteTrust");
-  const locale = normalizeLocale(typeof b.language === "string" ? b.language : null);
+  const locale = viewLocale(typeof b.language === "string" ? b.language : null);
   const facts = [
     `Name: ${b.name ?? c.business.name ?? ""}`,
     b.category ? `Category: ${b.category}` : null,

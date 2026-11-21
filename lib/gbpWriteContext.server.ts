@@ -14,7 +14,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { GbpEditBlock } from "@/lib/gbpEditGate.server";
 import type { GbpEditError, GbpEditTarget } from "@/lib/gbpAttributes.server";
 import { googleWritesAllowed, reviewRepliesPracticeOn } from "@/lib/gbpReviewPractice";
-import { normalizeLocale } from "@/lib/i18n";
+import { viewLocale } from "@/lib/viewLocale.server";
 
 export interface GoogleWriteContext {
   ok: true;
@@ -41,7 +41,7 @@ export async function googleWriteContext(businessId: string): Promise<GoogleWrit
     return {
       ok: true,
       admin: gate.admin,
-      target: { businessId, userId: gate.userId, locationName: practice.PRACTICE_PROFILE_LOCATION, accessToken: "practice-token", locale: normalizeLocale(gate.business.language) },
+      target: { businessId, userId: gate.userId, locationName: practice.PRACTICE_PROFILE_LOCATION, accessToken: "practice-token", locale: viewLocale(gate.business.language) },
       practice: true,
       canEdit: true,
       fetchImpl: practice.practiceProfileFetch(businessId),

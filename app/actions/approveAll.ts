@@ -47,12 +47,12 @@ export async function draftWeekReplies(businessId: string): Promise<WeekRepliesR
   const unanswered = page.reviews.filter((r) => !r.reply && !pending.has(r.reviewId)).sort((a, b) => (b.createTime ?? "").localeCompare(a.createTime ?? ""));
   const list = unanswered.slice(0, MAX_REPLIES);
 
-  const [{ createClient }, { withOwnerDetailsFor }, rr, { reviewLanguage }, { normalizeLocale }, { callAnthropicMessage }] = await Promise.all([
+  const [{ createClient }, { withOwnerDetailsFor }, rr, { reviewLanguage }, { viewLocale }, { callAnthropicMessage }] = await Promise.all([
     import("@/lib/supabase/server"),
     import("@/lib/ownerDetails.server"),
     import("@/lib/reviewReplies"),
     import("@/lib/gbpReviewInbox"),
-    import("@/lib/i18n"),
+    import("@/lib/viewLocale.server"),
     import("@/lib/anthropicClient"),
   ]);
   const db = createClient();
@@ -74,7 +74,7 @@ export async function draftWeekReplies(businessId: string): Promise<WeekRepliesR
       if (!input) return { ...base, reply: null };
       try {
         const reply = rr.cleanReply(
-          await callAnthropicMessage({ system: rr.replySystemPrompt(reviewLanguage(r.comment) ?? normalizeLocale((biz as { language?: string | null } | null)?.language ?? null), name), userMessage: rr.replyUserMessage(input), maxTokens: 300 })
+          await callAnthropicMessage({ system: rr.replySystemPrompt(reviewLanguage(r.comment) ?? viewLocale((biz as { language?: string | null } | null)?.language ?? null), name), userMessage: rr.replyUserMessage(input), maxTokens: 300 })
         );
         if (!reply || rr.replyBreaksRules(reply)) return { ...base, reply: null };
         drafts.set(key, { at: now, reply });

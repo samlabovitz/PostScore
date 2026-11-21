@@ -11,6 +11,7 @@ import type { BusinessSummary } from "@/app/actions/businesses";
 import { getCurrentUserEmail } from "@/app/actions/auth";
 import { rememberShellBusiness } from "@/components/layout/shellMemory";
 import { LocaleProvider, normalizeLocale, t } from "@/lib/i18n";
+import { useDevLocale } from "@/components/layout/DevLocale";
 import { LegalLinks } from "@/components/legal/LegalPage";
 import { SinceLastVisit } from "@/components/visits/SinceLastVisit";
 import { UpgradeProvider } from "@/components/upgrade/UpgradeContext";
@@ -44,7 +45,9 @@ export function DashboardShell({
   // No business (the home list, the intake page, a not-yet-loaded error
   // state) safely normalizes to DEFAULT_LOCALE — same never-throws
   // guarantee normalizeLocale() always gives.
-  const locale = normalizeLocale(business?.language);
+  // Local development only: devShot's language cookie (components/layout/DevLocale.tsx); null in production.
+  const devLocale = useDevLocale();
+  const locale = devLocale ?? normalizeLocale(business?.language);
   // This shell is a client component (needed for the mobile nav's own
   // open/close state), so it can't read the session directly the way
   // every server-rendered page already does — fetched once via a tiny

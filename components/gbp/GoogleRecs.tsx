@@ -35,7 +35,7 @@ export function recText(rec: Rec, locale: Locale, type: IdeaType | null): { text
       return { text: t(locale, K("rec.photos"), { count: rec.plan.count, list }), sub: rec.plan.fromMissing ? t(locale, K("rec.photos.missing")) : null };
     }
     case "replies":
-      return { text: t(locale, K(rec.plan.count === 1 ? "rec.repliesOne" : "rec.replies"), { count: rec.plan.count, minutes: rec.plan.minutes }), sub: null };
+      return { text: t(locale, K(rec.plan.count === 1 ? "rec.repliesOne" : "rec.replies"), { count: rec.plan.count, minutes: rec.plan.minutes }), sub: t(locale, K(rec.plan.total === 1 ? "rec.replies.subOne" : "rec.replies.sub"), { replied: rec.plan.replied, total: rec.plan.total }) };
     case "posts": {
       const topic = t(locale, K(`ideas.posts.topic.${rec.plan.topic}`));
       const text =
@@ -114,9 +114,9 @@ export function recButtonLabel(rec: Rec, locale: Locale, ctx: { premium: boolean
 }
 
 /** At least 44px tall, 14px text (the Google Profile tab's buttons). */
-const BUTTON = "inline-flex min-h-[44px] shrink-0 items-center whitespace-nowrap rounded-lg border border-ink bg-ink px-4 text-[14px] font-semibold text-paper";
+const BUTTON = "inline-flex min-h-[44px] shrink-0 items-center whitespace-nowrap rounded-lg border border-ink bg-ink px-4 text-[14px] font-semibold text-paper lg:min-h-[40px] lg:px-3.5";
 /** The secondary (outlined) look: Grow's "How to do it". */
-const BUTTON_OUTLINE = "inline-flex min-h-[44px] shrink-0 items-center whitespace-nowrap rounded-lg border border-paper-line bg-white px-4 text-[14px] font-semibold text-ink hover:border-ink";
+const BUTTON_OUTLINE = "inline-flex min-h-[44px] shrink-0 items-center whitespace-nowrap rounded-lg border border-paper-line bg-white px-4 text-[14px] font-semibold text-ink hover:border-ink lg:min-h-[36px] lg:px-3";
 
 /** Premium: one button. */
 export function RecPremiumButton({ rec, businessId, canEdit, className }: { rec: Rec; businessId: string; canEdit: boolean; className?: string }) {
@@ -191,9 +191,9 @@ export function RecItem({ rec, businessId, premium, canEdit, type, drafts = fals
   const locale = useLocale();
   const x = recText(rec, locale, type);
   return (
-    <li className={cn("flex flex-col gap-2.5 border-t border-paper-line py-4 first:border-t-0", premium && "sm:flex-row sm:items-center sm:justify-between sm:gap-4")} data-testid={`rec-${rec.kind}`}>
+    <li className={cn("flex flex-col gap-2.5 border-t border-paper-line py-4 first:border-t-0 lg:gap-1.5 lg:py-2.5", premium && "sm:flex-row sm:items-center sm:justify-between sm:gap-4")} data-testid={`rec-${rec.kind}`}>
       <div className="min-w-0">
-        <p className="text-[15px] font-semibold leading-snug text-ink">{x.text}</p>
+        <p className="text-[15px] font-medium leading-snug text-ink">{x.text}</p>
         {x.sub && <p className="mt-0.5 text-[13px] leading-snug text-ink-mute">{x.sub}</p>}
       </div>
       {premium ? <RecPremiumButton rec={rec} businessId={businessId} canEdit={canEdit} /> : <RecSteps rec={rec} businessId={businessId} drafts={drafts} />}

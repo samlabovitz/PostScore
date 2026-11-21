@@ -150,7 +150,7 @@ describe("Google's reviews, as the page shows them (pure)", () => {
     expect(reviewLanguage("👍")).toBeNull();
     expect(replySystemPrompt("es", "Hair express")).toContain("Spanish, addressing the reviewer formally (usted)");
     // draftReviewReply uses the review's language first, the business's when it can't tell.
-    expect(readFileSync("app/actions/reviewReplies.ts", "utf8")).toContain("replySystemPrompt(reviewLanguage(input.review) ?? normalizeLocale(business.language)");
+    expect(readFileSync("app/actions/reviewReplies.ts", "utf8")).toContain("replySystemPrompt(reviewLanguage(input.review) ?? viewLocale(business.language)");
   });
 });
 

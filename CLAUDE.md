@@ -50,7 +50,7 @@ Next.js 14 + Supabase. These rules are standing: follow them in every session.
   - It signs in through `/dev/test-login` as `DEV_TEST_LOGIN_EMAIL` / `DEV_TEST_LOGIN_PASSWORD` from `.env.local`, which the server reads. Never type, print or commit them.
   - The route only works under `next dev` on localhost. It returns 404 in production, in tests, from another host or machine, or when those variables aren't set; the `x-dev-test-login` header says why.
   - Only that account's businesses can be checked.
-  - `--lang=es` sets those businesses' saved language for the screenshots and always puts the owner's setting back.
+  - `--lang=es` shows the pages (and drafts) in Spanish through a dev-only cookie in the script's own browser — it never changes a business's saved language.
   - `--plan=free|grow|premium|multi` views the pages as that plan, in the script's own browser only. Free and paid plans show different Website cards, so check both.
   - It uses `playwright-core` with the installed Google Chrome (no browser download).
 

@@ -23,13 +23,14 @@ import { undoProfileEditAction } from "@/app/actions/gbpProfileEdits";
 import { undoServices } from "@/app/actions/gbpListingFields";
 import { undoCustomerDetailsAction } from "@/app/actions/gbpCustomerDetails";
 import type { AnswersPayload, AnswersResult, PartResult } from "@/lib/googleAnswers.server";
-import { detailLabel, detailPhrase, faqEntries, faqHtml, goodToKnowAnswers, ownerPriceFor, parsePrice, priceText, type AnswerFacts, type AnswerPart, type DetailPart } from "@/lib/googleAnswers";
+import { detailLabel, detailPhrase, faqEntries, faqHtml, ownerPriceFor, parsePrice, priceText, type AnswerFacts, type AnswerPart, type DetailPart } from "@/lib/googleAnswers";
 import { applySpellingFix, spellingFlags, type SpellingFlag } from "@/lib/serviceSpelling";
 import { descriptionProblems } from "@/lib/gbpProfileEdits";
-import { goodToKnowText } from "@/lib/gbpPosts";
+import { qaPostText } from "@/lib/gbpPosts";
+import { redraftDescription } from "@/app/actions/gbpPosts";
 import { DESCRIPTION_TARGET } from "@/lib/googleRecommendations";
-import { t, type MessageKey, useLocale } from "@/lib/i18n";
-import { PostPreview, usePostDraft, W_BUTTON, W_BUTTON_SOFT, failedText } from "@/components/gbp/PostPreview";
+import { t, type MessageKey, useLocale, useTimeZone } from "@/lib/i18n";
+import { PostPreview, RequestBox, usePostDraft, W_BUTTON, W_BUTTON_SOFT, failedText } from "@/components/gbp/PostPreview";
 import { cn } from "@/lib/utils";
 
 const W = (key: string) => `dashboard.googleTab.w.${key}` as MessageKey;
@@ -293,6 +294,7 @@ export function AnswersPreview({ businessId, state, standaloneApply = true }: { 
           ))}
           {!d.descriptionDraft && !d.listing.description && <p className="text-[13px] text-ink-mute">{t(locale, W("ans.desc.noDraft"))}</p>}
           <SpellingLines state={state} part="description" />
+          {!locked("description") && <DescriptionRequest businessId={businessId} state={state} />}
           {state.results?.description && <PartResultLine businessId={businessId} part="description" result={state.results.description} onUndone={() => undefined} />}
         </Step>
         <Step n={2} title={t(locale, W("ans.services.title"))} done={!missing.includes("services")} testId="answers-services">
@@ -383,6 +385,37 @@ export function AnswersPreview({ businessId, state, standaloneApply = true }: { 
   );
 }
 
+/** "Tell PostScore what you want" for the description: the same box and rules as the post's. */
+function DescriptionRequest({ businessId, state }: { businessId: string; state: AnswersState }) {
+  const locale = useLocale();
+  const timeZone = useTimeZone();
+  const [busy, setBusy] = useState(false);
+  const [limited, setLimited] = useState(false);
+  const [failed, setFailed] = useState(false);
+  const chips = [t(locale, W("req.chip.desc.specialties")), t(locale, W("req.chip.desc.area")), t(locale, W("req.chip.shorter")), t(locale, W("req.chip.friendlier"))];
+  return (
+    <>
+      <RequestBox
+        chips={chips}
+        busy={busy}
+        limited={limited}
+        testId="description-request"
+        onWrite={async (request) => {
+          setBusy(true);
+          setFailed(false);
+          const r = await redraftDescription(businessId, request, timeZone).catch(() => null);
+          setBusy(false);
+          if (r?.status === "ok") state.setDescription(r.text);
+          else if (r?.status === "limit") setLimited(true);
+          else setFailed(true);
+        }}
+      />
+      {limited && <p className="text-[13px] text-ink-mute">{t(locale, W("post.limit"))}</p>}
+      {failed && <p className="text-[13px] text-red">{t(locale, W("post.failed"))}</p>}
+    </>
+  );
+}
+
 /** "Did you mean 'balayage'?" — one click fixes it; "Keep" leaves it as written. Nothing with a flag goes to Google. */
 export function SpellingLines({ state, part }: { state: AnswersState; part: "description" | "services" }) {
   const locale = useLocale();
@@ -412,8 +445,10 @@ function AnswersExtras({ businessId, state, premium }: { businessId: string; sta
   const [open, setOpen] = useState<"post" | "faq" | null>(null);
   const facts = answerFacts(state);
   const language = state.data?.locale ?? locale;
-  const gtk = facts ? goodToKnowText(facts.name, goodToKnowAnswers(facts, language), language) : null;
-  const faq = facts ? faqHtml(faqEntries(facts, language), language) : "";
+  // "Your questions, answered": the same confirmed pairs as the website FAQ.
+  const entries = facts ? faqEntries(facts, language) : [];
+  const gtk = qaPostText(entries, language);
+  const faq = faqHtml(entries, language);
   const card = (id: "post" | "faq", title: string, body: string) => (
     <div className="flex flex-col gap-2.5 rounded-xl border border-paper-deep bg-white p-4 shadow-card" data-testid={`answers-extra-${id}`}>
       <p className="text-[15px] font-semibold text-ink">{title}</p>
@@ -427,7 +462,7 @@ function AnswersExtras({ businessId, state, premium }: { businessId: string; sta
     <div className="flex flex-col gap-3" data-testid="answers-extras">
       <p className="text-[13px] font-semibold text-ink-soft">{t(locale, W("ans.extra.title"))}</p>
       <div className="grid gap-3 sm:grid-cols-2">
-        {gtk && card("post", t(locale, W("ans.gtk.open")), t(locale, W("ans.extra.post")))}
+        {gtk && card("post", t(locale, W("ans.qa.open")), t(locale, W("ans.extra.qa")))}
         {card("faq", t(locale, W("ans.faq.open")), t(locale, W("ans.extra.faq")))}
       </div>
       {open === "post" && gtk && <div className="rounded-xl border border-paper-line bg-white p-4">{premium ? <GoodToKnowPost businessId={businessId} text={gtk} /> : <CopyBlock text={gtk} rows={4} />}</div>}
@@ -442,8 +477,8 @@ function AnswersExtras({ businessId, state, premium }: { businessId: string; sta
 }
 
 function GoodToKnowPost({ businessId, text }: { businessId: string; text: string }) {
-  const state = usePostDraft(businessId, { day: null, auto: true, initialText: text });
-  return <PostPreview businessId={businessId} state={state} kind="good_to_know" />;
+  const state = usePostDraft(businessId, { day: null, auto: true, initialText: text, initialType: "qa" });
+  return <PostPreview businessId={businessId} state={state} kind="qa" />;
 }
 
 /** Grow: the same drafts to copy into the Business Profile. */
@@ -462,6 +497,7 @@ export function AnswersCopy({ businessId, state }: { businessId: string; state: 
         <>
           <p className="text-[13px] font-bold uppercase tracking-[0.08em] text-ink-soft">{t(locale, W("ans.desc.title"))}</p>
           <CopyBlock text={state.description} rows={5} />
+          <DescriptionRequest businessId={businessId} state={state} />
         </>
       )}
       {missing.includes("services") && priced.length > 0 && (
