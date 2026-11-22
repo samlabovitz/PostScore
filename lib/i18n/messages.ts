@@ -5533,7 +5533,6 @@ export type MessageKey =
   | "dashboard.reports.v2.today.editGoogle"
   | "dashboard.reports.v2.today.replyGoogle"
   | "dashboard.reports.v2.headed.posts"
-  | "dashboard.reports.v2.headed.insights"
   | "dashboard.reports.v2.headed.everyone"
   | "dashboard.reports.v2.headed.editGoogle"
   | "dashboard.reports.v2.upgradeTitle"
@@ -12312,7 +12311,6 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.reports.v2.today.editGoogle": "Edit your Google listing from PostScore, with undo",
     "dashboard.reports.v2.today.replyGoogle": "Reply to your Google reviews from PostScore",
     "dashboard.reports.v2.headed.posts": "Your Google posts and offers drafted and scheduled for you; you just approve",
-    "dashboard.reports.v2.headed.insights": "See who searches for you, and who calls or clicks",
     "dashboard.reports.v2.headed.everyone": "Google edits and replies for every business (out of Beta)",
     "dashboard.reports.v2.headed.editGoogle": "Fix Google listing details in one tap, with undo",
     "dashboard.reports.v2.upgradeTitle": "This is one week. PostScore does it every week.",
@@ -19102,7 +19100,6 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.reports.v2.today.editGoogle": "Edite su ficha de Google desde PostScore, con opción de deshacer",
     "dashboard.reports.v2.today.replyGoogle": "Responda a sus reseñas de Google desde PostScore",
     "dashboard.reports.v2.headed.posts": "Sus publicaciones y ofertas de Google redactadas y programadas; usted solo las aprueba",
-    "dashboard.reports.v2.headed.insights": "Vea quién le busca y quién le llama o hace clic",
     "dashboard.reports.v2.headed.everyone": "Ediciones y respuestas en Google para todos los negocios (fuera de Beta)",
     "dashboard.reports.v2.headed.editGoogle": "Arregle datos de su ficha de Google con un toque, con opción de deshacer",
     "dashboard.reports.v2.upgradeTitle": "Esto es una semana. PostScore lo hace cada semana.",

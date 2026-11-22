@@ -331,7 +331,8 @@ export function todayItems(plan: Plan, locale: Locale, launched: boolean = GOOGL
 }
 
 export function headedItems(plan: Plan, locale: Locale, launched: boolean = GOOGLE_WRITES_FOR_EVERYONE): string[] {
-  const items = [t(locale, K("headed.posts")), t(locale, K("headed.insights"))];
+  // Google results (who searches, calls, clicks) are live since Day 22B — not "headed".
+  const items = [t(locale, K("headed.posts"))];
   // Editing the listing and posting replies: on for everyone at launch.
   if (!launched) items.push(t(locale, K(plan === "premium" || plan === "multi" ? "headed.everyone" : "headed.editGoogle")));
   return items;
