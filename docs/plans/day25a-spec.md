@@ -26,6 +26,7 @@ All numbers are Hair Express's real numbers: scan of Nov 20, 2026 (78 · C), and
 19. **Growth plan "jump":** This week's plan is ranked by what each task does for the tier, with a tier line under each task, "Do this one first", and a top line "Do 1 task → on track for Growing on Mon, Nov 30" (§2c). Tier terms only, never points.
 20. **Growth order** everywhere (sidebar, phone tab row, Free sidebar, "More customers" cards): Growth plan · Google results · Get more reviews · Customer offers · Campaigns · Print kit & QR · Local events (last).
 21. **Fix plan: one score, two targets:** "This week: 78 → 87" (big) and "When every fix is done: 100 · A" (smaller). Each row is tagged "This week" or "Takes a few weeks", from a `thisWeek` field on every fix type (§2b). Overview keeps its single 100 · A.
+22. **Google results shows Growth content only:** the closing listing box is removed; "Fix your listing →" stays only in the top bar. Not connected (04b): only the Connect card + "Your weekly tasks are on Growth plan →". Rule: Growth pages never show Presence content (§2, §6.5).
 
 ---
 
@@ -112,11 +113,13 @@ Columns: Tab · Page · Route · What's on it · Source.
 | **Price check** | `/business/[id]/pricing` | Unchanged. | — |
 
 ### Growth
+**Rule: Growth pages never show Presence content.** No listing status, no OK / to fix / to improve counts, no "+N pts", no score fixes. A Growth page may link to Presence in one small line (e.g. "Fix your listing →" in Google results' top bar), never with a Presence box or numbers.
+
 
 | Page | Route | What's on it | Comes from |
 |---|---|---|---|
 | **Growth plan** | `/business/[id]/growth` (repurposed) | 1. **Tier hero**: name, "Tier N of 5", the next step in one line (Hair Express, test account: "2 · Building + Test account", "On track for Growing on Monday, Nov 30"), Active weeks (last 8), the 5-step track. 2. **To reach [next tier]** + **After that** cards. 3. **This week's plan**, the single weekly list (§4): "Approve 3 tasks" + "12 items go to Google" on Premium; steps on Grow. 4. One link line: **"See what Google brought you last month → Google results"**. No number cards: Google numbers live only on Google results, and offer tracking only on Customer offers. 5. **More customers, whatever your score** (moved from Overview). | New tier parts; `WeeklyChecklist.tsx` (folds into This week's plan); `MoreWaysCards.tsx`; `GrowMoreCustomers.tsx`; `ThisWeekList.tsx` / `ApproveAll.tsx` |
-| **Google results** | `/business/[id]/google-results` (new) | Today's sections 1–3: Last month hero (rate + chart), KPI tiles, November so far, the "Google brought you…" estimate, What to do this week, Since you did this (decreases gray, increases green; the "other things also affect these numbers" note above the table), Searches → actions (funnel, who saw you, devices, call days, by month; "Actions per 100 viewers"), Search terms. The Growth line sits at the top, with "Fix your listing →". Hero sentence: "of people who found you on Google took action (called, got directions or visited your site)". Jump: Last month · This week · Since you did this · Searches → actions · Search terms. | `GoogleProfileTab.tsx`: `LastMonthSection`, `ThisWeek`, `SinceCard`, `FunnelSection`, `SearchesSection`, `JumpMenu`, `WorthBox` |
+| **Google results** | `/business/[id]/google-results` (new) | Today's sections 1–3: Last month hero (rate + chart), KPI tiles, November so far, the "Google brought you…" estimate, What to do this week, Since you did this (decreases gray, increases green; the "other things also affect these numbers" note above the table), Searches → actions (funnel, who saw you, devices, call days, by month; "Actions per 100 viewers"), Search terms. The Growth line sits at the top, with a small "Fix your listing →" link (the page's only link to Presence; no closing listing box, no listing counts). Hero sentence: "of people who found you on Google took action (called, got directions or visited your site)". Jump: Last month · This week · Since you did this · Searches → actions · Search terms. | `GoogleProfileTab.tsx`: `LastMonthSection`, `ThisWeek`, `SinceCard`, `FunnelSection`, `SearchesSection`, `JumpMenu`, `WorthBox` |
 | **Get more reviews** | `/business/[id]/get-reviews` (new) | Ask + reply: review link, QR + PNG, the "right way" guide, counter tools, reply drafter / Google reviews inbox, unanswered reviews. The Sign Studio stays here **and** is listed in Print kit. Link back: "See what customers say →" (Presence → Reviews). | `ReviewsView.tsx`: `GetMoreReviews`, `ReviewGuide`, `CounterTools`, `ReviewReplyDrafter`, `GoogleReviewsInbox`, `GbpReplyCheckConnect`, `SignStudio` |
 | **Customer offers** | `/business/[id]/offers` (new; `?tab=running\|coupons\|referrals\|first-time\|loyalty`) | Opens on **Running now** (today's All campaigns rows for coupons and referrals: code, start, times used, +1, Share, End). Then the Coupons and Referrals designers. First-time customers and Loyalty programs are "Coming soon" until Day 25D. **Offer tracking lives here** (moved off the Growth plan): a summary card at the top of Running now, "{n} offers started since {date} · {uses} uses logged", plus per-offer uses. Test and practice offers are never listed or counted (§6.2). | `campaigns/CampaignsView.tsx` (coupon/referral rows), `CouponsSection`, `ReferralSection`, `HowToRunIt` |
 | **Campaigns** | `/business/[id]/campaigns` (repurposed) | Email (Day 37), Text messages, Social posts: "Coming soon" until they ship, with the Premium/Grow labels from today. Small link: "Running coupons and referrals are in Customer offers →". | `campaigns/AllCampaigns.tsx` (email/text/social block) |
@@ -345,7 +348,7 @@ Hashes never reach the server, so hash-based moves need a small client redirect 
 | Google listing (top bar) | See what your listing brings in → | Google results |
 | Google listing, Reviews row | Reply in Get more reviews → | Get more reviews |
 | Google listing, end of section 2 | Fix plan / Growth plan | both |
-| Google results (top line, funnel takeaway, closing card) | Fix your listing → | Google listing |
+| Google results (top info bar only) | Fix your listing → | Google listing |
 | Google results, What to do this week | (same items as Growth plan) | Growth plan → This week's plan |
 | Growth plan (link line under This week's plan) | See what Google brought you last month → Google results | Google results |
 | Growth plan, More customers | Get your review link & QR → / Customer offers / Local events / Print kit / Campaigns | each Growth page |
@@ -494,6 +497,7 @@ Protections:
 7. **Every change says why, in plain words.** Examples: "You moved to Building: no activity the weeks of Nov 30 and Dec 7. Two active weeks bring Growing back." / "You moved up to Growing: 5 active weeks and 152 customer actions from Google in October."
 
 ### 6.5 Wording rules for the tier
+- **Growth pages never show Presence content:** listing status, OK / to fix / to improve counts, "+N pts" or score fixes. At most one small link to Presence (§2, Growth).
 - No game language: no XP, levels, badges, streaks, "unlock achievements". "Tier" + name, "active weeks", "results".
 - "Customer actions", never "sales". Every result names its source ("from Google", "You told us").
 - Growth pages never show "+N pts"; Presence pages never show the tier as a score.
@@ -580,7 +584,7 @@ Shown **only** when the business's Google listing isn't connected. Hair Express 
   - "Connect your Google listing to see your results. Google keeps these numbers for your listing…";
   - then what they'd see: calls / directions / website clicks / bookings; people who saw the listing and took action; search terms; what changed after things you did.
 - **No fake, sample or old numbers.** If an earlier connection left saved monthly totals, they're still not shown while disconnected; the page says when the last update was.
-- "What to do this week" stays, as "I did this" steps. The closing "Fix your listing" card stays (the listing is checked on every scan, connected or not).
+- Only the Connect card, then one line under it: "Your weekly tasks are on Growth plan →". The week's tasks are **not** repeated here, and there's no listing box (Growth pages never show Presence content, §6.5).
 
 **Tier without Google**
 - **Active weeks can still be met:**
@@ -671,8 +675,8 @@ These notes used to sit inside the mockups as dashed yellow boxes. They're revie
 | 03 | `growth-plan.html` | Tier hero (Building + Test account), active weeks, To reach Growing / After that: Thriving, This week's plan ("Approve 3 tasks"), link line to Google results, More customers |
 | 03b | `growth-plan-not-connected.html` | Connect banner, the same tier, "I did this" steps, R1 needs Google |
 | 07 | `fix-plan.html` | Fix plan: This week 78 → 87 · every fix 100 · A, 4 ranked fixes tagged This week / Takes a few weeks with +pts, running score and Fix it, the not-scored-yet speed row |
-| 04b | `google-results-not-connected.html` | Explanation + Connect Google, no numbers, the week's steps |
-| 04 | `google-results.html` | Growth line, hero 21.6% ("took action…"), tiles, estimate, What to do this week (same order, "Approve 3 tasks"), Since you did this (gray decreases, note above), Searches → actions, search terms, "Fix your listing" |
+| 04b | `google-results-not-connected.html` | Only the Connect card (what they'll see + Connect Google) and "Your weekly tasks are on Growth plan →" |
+| 04 | `google-results.html` | Growth line, hero 21.6% ("took action…"), tiles, estimate, What to do this week (same order, "Approve 3 tasks"), Since you did this (gray decreases, note above), Searches → actions, search terms; "Fix your listing →" only in the top bar |
 | 05 | `google-listing.html` | Listing rows with "+N pts", Show up for more, Protection & changes, "See what your listing brings in" |
 | 06 | `free-growth-preview.html` | Free: "?" ring, what it would measure, blurred real tasks, Grow vs Premium |
 

@@ -74,7 +74,8 @@ Shown only when the listing isn't connected. Hair Express is connected, so mocku
   - banner: "Connect your Google listing to see your results and let PostScore post for you" + Connect;
   - one-tap tasks become "I did this" steps, with "Connect Google to make this one tap", and drafts stay ready to copy;
   - offers, QR, the review link, Campaigns and Local events work as normal.
-- **Google results (04b):** an explanation of what they'd see + Connect Google. No fake, sample or old numbers. The week's steps and "Fix your listing" stay.
+- **Google results (04b):** only the Connect card (what they'll see + Connect Google), then one line: "Your weekly tasks are on Growth plan →". No fake, sample or old numbers, no repeated task list, no listing box.
+- **Rule:** Growth pages never show Presence content (listing status, OK / fix counts, +pts). Connected Google results (04) keeps only the small "Fix your listing →" in its top bar.
 - **Tier without Google:**
   - active weeks come from offers, QR scans, review-link opens, photos and fixes seen on scans, and check-offs;
   - results come from new reviews, QR scans and offers used;
