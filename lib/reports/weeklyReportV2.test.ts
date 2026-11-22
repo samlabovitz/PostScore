@@ -107,6 +107,13 @@ describe("the layout", () => {
     expect(all).not.toContain("THIS IS ONE WEEK");
   });
 
+  test("nothing left “headed” (everything shipped): no empty navy box, the Today box takes the width", async () => {
+    const all = texts(layoutWeeklyReportV2({ ...DATA, waiting: null, plan: "premium", today: todayItems("premium", "en", true), headed: headedItems("premium", "en", true) }, await measurer()));
+    expect(headedItems("premium", "en", true)).toEqual([]);
+    expect(all).not.toContain("WHERE IT'S HEADED");
+    expect(all).toContain("WHAT POSTSCORE DOES TODAY");
+  });
+
   test("worst case — long names, Spanish, every section full — still 3 pages, every element on its page", async () => {
     const m = await measurer();
     const long: WeeklyReportV2Data = {
@@ -316,14 +323,14 @@ describe("plan boxes follow the plan and the Google-writes switch", () => {
   test("Premium: editing and replies say Beta until launch; “headed” loses the launch line at launch", () => {
     expect(todayItems("premium", "en", false).filter((i) => i.beta).map((i) => i.text)).toEqual(["Edit your Google listing from PostScore, with undo", "Reply to your Google reviews from PostScore"]);
     expect(todayItems("premium", "en", true).some((i) => i.beta)).toBe(false);
-    expect(headedItems("premium", "en", false)).toHaveLength(2);
-    expect(headedItems("premium", "en", true)).toHaveLength(1);
+    expect(headedItems("premium", "en", false)).toHaveLength(1);
+    expect(headedItems("premium", "en", true)).toHaveLength(0);
     expect(headedItems("premium", "en", false)).toContain("Google edits and replies for every business (out of Beta)");
     expect(headedItems("premium", "es", false)).toContain("Ediciones y respuestas en Google para todos los negocios (fuera de Beta)");
     // Google results are live (Day 22B): never listed as where PostScore is headed.
     for (const plan of ["free", "grow", "premium", "multi"] as const)
       for (const locale of ["en", "es"] as const)
-        for (const launched of [false, true]) expect(headedItems(plan, locale, launched).join(" ")).not.toMatch(/who searches|quién le busca/i);
+        for (const launched of [false, true]) expect(headedItems(plan, locale, launched).join(" ")).not.toMatch(/who searches|quién le busca|posts and offers|publicaciones y ofertas/i);
     expect(todayItems("free", "en").some((i) => /Edit your Google/.test(i.text))).toBe(false);
     expect(todayItems("grow", "en").map((i) => i.text)).toContain("PostAI: 100 questions a month");
   });

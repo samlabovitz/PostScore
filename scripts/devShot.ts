@@ -54,6 +54,12 @@ async function main() {
     if (lang && (!lc || lc.status() >= 400)) throw new Error(`language override refused (${lc?.status()})`);
     for (const p of paths) {
       await page.goto(`${BASE}${p}`, { waitUntil: "networkidle", timeout: 90_000 });
+      // `next dev` can go idle while it's still compiling: wait until the
+      // styles are in and the route's loading skeleton (PageSkeleton) is gone.
+      const ready = await page
+        .waitForFunction(() => document.styleSheets.length > 0 && !document.querySelector('[role="status"][aria-busy="true"]'), null, { timeout: 60_000 })
+        .then(() => true, () => false);
+      if (!ready) console.warn(`${p}: still loading after 60s — the screenshot may show the loading screen`);
       const file = path.join(out, `${p.replace(/[^a-z0-9]+/gi, "_").replace(/^_|_$/g, "") || "home"}${lang ? `.${lang}` : ""}${plan ? `.${plan}` : ""}.${width}.png`);
       const steps = Number(arg("scroll") ?? 0);
       if (steps > 0) {

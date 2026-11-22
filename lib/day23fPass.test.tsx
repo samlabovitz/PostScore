@@ -27,6 +27,9 @@ import type { WeekRepliesState } from "@/components/gbp/RepliesPreview";
 import { faqEntries } from "@/lib/googleAnswers";
 import { LocaleProvider } from "@/lib/i18n";
 
+// Day 25B step 2: the old tab is split into these files (the old tab composes them).
+const GOOGLE_TAB_SOURCE = () => ["GoogleProfileTab", "googleTabParts", "GoogleResults", "GoogleListingPage"].map((f) => readFileSync(`components/gbp/${f}.tsx`, "utf8")).join("\n");
+
 const wrap = (node: React.ReactNode, locale: "en" | "es" = "en") => renderToStaticMarkup(<LocaleProvider locale={locale}>{node}</LocaleProvider>);
 
 describe("1. drafts in the language the page is viewed in; devShot never changes a business's language", () => {
@@ -89,8 +92,8 @@ describe("2. every lever and card link lands where the task is done, opened", ()
 
 describe("3. the listing's Description row reads what the editor reads", () => {
   test("from the page's own listing read — no second read that could fail on its own", () => {
-    const src = readFileSync("components/gbp/GoogleProfileTab.tsx", "utf8");
-    expect(src).toContain("useLiveValues(props.businessId, props.extras ? props.extras.description : undefined)");
+    const src = GOOGLE_TAB_SOURCE();
+    expect(src).toContain("useLiveValues(props.businessId, props.extras ? props.extras.description : undefined, page?.readOnly === true)");
     expect(src).toContain("known ? Promise.resolve(null) : safe(() => openProfileEdits(businessId))");
   });
 });
@@ -171,7 +174,7 @@ describe("7. polish", () => {
     expect(leverShort(lever(2), "es")).toBe("Fotos · 2 meses");
     expect(leverShort(lever(1), "es")).toBe("Fotos · 1 mes");
     expect(leverShort(lever(2), "en")).toBe("Photos · 2 mo");
-    const tab = readFileSync("components/gbp/GoogleProfileTab.tsx", "utf8");
+    const tab = GOOGLE_TAB_SOURCE();
     expect(tab).toContain('t(locale, K("since.windowShort"), { days: result.days })');
     expect(tab).toContain('t(locale, K(`since.per100Label.${c.dir}`))');
     expect(readFileSync("components/gbp/ThisWeekList.tsx", "utf8")).toContain("<PostPreview businessId={businessId} state={post} showBlocked={false} />");
@@ -180,7 +183,7 @@ describe("7. polish", () => {
 
 describe("last tweaks: 'Since' layout, the replies' detail line, Approve all while drafts load", () => {
   test("a card with numbers takes the full width; 'Check back on…' cards 2 per row below, stacked on phones", () => {
-    const tab = readFileSync("components/gbp/GoogleProfileTab.tsx", "utf8");
+    const tab = GOOGLE_TAB_SOURCE();
     expect(tab).toContain('<div className="grid items-start gap-3 sm:grid-cols-2">');
     expect(tab).toContain('st.ready && "sm:col-span-2"');
   });

@@ -1772,7 +1772,7 @@ const MISMATCH_ACTION_KEYS: Record<"hours" | "phone" | "address", MessageKey> = 
 /** The real, currently-scored mismatched fields (never an overridden
  * one, never a field missing from the site) — the same filter
  * website.info_consistency itself scores on. */
-function mismatchedFields(input: BusinessScoringInput): Array<"hours" | "phone" | "address"> {
+export function mismatchedFields(input: BusinessScoringInput): Array<"hours" | "phone" | "address"> {
   const trust = input.websiteAnalysis?.websiteTrust;
   if (!trust) return [];
   const overridden = new Set((input.websiteTrustOverrides ?? []).map((o) => o.key));

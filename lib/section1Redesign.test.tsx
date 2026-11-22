@@ -17,6 +17,9 @@ import { serviceOrder } from "@/components/gbp/AnswersPreview";
 import { hoursLines } from "@/lib/googleAnswers";
 import type { Lever } from "@/lib/googleProfileTab";
 
+// Day 25B step 2: the old tab is split into these files (the old tab composes them).
+const GOOGLE_TAB_SOURCE = () => ["GoogleProfileTab", "googleTabParts", "GoogleResults", "GoogleListingPage"].map((f) => readFileSync(`components/gbp/${f}.tsx`, "utf8")).join("\n");
+
 const TZ = "America/New_York";
 
 describe("1. practice-mode actions never appear as results", () => {
@@ -83,7 +86,7 @@ describe("6. the levers' chips: short labels, the detail on tap", () => {
     expect(leverShort(lever("deals", "running", { count: 1 }), "es")).toBe("Ofertas · 1");
   });
   test("one row at desktop width: chips never wrap their own words", () => {
-    const src = readFileSync("components/gbp/GoogleProfileTab.tsx", "utf8");
+    const src = GOOGLE_TAB_SOURCE();
     // 44px tap targets on phones; 32px chips on desktop.
     expect(src).toContain('"inline-flex min-h-[44px] items-center gap-2 whitespace-nowrap rounded-full border px-3.5 text-[13px] text-ink lg:min-h-[32px] lg:px-3"');
   });
@@ -115,7 +118,7 @@ describe("desktop tightening: 36px secondary / 40px primary buttons, 44px on pho
 });
 
 describe("4, 5, 11. the hero's ⓘ, the 'so far' line, the 'Since' cards", () => {
-  const src = readFileSync("components/gbp/GoogleProfileTab.tsx", "utf8");
+  const src = GOOGLE_TAB_SOURCE();
   test("the ⓘ opens above, over everything (never under the dark card or over 'Updates on the 1st')", () => {
     expect(src).toContain('"absolute bottom-full z-50 mb-2');
   });

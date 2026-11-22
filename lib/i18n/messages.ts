@@ -1929,6 +1929,74 @@ export type MessageKey =
   | "dashboard.googleTab.jump.listing"
   | "dashboard.googleTab.jump.next"
   | "dashboard.googleTab.jump.protection"
+  | "dashboard.googlePages.results.title"
+  | "dashboard.googlePages.results.lead"
+  | "dashboard.googlePages.results.info"
+  | "dashboard.googlePages.results.fixListing"
+  | "dashboard.googlePages.results.heroSentence"
+  | "dashboard.googlePages.results.compare.down"
+  | "dashboard.googlePages.results.compare.up"
+  | "dashboard.googlePages.results.compare.same"
+  | "dashboard.googlePages.results.jump.thisWeek"
+  | "dashboard.googlePages.results.jump.since"
+  | "dashboard.googlePages.results.jump.funnel"
+  | "dashboard.googlePages.results.funnelTitle"
+  | "dashboard.googlePages.results.funnelCard"
+  | "dashboard.googlePages.results.per100"
+  | "dashboard.googlePages.results.takeaway.downUp"
+  | "dashboard.googlePages.results.takeaway.upUp"
+  | "dashboard.googlePages.results.takeaway.upDown"
+  | "dashboard.googlePages.results.takeaway.downDown"
+  | "dashboard.googlePages.results.websiteWork"
+  | "dashboard.googlePages.results.notConnected.title"
+  | "dashboard.googlePages.results.notConnected.lead"
+  | "dashboard.googlePages.results.notConnected.reconnectLead"
+  | "dashboard.googlePages.results.notConnected.calls"
+  | "dashboard.googlePages.results.notConnected.callsSub"
+  | "dashboard.googlePages.results.notConnected.saw"
+  | "dashboard.googlePages.results.notConnected.sawSub"
+  | "dashboard.googlePages.results.notConnected.searched"
+  | "dashboard.googlePages.results.notConnected.searchedSub"
+  | "dashboard.googlePages.results.notConnected.since"
+  | "dashboard.googlePages.results.notConnected.sinceSub"
+  | "dashboard.googlePages.results.notConnected.connect"
+  | "dashboard.googlePages.results.notConnected.reconnect"
+  | "dashboard.googlePages.results.notConnected.lastUpdate"
+  | "dashboard.googlePages.results.tasksLink"
+  | "dashboard.googlePages.results.locked.title"
+  | "dashboard.googlePages.results.locked.body"
+  | "dashboard.googlePages.results.locked.badge"
+  | "dashboard.googlePages.listing.title"
+  | "dashboard.googlePages.listing.pts"
+  | "dashboard.googlePages.listing.lead"
+  | "dashboard.googlePages.listing.leadGrow"
+  | "dashboard.googlePages.listing.leadFree"
+  | "dashboard.googlePages.listing.bringsIn"
+  | "dashboard.googlePages.listing.bringsInLink"
+  | "dashboard.googlePages.listing.fixOne"
+  | "dashboard.googlePages.listing.fixMany"
+  | "dashboard.googlePages.listing.fixPlanLink"
+  | "dashboard.googlePages.listing.rowPts"
+  | "dashboard.googlePages.listing.unknown"
+  | "dashboard.googlePages.listing.photosNote"
+  | "dashboard.googlePages.listing.protectLocked"
+  | "dashboard.googlePages.listing.replyInReviews"
+  | "dashboard.googlePages.listing.endBefore"
+  | "dashboard.googlePages.listing.endFixPlan"
+  | "dashboard.googlePages.listing.endMiddle"
+  | "dashboard.googlePages.listing.endGrowthPlan"
+  | "dashboard.googlePages.listing.notConnected.title"
+  | "dashboard.googlePages.listing.notConnected.titleGrow"
+  | "dashboard.googlePages.listing.notConnected.body"
+  | "dashboard.googlePages.listing.notConnected.bodyGrow"
+  | "dashboard.googlePages.listing.notConnected.reconnectBody"
+  | "dashboard.googlePages.listing.steps.title"
+  | "dashboard.googlePages.listing.steps.generic1"
+  | "dashboard.googlePages.listing.steps.generic2"
+  | "dashboard.googlePages.listing.steps.generic3"
+  | "dashboard.googlePages.listing.steps.open"
+  | "dashboard.googlePages.listing.locked"
+  | "dashboard.googlePages.listing.lockedSee"
   | "dashboard.googleTab.sample"
   | "dashboard.googleTab.sampleNote"
   | "dashboard.googleTab.monthly"
@@ -5532,7 +5600,6 @@ export type MessageKey =
   | "dashboard.reports.v2.today.report"
   | "dashboard.reports.v2.today.editGoogle"
   | "dashboard.reports.v2.today.replyGoogle"
-  | "dashboard.reports.v2.headed.posts"
   | "dashboard.reports.v2.headed.everyone"
   | "dashboard.reports.v2.headed.editGoogle"
   | "dashboard.reports.v2.upgradeTitle"
@@ -8222,6 +8289,74 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.googleTab.jump.listing": "Your listing",
     "dashboard.googleTab.jump.next": "Show up for more",
     "dashboard.googleTab.jump.protection": "Changes",
+    "dashboard.googlePages.results.title": "Google results",
+    "dashboard.googlePages.results.lead": "What people did after they found you on Google, and what to do this week to get more of it.",
+    "dashboard.googlePages.results.info": "These numbers show results from Google. They don't change your PostScore score.",
+    "dashboard.googlePages.results.fixListing": "Fix your listing →",
+    "dashboard.googlePages.results.heroSentence": "of people who found you on Google took action (called, got directions or visited your site)",
+    "dashboard.googlePages.results.compare.down": "Down from {rate} in {month}",
+    "dashboard.googlePages.results.compare.up": "Up from {rate} in {month}",
+    "dashboard.googlePages.results.compare.same": "About the same as {month} ({rate})",
+    "dashboard.googlePages.results.jump.thisWeek": "This week",
+    "dashboard.googlePages.results.jump.since": "Since you did this",
+    "dashboard.googlePages.results.jump.funnel": "Searches → actions",
+    "dashboard.googlePages.results.funnelTitle": "How searches became actions",
+    "dashboard.googlePages.results.funnelCard": "From views to actions",
+    "dashboard.googlePages.results.per100": "Actions per 100 viewers",
+    "dashboard.googlePages.results.takeaway.downUp": "Fewer people saw your listing than last year, but more of them took action.",
+    "dashboard.googlePages.results.takeaway.upUp": "More people saw your listing, and more of them took action.",
+    "dashboard.googlePages.results.takeaway.upDown": "More people saw your listing, but fewer of them took action.",
+    "dashboard.googlePages.results.takeaway.downDown": "Fewer people saw your listing, and fewer of them took action.",
+    "dashboard.googlePages.results.websiteWork": "needs work",
+    "dashboard.googlePages.results.notConnected.title": "Connect your Google listing to see your results",
+    "dashboard.googlePages.results.notConnected.lead": "Google keeps these numbers for your listing. Once you connect, PostScore shows them here and updates them on the 1st of each month. PostScore only reads them; nothing changes on Google unless you approve it.",
+    "dashboard.googlePages.results.notConnected.reconnectLead": "Your Google connection stopped working, so these numbers can't update. Reconnect to see them again. PostScore only reads them; nothing changes on Google unless you approve it.",
+    "dashboard.googlePages.results.notConnected.calls": "Calls, direction requests, website clicks and bookings from Google",
+    "dashboard.googlePages.results.notConnected.callsSub": "every month, compared with the month before and the same month last year",
+    "dashboard.googlePages.results.notConnected.saw": "How many people saw your listing and how many of them took action",
+    "dashboard.googlePages.results.notConnected.sawSub": "on Search and Maps, on phones and computers",
+    "dashboard.googlePages.results.notConnected.searched": "What people searched to find you",
+    "dashboard.googlePages.results.notConnected.searchedSub": "the search terms Google reports for your listing",
+    "dashboard.googlePages.results.notConnected.since": "What changed after things you did",
+    "dashboard.googlePages.results.notConnected.sinceSub": "e.g. 29 days before and after you started an offer",
+    "dashboard.googlePages.results.notConnected.connect": "Connect Google",
+    "dashboard.googlePages.results.notConnected.reconnect": "Reconnect",
+    "dashboard.googlePages.results.notConnected.lastUpdate": "Last update from Google: {date}. The numbers stay hidden until you reconnect.",
+    "dashboard.googlePages.results.tasksLink": "Your weekly tasks are on Growth plan →",
+    "dashboard.googlePages.results.locked.title": "See what Google brings you",
+    "dashboard.googlePages.results.locked.body": "Connect Google with Grow to see your calls, direction requests and website clicks.",
+    "dashboard.googlePages.results.locked.badge": "Locked",
+    "dashboard.googlePages.listing.title": "Google listing",
+    "dashboard.googlePages.listing.pts": "{earned} / {of} pts",
+    "dashboard.googlePages.listing.lead": "What customers see on Google, checked row by row. Fix it here: preview, approve, and undo for 7 days.",
+    "dashboard.googlePages.listing.leadGrow": "What customers see on Google, checked row by row, with the steps to fix each one yourself.",
+    "dashboard.googlePages.listing.leadFree": "What customers see on Google, checked row by row, with the points each fix is worth.",
+    "dashboard.googlePages.listing.bringsIn": "Want to know what your listing brings in? Calls, direction requests and website clicks are in Growth.",
+    "dashboard.googlePages.listing.bringsInLink": "See what your listing brings in →",
+    "dashboard.googlePages.listing.fixOne": "Fix this 1 and your Google listing goes {from} → {to} pts (score {scoreFrom} → {scoreTo}).",
+    "dashboard.googlePages.listing.fixMany": "Fix these {count} and your Google listing goes {from} → {to} pts (score {scoreFrom} → {scoreTo}).",
+    "dashboard.googlePages.listing.fixPlanLink": "Fix plan →",
+    "dashboard.googlePages.listing.rowPts": "+{points} pts",
+    "dashboard.googlePages.listing.unknown": "Shown once Google is connected",
+    "dashboard.googlePages.listing.photosNote": "Add 2–3 new ones a month. Your newest photo's date: shown once Google is connected.",
+    "dashboard.googlePages.listing.protectLocked": "Google can change your listing, or accept other people's suggested edits, without telling you. With Grow, PostScore checks every day, tells you what changed and shows you how to change it back.",
+    "dashboard.googlePages.listing.replyInReviews": "Reply in Reviews →",
+    "dashboard.googlePages.listing.endBefore": "Every score fix, ranked, is in",
+    "dashboard.googlePages.listing.endFixPlan": "Fix plan",
+    "dashboard.googlePages.listing.endMiddle": ". Posts, offers and review asks are in",
+    "dashboard.googlePages.listing.endGrowthPlan": "Growth plan",
+    "dashboard.googlePages.listing.notConnected.title": "Connect Google to edit your listing from here",
+    "dashboard.googlePages.listing.notConnected.titleGrow": "Connect Google to keep your listing checked",
+    "dashboard.googlePages.listing.notConnected.body": "These rows come from your last scan. Connect your Google listing to fix them here (preview, approve, and undo for 7 days) and to see when anyone else changes it.",
+    "dashboard.googlePages.listing.notConnected.bodyGrow": "These rows come from your last scan. Connect your Google listing to check it every day and see when anyone else changes it.",
+    "dashboard.googlePages.listing.notConnected.reconnectBody": "Your Google connection stopped working. These rows come from your last scan until you reconnect.",
+    "dashboard.googlePages.listing.steps.title": "How to fix it yourself",
+    "dashboard.googlePages.listing.steps.generic1": "Open your Business Profile on Google (sign in with the account that manages your listing).",
+    "dashboard.googlePages.listing.steps.generic2": "Choose Edit profile and find {field}.",
+    "dashboard.googlePages.listing.steps.generic3": "Make the change and save. Google may take a few days to show it.",
+    "dashboard.googlePages.listing.steps.open": "Open your Business Profile",
+    "dashboard.googlePages.listing.locked": "The step-by-step fix is on Grow.",
+    "dashboard.googlePages.listing.lockedSee": "See plans",
     "dashboard.googleTab.sample": "Sample data",
     "dashboard.googleTab.sampleNote": "Practice mode: the numbers in sections 1, 2, 3 and 5 are sample data to show the design. Real numbers come from Google after your first full month connected.",
     "dashboard.googleTab.monthly": "Updates monthly",
@@ -12310,7 +12445,6 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.reports.v2.today.report": "A weekly report showing what moved your score",
     "dashboard.reports.v2.today.editGoogle": "Edit your Google listing from PostScore, with undo",
     "dashboard.reports.v2.today.replyGoogle": "Reply to your Google reviews from PostScore",
-    "dashboard.reports.v2.headed.posts": "Your Google posts and offers drafted and scheduled for you; you just approve",
     "dashboard.reports.v2.headed.everyone": "Google edits and replies for every business (out of Beta)",
     "dashboard.reports.v2.headed.editGoogle": "Fix Google listing details in one tap, with undo",
     "dashboard.reports.v2.upgradeTitle": "This is one week. PostScore does it every week.",
@@ -14799,6 +14933,74 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.googleTab.jump.listing": "Su ficha",
     "dashboard.googleTab.jump.next": "Aparezca en más",
     "dashboard.googleTab.jump.protection": "Cambios",
+    "dashboard.googlePages.results.title": "Resultados en Google",
+    "dashboard.googlePages.results.lead": "Lo que hizo la gente después de encontrarle en Google, y qué hacer esta semana para conseguir más.",
+    "dashboard.googlePages.results.info": "Estas cifras muestran resultados de Google. No cambian su puntuación de PostScore.",
+    "dashboard.googlePages.results.fixListing": "Corrija su ficha →",
+    "dashboard.googlePages.results.heroSentence": "de las personas que le encontraron en Google realizaron una acción (llamaron, pidieron indicaciones o visitaron su sitio)",
+    "dashboard.googlePages.results.compare.down": "Bajó desde {rate} en {month}",
+    "dashboard.googlePages.results.compare.up": "Subió desde {rate} en {month}",
+    "dashboard.googlePages.results.compare.same": "Casi igual que en {month} ({rate})",
+    "dashboard.googlePages.results.jump.thisWeek": "Esta semana",
+    "dashboard.googlePages.results.jump.since": "Desde que hizo esto",
+    "dashboard.googlePages.results.jump.funnel": "Búsquedas → acciones",
+    "dashboard.googlePages.results.funnelTitle": "Cómo las búsquedas se convirtieron en acciones",
+    "dashboard.googlePages.results.funnelCard": "De vistas a acciones",
+    "dashboard.googlePages.results.per100": "Acciones por cada 100 personas que le vieron",
+    "dashboard.googlePages.results.takeaway.downUp": "Menos personas vieron su ficha que el año pasado, pero más de ellas realizaron una acción.",
+    "dashboard.googlePages.results.takeaway.upUp": "Más personas vieron su ficha, y más de ellas realizaron una acción.",
+    "dashboard.googlePages.results.takeaway.upDown": "Más personas vieron su ficha, pero menos de ellas realizaron una acción.",
+    "dashboard.googlePages.results.takeaway.downDown": "Menos personas vieron su ficha, y menos de ellas realizaron una acción.",
+    "dashboard.googlePages.results.websiteWork": "necesita mejoras",
+    "dashboard.googlePages.results.notConnected.title": "Conecte su ficha de Google para ver sus resultados",
+    "dashboard.googlePages.results.notConnected.lead": "Google guarda estas cifras de su ficha. Cuando se conecte, PostScore las mostrará aquí y las actualizará el día 1 de cada mes. PostScore solo las lee; nada cambia en Google a menos que usted lo apruebe.",
+    "dashboard.googlePages.results.notConnected.reconnectLead": "Su conexión con Google dejó de funcionar, así que estas cifras no se pueden actualizar. Vuelva a conectarse para verlas de nuevo. PostScore solo las lee; nada cambia en Google a menos que usted lo apruebe.",
+    "dashboard.googlePages.results.notConnected.calls": "Llamadas, solicitudes de indicaciones, clics a su sitio web y reservas desde Google",
+    "dashboard.googlePages.results.notConnected.callsSub": "cada mes, comparadas con el mes anterior y con el mismo mes del año pasado",
+    "dashboard.googlePages.results.notConnected.saw": "Cuántas personas vieron su ficha y cuántas realizaron una acción",
+    "dashboard.googlePages.results.notConnected.sawSub": "en la Búsqueda y en Maps, en teléfonos y computadoras",
+    "dashboard.googlePages.results.notConnected.searched": "Qué buscó la gente para encontrarle",
+    "dashboard.googlePages.results.notConnected.searchedSub": "los términos de búsqueda que Google informa para su ficha",
+    "dashboard.googlePages.results.notConnected.since": "Qué cambió después de lo que usted hizo",
+    "dashboard.googlePages.results.notConnected.sinceSub": "p. ej., 29 días antes y después de empezar una oferta",
+    "dashboard.googlePages.results.notConnected.connect": "Conectar Google",
+    "dashboard.googlePages.results.notConnected.reconnect": "Volver a conectar",
+    "dashboard.googlePages.results.notConnected.lastUpdate": "Última actualización de Google: {date}. Las cifras quedan ocultas hasta que vuelva a conectarse.",
+    "dashboard.googlePages.results.tasksLink": "Sus tareas semanales están en el plan de crecimiento →",
+    "dashboard.googlePages.results.locked.title": "Vea lo que Google le trae",
+    "dashboard.googlePages.results.locked.body": "Conecte Google con Grow para ver sus llamadas, solicitudes de indicaciones y clics a su sitio web.",
+    "dashboard.googlePages.results.locked.badge": "Bloqueado",
+    "dashboard.googlePages.listing.title": "Ficha de Google",
+    "dashboard.googlePages.listing.pts": "{earned} / {of} pts",
+    "dashboard.googlePages.listing.lead": "Lo que los clientes ven en Google, revisado fila por fila. Corríjalo aquí: vista previa, aprobación y 7 días para deshacer.",
+    "dashboard.googlePages.listing.leadGrow": "Lo que los clientes ven en Google, revisado fila por fila, con los pasos para que usted mismo corrija cada uno.",
+    "dashboard.googlePages.listing.leadFree": "Lo que los clientes ven en Google, revisado fila por fila, con los puntos que vale cada corrección.",
+    "dashboard.googlePages.listing.bringsIn": "¿Quiere saber lo que le trae su ficha? Las llamadas, las solicitudes de indicaciones y los clics a su sitio web están en Crecimiento.",
+    "dashboard.googlePages.listing.bringsInLink": "Vea lo que le trae su ficha →",
+    "dashboard.googlePages.listing.fixOne": "Corrija esta 1 y su ficha de Google pasa de {from} → {to} pts (puntuación {scoreFrom} → {scoreTo}).",
+    "dashboard.googlePages.listing.fixMany": "Corrija estas {count} y su ficha de Google pasa de {from} → {to} pts (puntuación {scoreFrom} → {scoreTo}).",
+    "dashboard.googlePages.listing.fixPlanLink": "Plan de correcciones →",
+    "dashboard.googlePages.listing.rowPts": "+{points} pts",
+    "dashboard.googlePages.listing.unknown": "Se muestra cuando conecte Google",
+    "dashboard.googlePages.listing.photosNote": "Agregue 2 o 3 nuevas al mes. La fecha de su foto más reciente: se muestra cuando conecte Google.",
+    "dashboard.googlePages.listing.protectLocked": "Google puede cambiar su ficha, o aceptar ediciones sugeridas por otras personas, sin avisarle. Con Grow, PostScore la revisa cada día, le dice qué cambió y le muestra cómo revertirlo.",
+    "dashboard.googlePages.listing.replyInReviews": "Responda en Reseñas →",
+    "dashboard.googlePages.listing.endBefore": "Todas las correcciones de su puntuación, en orden, están en el",
+    "dashboard.googlePages.listing.endFixPlan": "Plan de correcciones",
+    "dashboard.googlePages.listing.endMiddle": ". Las publicaciones, las ofertas y las solicitudes de reseñas están en el",
+    "dashboard.googlePages.listing.endGrowthPlan": "Plan de crecimiento",
+    "dashboard.googlePages.listing.notConnected.title": "Conecte Google para editar su ficha desde aquí",
+    "dashboard.googlePages.listing.notConnected.titleGrow": "Conecte Google para que sigamos revisando su ficha",
+    "dashboard.googlePages.listing.notConnected.body": "Estas filas vienen de su último análisis. Conecte su ficha de Google para corregirlas aquí (vista previa, aprobación y 7 días para deshacer) y para ver cuando otra persona la cambie.",
+    "dashboard.googlePages.listing.notConnected.bodyGrow": "Estas filas vienen de su último análisis. Conecte su ficha de Google para revisarla cada día y ver cuando otra persona la cambie.",
+    "dashboard.googlePages.listing.notConnected.reconnectBody": "Su conexión con Google dejó de funcionar. Estas filas vienen de su último análisis hasta que vuelva a conectarse.",
+    "dashboard.googlePages.listing.steps.title": "Cómo corregirlo usted mismo",
+    "dashboard.googlePages.listing.steps.generic1": "Abra su Perfil de Empresa en Google (inicie sesión con la cuenta que administra su ficha).",
+    "dashboard.googlePages.listing.steps.generic2": "Elija Editar perfil y busque {field}.",
+    "dashboard.googlePages.listing.steps.generic3": "Haga el cambio y guárdelo. Google puede tardar unos días en mostrarlo.",
+    "dashboard.googlePages.listing.steps.open": "Abra su Perfil de Empresa",
+    "dashboard.googlePages.listing.locked": "Los pasos para corregirlo están en Grow.",
+    "dashboard.googlePages.listing.lockedSee": "Ver planes",
     "dashboard.googleTab.sample": "Datos de muestra",
     "dashboard.googleTab.sampleNote": "Modo de práctica: los números de las secciones 1, 2, 3 y 5 son datos de muestra para mostrar el diseño. Los números reales llegan de Google después de su primer mes completo conectado.",
     "dashboard.googleTab.monthly": "Se actualiza cada mes",
@@ -19099,7 +19301,6 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.reports.v2.today.report": "Un informe semanal que muestra qué movió su puntuación",
     "dashboard.reports.v2.today.editGoogle": "Edite su ficha de Google desde PostScore, con opción de deshacer",
     "dashboard.reports.v2.today.replyGoogle": "Responda a sus reseñas de Google desde PostScore",
-    "dashboard.reports.v2.headed.posts": "Sus publicaciones y ofertas de Google redactadas y programadas; usted solo las aprueba",
     "dashboard.reports.v2.headed.everyone": "Ediciones y respuestas en Google para todos los negocios (fuera de Beta)",
     "dashboard.reports.v2.headed.editGoogle": "Arregle datos de su ficha de Google con un toque, con opción de deshacer",
     "dashboard.reports.v2.upgradeTitle": "Esto es una semana. PostScore lo hace cada semana.",

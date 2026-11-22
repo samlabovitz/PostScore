@@ -11,6 +11,7 @@
 // Checkout doesn't exist: nothing here charges or pretends to — "See
 // plans" opens Settings → Plan & billing → Compare plans. Pure.
 
+import { NEW_PAGES_LIVE } from "@/lib/routes";
 import { t, type Locale, type MessageKey } from "./i18n";
 import type { Plan } from "./plan";
 import { MIN_RANKED_COMPETITORS } from "./competitorComparison";
@@ -324,10 +325,14 @@ const GROW_CHIPS: Record<ShowcasePage, Chip[]> = {
 };
 
 /** A card's chips for this page (Grow or Premium; PostStudio has none). */
-export function cardChips(kind: PromoCardKind, page: ShowcasePage, plan: Plan | null = null): Chip[] {
+export function cardChips(kind: PromoCardKind, page: ShowcasePage, plan: Plan | null = null, newPagesLive: boolean = NEW_PAGES_LIVE): Chip[] {
   if (kind === "grow") return GROW_CHIPS[page];
   // Free's Website page already has its one PostStudio card — no chip too.
-  if (kind === "premium") return plan === "free" && page === "website" ? PREMIUM_CHIPS[page].filter((c) => !c.key.endsWith(".postStudio")) : PREMIUM_CHIPS[page];
+  if (kind === "premium") {
+    const chips = plan === "free" && page === "website" ? PREMIUM_CHIPS[page].filter((c) => !c.key.endsWith(".postStudio")) : PREMIUM_CHIPS[page];
+    // Day 25B: once the new Google pages are live, Grow has Google results — never sold to Grow as Premium.
+    return plan === "grow" && newPagesLive ? chips.filter((c) => c !== SEARCH_INSIGHTS) : chips;
+  }
   return [];
 }
 

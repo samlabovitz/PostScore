@@ -33,7 +33,24 @@ export const JUMP_SECTIONS = [
   { id: "next", key: "next", part: "edit" },
   { id: "protection", key: "protection", part: "protection" },
 ] as const;
-export type JumpSectionId = (typeof JUMP_SECTIONS)[number]["id"];
+export type JumpSectionId = (typeof JUMP_SECTIONS)[number]["id"] | (typeof RESULTS_SECTIONS)[number]["id"];
+
+/** Day 25B step 2: the two pages' own menus (docs/plans/day25a-spec.md §3).
+ * Growth → Google results; Presence → Google listing. Same anchor ids as the
+ * old tab (plus this-week and since, which were inside its section 1). */
+export const RESULTS_SECTIONS = [
+  { id: "last-month", key: "lastMonth", part: "performance" },
+  { id: "this-week", key: "thisWeek", part: "performance" },
+  { id: "since", key: "since", part: "performance" },
+  { id: "funnel", key: "funnel", part: "performance" },
+  { id: "searches", key: "searches", part: "performance" },
+] as const;
+export const LISTING_SECTIONS = [
+  { id: "listing", key: "listing", part: "edit" },
+  { id: "next", key: "next", part: "edit" },
+  { id: "protection", key: "protection", part: "protection" },
+] as const;
+export type JumpSection = { id: JumpSectionId; key: string; part: JumpPart };
 
 /** How far below the menu's bottom edge a section title still counts as
  * "under the menu": jumps land a title 12px below it (scroll-margin). */
@@ -41,19 +58,20 @@ export const JUMP_LINE_SLACK = 24;
 
 /** The jump item for a URL hash: a section's own (#protection), or the
  * listing for a row editor's (#edit-hours); null for anything else. */
-export function jumpIdFromHash(hash: string | null | undefined): JumpSectionId | null {
+export function jumpIdFromHash(hash: string | null | undefined, sections: readonly JumpSection[] = JUMP_SECTIONS): JumpSectionId | null {
   const h = (hash ?? "").replace(/^#/, "");
-  const own = JUMP_SECTIONS.find((s) => s.id === h);
+  const own = sections.find((s) => s.id === h);
   if (own) return own.id;
-  return editorFromHash(`#${h}`) ? "listing" : null;
+  // A row editor's hash belongs to the listing — only on a page that has it.
+  return editorFromHash(`#${h}`) && sections.some((s) => s.id === "listing") ? "listing" : null;
 }
 
 /** The active menu item: the last section whose title has reached the line
  * just under the pinned menu (`line` = the menu's bottom + JUMP_LINE_SLACK,
  * in viewport px); the first one while none has; the last one at the
  * bottom of the page, where section 6 can't scroll up that far. */
-export function activeJumpSection(tops: Array<{ id: JumpSectionId; top: number }>, line: number, atBottom: boolean): JumpSectionId {
-  if (tops.length === 0) return JUMP_SECTIONS[0].id;
+export function activeJumpSection(tops: Array<{ id: JumpSectionId; top: number }>, line: number, atBottom: boolean, first: JumpSectionId = JUMP_SECTIONS[0].id): JumpSectionId {
+  if (tops.length === 0) return first;
   if (atBottom) return tops[tops.length - 1].id;
   let active = tops[0].id;
   for (const s of tops) if (s.top <= line) active = s.id;
@@ -562,6 +580,9 @@ export interface ListingInput {
   extras?: ListingExtras | null;
   /** The real Book online button and whether Google counts its bookings (lib/bookingPartners.ts). */
   booking?: BookingState | null;
+  /** Day 25B (Google listing page only): the website shows different hours —
+   * the Hours row is ! and counts toward "to improve", never "OK". */
+  hoursMismatch?: boolean;
 }
 
 export interface ListingExtras {
@@ -647,6 +668,18 @@ export function compactHours(lines: string[] | null): string | null {
   return runs.map((r) => `${r.from === r.to ? r.from : `${r.from}–${r.to}`} ${r.hours}`.trim()).join(" · ");
 }
 
+/** The compact hours in Spanish when Google's lines came in English
+ * ("Mon Closed · Tue–Wed 9:30 AM – 5:00 PM" → "lun Cerrado · mar–mié …").
+ * The times stay as Google wrote them. */
+const ES_DAYS: Record<string, string> = { Mon: "lun", Tue: "mar", Wed: "mié", Thu: "jue", Fri: "vie", Sat: "sáb", Sun: "dom" };
+export function localizeHours(value: string, locale: "en" | "es"): string {
+  if (locale !== "es") return value;
+  return value
+    .replace(/\b(Mon|Tue|Wed|Thu|Fri|Sat|Sun)\b/g, (d) => ES_DAYS[d])
+    .replace(/\bClosed\b/g, "Cerrado")
+    .replace(/\bOpen 24 hours\b/g, "Abierto las 24 horas");
+}
+
 function host(url: string | null): string | null {
   if (!url) return null;
   try {
@@ -683,7 +716,13 @@ export function listingGroups(input: ListingInput): ListingGroup[] {
     },
     {
       id: "open",
-      rows: [row("hours", "completeness.hours", compactHours(input.openingHours), editor("hours")), holidayRow(input)],
+      rows: [
+        (() => {
+          const r = row("hours", "completeness.hours", compactHours(input.openingHours), editor("hours"));
+          return input.hoursMismatch && r.status === "ok" ? { ...r, status: "warn" as const } : r;
+        })(),
+        holidayRow(input),
+      ],
     },
     {
       id: "who",
@@ -751,6 +790,53 @@ function postsRow(input: ListingInput): ListingRow {
 export function listingCounts(groups: ListingGroup[]): { ok: number; fix: number; improve: number } {
   const rows = groups.flatMap((g) => g.rows);
   return { ok: rows.filter((r) => r.status === "ok").length, fix: rows.filter((r) => r.status === "bad").length, improve: rows.filter((r) => r.status === "warn").length };
+}
+
+// ---------------------------------------------------------------------------
+// Day 25B: the Google listing page's points (Presence pages show "+N pts")
+// ---------------------------------------------------------------------------
+
+/** The score check behind each listing row, for its "+N pts". */
+export const ROW_CHECK: Record<string, string> = {
+  phone: "completeness.phone",
+  website: "completeness.website_link",
+  hours: "completeness.hours",
+  category: "completeness.categories",
+  customerDetails: "completeness.customer_details",
+  photos: "completeness.photos",
+  reviews: "visibility.review_replies",
+};
+
+const round1 = (n: number) => Math.round(n * 10) / 10;
+/** What a check is missing from the saved scan; 0 when it couldn't run. */
+const missingPoints = (c: Pick<CheckResult, "earnedPoints" | "maxPoints"> | undefined) => (c && c.earnedPoints !== null ? Math.max(0, c.maxPoints - c.earnedPoints) : 0);
+
+/** A row's "+N pts" from the saved scan (0: nothing to win). The Hours row
+ * adds the hours-mismatch fix's own points (the website check's). */
+export function rowPoints(rowId: string, checks: CheckResult[], extra: { hoursMismatchPoints?: number | null } = {}): number {
+  const own = ROW_CHECK[rowId] ? missingPoints(checks.find((c) => c.id === ROW_CHECK[rowId])) : 0;
+  return round1(own + (rowId === "hours" ? (extra.hoursMismatchPoints ?? 0) : 0));
+}
+
+/** "+0.6" / "+2": one decimal only when it isn't whole. */
+export function pointsText(points: number): string {
+  return Number.isInteger(points) ? String(points) : points.toFixed(1);
+}
+
+/** "Fix this 1 and your Google listing goes 28 → 30 pts (score 78 → 80)":
+ * every Google-listing check losing points in the saved scan, their sum on
+ * the listing's own points and on the score. null when nothing is losing. */
+export function listingFixLine(checks: CheckResult[], listing: { points: number; weight: number }, score: number): { count: number; from: number; to: number; scoreFrom: number; scoreTo: number } | null {
+  const losing = checks.filter((c) => c.category === "completeness" && missingPoints(c) > 0);
+  if (losing.length === 0) return null;
+  const gain = losing.reduce((sum, c) => sum + missingPoints(c), 0);
+  return {
+    count: losing.length,
+    from: round1(listing.points),
+    to: Math.min(listing.weight, round1(listing.points + gain)),
+    scoreFrom: Math.round(score),
+    scoreTo: Math.min(100, Math.round(score + gain)),
+  };
 }
 
 /** The editor a ?tab=google#edit-… link opens. */

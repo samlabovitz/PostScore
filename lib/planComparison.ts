@@ -5,6 +5,7 @@
 // Anything not live yet says so ("Coming soon") — never claimed as
 // working. Pure.
 
+import { NEW_PAGES_LIVE } from "@/lib/routes";
 import type { MessageKey } from "./i18n";
 import type { Plan } from "./plan";
 import { GOOGLE_WRITES_FOR_EVERYONE, googleWritesCopy } from "./googleWritesLaunch";
@@ -45,8 +46,11 @@ const oneTap: Cell = text(GOOGLE_WRITES_FOR_EVERYONE ? "oneTapApproveLive" : "on
 /** The Compare plans rows. The monthly report email says "Coming soon"
  * until MONTHLY_REPORTS_LIVE is "true" (lib/monthlyReportsFeatureFlag.ts —
  * read on the server and passed in). */
-export function compareRows(monthlyReportsLive = false): CompareRow[] {
+export function compareRows(monthlyReportsLive = false, newPagesLive: boolean = NEW_PAGES_LIVE): CompareRow[] {
   const monthly: Cell = monthlyReportsLive ? yes : soon;
+  // Day 25B: Grow gets Google results and the listing's "changes by anyone
+  // else" once the new Google pages are live (lib/routes.ts NEW_PAGES_LIVE).
+  const growGoogle: Cell = newPagesLive ? text("withGoogle", true) : no;
   return [
     row("whatsWrong", yes, yes, yes),
     row("rank", yes, yes, yes),
@@ -67,10 +71,10 @@ export function compareRows(monthlyReportsLive = false): CompareRow[] {
     // Edit on Google (hours, phone, description, website link, customer
     // details, order or booking link): Premium, Beta until it's on for everyone.
     row("doneForYou", no, no, googleWrites),
-    // Live features (Days 22B–23E). Grow gets Google results in Day 25B.
+    // Live features (Days 22B–23E). Grow gets Google results and the alerts in Day 25B.
     row("weeklyPost", preview, text("draftsToCopy"), oneTap),
-    row("googleResults", no, no, text("withGoogle", true)),
-    row("protection", no, no, text("withGoogle", true)),
+    row("googleResults", no, growGoogle, text("withGoogle", true)),
+    row("protection", no, growGoogle, text("withGoogle", true)),
     // Free gets no monthly report email (lib/plan.ts planIncludesMonthlyReports).
     row("reports", no, text("weeklyRecap"), text("weeklyPdf")),
     row("monthlyEmail", no, monthly, monthly),

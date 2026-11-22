@@ -22,6 +22,7 @@ import { versionsOfHours } from "@/lib/compareVersions";
 import { CompareVersions } from "@/components/gbp/CompareVersions";
 import { t, useLocale, type Locale, type MessageKey } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
+import { PremiumOneClickLine } from "@/components/scoring/PremiumOneClickLine";
 
 const K = (key: string) => `dashboard.hoursChooser.${key}` as MessageKey;
 const GOOGLE_BUSINESS_URL = "https://business.google.com/";
@@ -117,6 +118,8 @@ export function FixGoogle({ businessId, view, week, own, onTab }: { businessId: 
         </a>
         <CopyHours lines={lines} />
       </div>
+      {/* Grow and Free: the steps, never a write — and what Premium does instead (hidden on Premium). */}
+      <PremiumOneClickLine businessId={businessId} item={{ checkId: "website.info_consistency", hoursMismatch: true }} />
     </div>
   );
 }

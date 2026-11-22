@@ -331,8 +331,8 @@ export function todayItems(plan: Plan, locale: Locale, launched: boolean = GOOGL
 }
 
 export function headedItems(plan: Plan, locale: Locale, launched: boolean = GOOGLE_WRITES_FOR_EVERYONE): string[] {
-  // Google results (who searches, calls, clicks) are live since Day 22B — not "headed".
-  const items = [t(locale, K("headed.posts"))];
+  // Google results (Day 22B) and Google posts with Approve (Day 23E) are live — not "headed".
+  const items: string[] = [];
   // Editing the listing and posting replies: on for everyone at launch.
   if (!launched) items.push(t(locale, K(plan === "premium" || plan === "multi" ? "headed.everyone" : "headed.editGoogle")));
   return items;
@@ -642,16 +642,18 @@ function pageThree(d: WeeklyReportV2Data, m: Measurer): PrintPage {
   // The two boxes and the last box get their room first; the posts take what's left.
   const gap = 14;
   const colW = (INNER - gap) / 2;
+  // Nothing left "headed" (everything shipped): the Today box takes the full width.
+  const todayW = d.headed.length > 0 ? colW : INNER;
   const itemLines = (items: string[], width: number) => items.reduce((n, s) => n + k.lines(s, 9, "body", width, 3).length, 0);
   const todayH =
     30 +
     itemLines(
       d.today.map((i) => i.text),
-      colW - 34 - 34
+      todayW - 34 - 34
     ) *
       12.6 +
     d.today.length * 3;
-  const headedH = 30 + itemLines(d.headed, colW - 34) * 12.6 + d.headed.length * 16;
+  const headedH = d.headed.length > 0 ? 30 + itemLines(d.headed, colW - 34) * 12.6 + d.headed.length * 16 : 0;
   const boxH = Math.max(todayH, headedH) + 8;
   const free = d.plan === "free";
   const lastLines = k.lines(t(locale, free ? K("upgradeBody") : K("teaserBody")), 9.5, "body", INNER - 28, 5);
@@ -696,23 +698,25 @@ function pageThree(d: WeeklyReportV2Data, m: Measurer): PrintPage {
   // Today | Where it's headed
   const boxTop = y;
   {
-    k.els.push({ kind: "rect", x: M, y: boxTop, w: colW, h: boxH, r: 6, fill: C.white, stroke: C.line, strokeWidth: 0.9 });
+    k.els.push({ kind: "rect", x: M, y: boxTop, w: todayW, h: boxH, r: 6, fill: C.white, stroke: C.line, strokeWidth: 0.9 });
     k.eyebrow(M + 12, boxTop + 18, t(locale, K("todayHeading")));
     let ty = boxTop + 34;
     for (const item of d.today) {
       if (ty > boxTop + boxH - 10) break;
       k.els.push({ kind: "rect", x: M + 14, y: ty - 4, w: 3.5, h: 3.5, r: 1.75, fill: C.ink, stroke: null, strokeWidth: 0 });
-      ty = k.para(M + 24, ty, item.text, 9, "body", C.ink, colW - 34 - 34, 3);
+      ty = k.para(M + 24, ty, item.text, 9, "body", C.ink, todayW - 34 - 34, 3);
       if (item.beta) {
         const bw = m.width("Beta", "bodyBold", 7.5) + 10;
-        k.els.push({ kind: "rect", x: M + colW - 12 - bw, y: ty - 21, w: bw, h: 12, r: 6, fill: CREAM, stroke: null, strokeWidth: 0 });
-        k.text(M + colW - 7 - bw, ty - 12.5, "Beta", 7.5, "bodyBold", C.brass);
+        k.els.push({ kind: "rect", x: M + todayW - 12 - bw, y: ty - 21, w: bw, h: 12, r: 6, fill: CREAM, stroke: null, strokeWidth: 0 });
+        k.text(M + todayW - 7 - bw, ty - 12.5, "Beta", 7.5, "bodyBold", C.brass);
       }
       ty += 3;
     }
     const hx = M + colW + gap;
-    k.els.push({ kind: "rect", x: hx, y: boxTop, w: colW, h: boxH, r: 6, fill: NAVY, stroke: null, strokeWidth: 0 });
-    k.eyebrow(hx + 12, boxTop + 18, t(locale, K("headedHeading")));
+    if (d.headed.length > 0) {
+      k.els.push({ kind: "rect", x: hx, y: boxTop, w: colW, h: boxH, r: 6, fill: NAVY, stroke: null, strokeWidth: 0 });
+      k.eyebrow(hx + 12, boxTop + 18, t(locale, K("headedHeading")));
+    }
     let hy = boxTop + 34;
     const soon = t(locale, "dashboard.common.comingSoon");
     for (const item of d.headed) {

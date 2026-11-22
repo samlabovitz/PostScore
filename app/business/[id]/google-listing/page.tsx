@@ -1,0 +1,17 @@
+import { redirect } from "next/navigation";
+import { googleListingHref } from "@/lib/routes";
+import { websiteOnlyGuard } from "@/components/scoring/websiteOnlyGuard";
+import { canOpenNewGooglePages, loadGoogleListing } from "@/lib/googlePages.server";
+import { GooglePageShell } from "@/components/gbp/GooglePageShell";
+import { GoogleListingPage } from "@/components/gbp/GoogleListingPage";
+
+/** Presence → Google listing (Day 25B step 2; docs/plans/day25a-spec.md §2).
+ * Behind NEW_PAGES_LIVE: until then only the dev test login may open it;
+ * everyone else lands on the old Google Profile tab. */
+export default async function GoogleListingRoute({ params, searchParams = {} }: { params: { id: string }; searchParams?: { gbp?: string } }) {
+  if (!(await canOpenNewGooglePages())) redirect(googleListingHref(params.id));
+  const websiteOnly = await websiteOnlyGuard(params.id, "growth");
+  if (websiteOnly) return websiteOnly;
+  const data = await loadGoogleListing(params.id, searchParams.gbp);
+  return <GooglePageShell data={data} promoPage="overview" render={(props) => <GoogleListingPage {...props} />} />;
+}

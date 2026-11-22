@@ -233,7 +233,9 @@ export async function scoreBusinessWithClient(
   const { withOwnerWebsite } = await import("@/lib/ownerWebsite.server");
   const zoned = await withOwnerWebsite(supabase, businessId, withTimeZone(row));
   const input = businessRowToScoringInput(zoned as unknown as BusinessScoringRow);
-  const result = getScoreWithSuggestions(input, locale === "business" ? normalizeLocale(business.language) : locale);
+  // "business": its own language — or, under `next dev` only, the --lang preview cookie (lib/viewLocale.server.ts), so the checks' words match the page's.
+  const { viewLocale } = await import("@/lib/viewLocale.server");
+  const result = getScoreWithSuggestions(input, locale === "business" ? viewLocale(business.language) : locale);
 
   // Can't be read: no Google values at all (the header shows the owner's
   // confirmed name, else a neutral label), and the page says so.
