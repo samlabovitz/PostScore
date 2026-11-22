@@ -116,6 +116,17 @@ Mockup 07. "This week's fixes" is renamed **Fix plan** and sits second in the Pr
 - The same order is used on Google results (one list): post → replies → answers → photos.
 - **Growth order everywhere** (sidebar, phone tab row, Free sidebar, "More customers" cards): Growth plan · Google results · Get more reviews · Customer offers · Campaigns · Print kit & QR · Local events (last).
 
+## 7b. Replies live in Presence → Reviews
+
+- **Presence → Reviews** (new mockup 08): rating, count, the review goal, the fix line, **the reply inbox + reply drafts** ("Approve 10 replies"), and the review points with +pts.
+  - The inbox rows show "review text, live from Google (never saved)" and "date from Google" instead of invented text, since review text is never stored.
+- **Growth → Get more reviews:** asking only (review link, QR, guide, counter tools, Sign Studio).
+- **Fix plan:** "Reply to your recent reviews" → Presence → Reviews. "Get fresh reviews" says "Get more reviews (in Growth) →".
+- **Google listing's Reviews row:** "Reply in Reviews →".
+- Every Presence link into Get more reviews says "(in Growth)"; that includes Overview's Reviews button.
+- **Growth plan's weekly reply task + Approve stay.** They send the same drafts as the Reviews inbox.
+- **Screenshots:** new `08-reviews`; re-taken `05-google-listing` and `07-fix-plan`, plus `02-overview`, `02b-overview-disconnected` (button wording) and `03b-growth-plan-not-connected` ("PostAI drafts each reply on Reviews").
+
 ## 8. Every file changed in this round
 
 **Final cleanup (Nov 21)**

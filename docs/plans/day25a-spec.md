@@ -27,6 +27,7 @@ All numbers are Hair Express's real numbers: scan of Nov 20, 2026 (78 · C), and
 20. **Growth order** everywhere (sidebar, phone tab row, Free sidebar, "More customers" cards): Growth plan · Google results · Get more reviews · Customer offers · Campaigns · Print kit & QR · Local events (last).
 21. **Fix plan: one score, two targets:** "This week: 78 → 87" (big) and "When every fix is done: 100 · A" (smaller). Each row is tagged "This week" or "Takes a few weeks", from a `thisWeek` field on every fix type (§2b). Overview keeps its single 100 · A.
 22. **Google results shows Growth content only:** the closing listing box is removed; "Fix your listing →" stays only in the top bar. Not connected (04b): only the Connect card + "Your weekly tasks are on Growth plan →". Rule: Growth pages never show Presence content (§2, §6.5).
+23. **Replies live in Presence → Reviews:** the reply inbox and drafter (`ReviewReplyDrafter`, `GoogleReviewsInbox`, `GbpReplyCheckConnect`) move to Reviews; Get more reviews (Growth) keeps only asking. Fix plan's reply fix and Google listing's "Reply in Reviews →" stay in Presence; every Presence link into Growth says "Get more reviews (in Growth) →". The Growth plan's weekly reply task + Approve stay (same drafts). New mockup 08.
 
 ---
 
@@ -107,7 +108,7 @@ Columns: Tab · Page · Route · What's on it · Source.
 | **Overview** | `/business/[id]` (unchanged) | See §2a. | `BusinessScoreView.tsx`, `TopRecommendations.tsx`, `GrowMoreCustomers.tsx`, `GoogleListingCard.tsx`, `StudioComingSoon.tsx` |
 | **Fix plan** (Presence sidebar, 2nd, under Overview) | `/business/[id]/fix-plan` (new) | Every PostScore score fix, ranked from most urgent to least, each with "+N pts", a running projected score, and **Fix it →** to the exact spot (§2b). Replaces today's Growth recap: the weekly "+14 within reach" cap goes, Bigger projects become lower rows in the same list, and re-check website and celebrations stay. | `growth/GrowthView.tsx` (recap part), `ActionPlanSection.tsx`, `FreeGrowthPlan.tsx` (Free locked view) |
 | **Google listing** | `/business/[id]/google-listing` (new) | Today's Google Profile sections 4 Your listing, 5 Show up for more, 6 Protection & changes. A top bar links "See what your listing brings in →" to Google results. Scored rows show "+N pts". Jump menu: 1 Your listing · 2 Show up for more · 3 Changes. | `GoogleProfileTab.tsx`: `ListingSection`, `NextSection`, `ProtectionSection`, `GoogleEditsBanner`, `PartHeader` "edit"/"protection" |
-| **Reviews** | `/business/[id]/website-reviews` (URL kept) | What customers say: rating, count, review goal vs nearby, recent reviews, the Visibility & Reputation checks with "+N pts". "Grow this" bar: "Get more reviews →". | `ReviewsView.tsx` (social proof, `ReviewGapLine`, rubric `CategoryCard`) |
+| **Reviews** | `/business/[id]/website-reviews` (URL kept) | What customers say **and your replies** (mockup 08): rating, count, review goal vs nearby, the fix line ("Fix these 2 and Visibility & Reputation goes 21 → 40 pts (score 78 → 97)"), **the reply inbox + reply drafts** (recent reviews live from Google, oldest first, "Approve 10 replies", "Paste a review" for the drafter), and the Visibility & Reputation checks with "+N pts". Links into Growth say **"Get more reviews (in Growth) →"**. | `ReviewsView.tsx` (social proof, `ReviewGapLine`, rubric `CategoryCard`), `ReviewReplyDrafter`, `GoogleReviewsInbox`, `GbpReplyCheckConnect` |
 | **Website** | `/business/[id]/website` | Unchanged. | — |
 | **Competitors** | `/business/[id]/competitors` | Unchanged (rank map tab arrives in 25C). | — |
 | **Price check** | `/business/[id]/pricing` | Unchanged. | — |
@@ -120,7 +121,7 @@ Columns: Tab · Page · Route · What's on it · Source.
 |---|---|---|---|
 | **Growth plan** | `/business/[id]/growth` (repurposed) | 1. **Tier hero**: name, "Tier N of 5", the next step in one line (Hair Express, test account: "2 · Building + Test account", "On track for Growing on Monday, Nov 30"), Active weeks (last 8), the 5-step track. 2. **To reach [next tier]** + **After that** cards. 3. **This week's plan**, the single weekly list (§4): "Approve 3 tasks" + "12 items go to Google" on Premium; steps on Grow. 4. One link line: **"See what Google brought you last month → Google results"**. No number cards: Google numbers live only on Google results, and offer tracking only on Customer offers. 5. **More customers, whatever your score** (moved from Overview). | New tier parts; `WeeklyChecklist.tsx` (folds into This week's plan); `MoreWaysCards.tsx`; `GrowMoreCustomers.tsx`; `ThisWeekList.tsx` / `ApproveAll.tsx` |
 | **Google results** | `/business/[id]/google-results` (new) | Today's sections 1–3: Last month hero (rate + chart), KPI tiles, November so far, the "Google brought you…" estimate, What to do this week, Since you did this (decreases gray, increases green; the "other things also affect these numbers" note above the table), Searches → actions (funnel, who saw you, devices, call days, by month; "Actions per 100 viewers"), Search terms. The Growth line sits at the top, with a small "Fix your listing →" link (the page's only link to Presence; no closing listing box, no listing counts). Hero sentence: "of people who found you on Google took action (called, got directions or visited your site)". Jump: Last month · This week · Since you did this · Searches → actions · Search terms. | `GoogleProfileTab.tsx`: `LastMonthSection`, `ThisWeek`, `SinceCard`, `FunnelSection`, `SearchesSection`, `JumpMenu`, `WorthBox` |
-| **Get more reviews** | `/business/[id]/get-reviews` (new) | Ask + reply: review link, QR + PNG, the "right way" guide, counter tools, reply drafter / Google reviews inbox, unanswered reviews. The Sign Studio stays here **and** is listed in Print kit. Link back: "See what customers say →" (Presence → Reviews). | `ReviewsView.tsx`: `GetMoreReviews`, `ReviewGuide`, `CounterTools`, `ReviewReplyDrafter`, `GoogleReviewsInbox`, `GbpReplyCheckConnect`, `SignStudio` |
+| **Get more reviews** | `/business/[id]/get-reviews` (new) | **Asking only:** review link, QR + PNG, the "right way" guide, counter tools, Sign Studio (also listed in Print kit). No replies here: they live in Presence → Reviews. Link back: "See what customers say and reply →" (Presence → Reviews). | `ReviewsView.tsx`: `GetMoreReviews`, `ReviewGuide`, `CounterTools`, `SignStudio` |
 | **Customer offers** | `/business/[id]/offers` (new; `?tab=running\|coupons\|referrals\|first-time\|loyalty`) | Opens on **Running now** (today's All campaigns rows for coupons and referrals: code, start, times used, +1, Share, End). Then the Coupons and Referrals designers. First-time customers and Loyalty programs are "Coming soon" until Day 25D. **Offer tracking lives here** (moved off the Growth plan): a summary card at the top of Running now, "{n} offers started since {date} · {uses} uses logged", plus per-offer uses. Test and practice offers are never listed or counted (§6.2). | `campaigns/CampaignsView.tsx` (coupon/referral rows), `CouponsSection`, `ReferralSection`, `HowToRunIt` |
 | **Campaigns** | `/business/[id]/campaigns` (repurposed) | Email (Day 37), Text messages, Social posts: "Coming soon" until they ship, with the Premium/Grow labels from today. Small link: "Running coupons and referrals are in Customer offers →". | `campaigns/AllCampaigns.tsx` (email/text/social block) |
 | **Local events** | `/business/[id]/local-events` (new) | "Coming soon" + what it will do, until Day 25D. | new |
@@ -208,16 +209,16 @@ Hair Express: hours match (+0.6), replies (+6) and customer details (+2) are "Th
   - **"+N pts"** and the **running projected score** going down the list;
   - **Fix it →**, which uses the existing `lib/fixDestination.ts` links to land on the exact spot:
     - the Google listing row (e.g. `#customer-details`);
-    - Reviews / Get more reviews;
+    - Presence → Reviews (replies) / Get more reviews in Growth (asking);
     - the Website check.
 - **Hair Express** (scan of Nov 20; Top recommendations' own order and points):
   1. Match your website's hours to Google · Urgent · This week · +0.6 · → 79 · Website
-  2. Get fresh reviews · High · Takes a few weeks · +13 · → 92 · Get more reviews (count + rating + recency move together)
-  3. Reply to your recent reviews · High · This week · +6 · → 98 · Get more reviews, reply inbox
+  2. Get fresh reviews · High · Takes a few weeks · +13 · → 92 · button **"Get more reviews (in Growth) →"** (count + rating + recency move together)
+  3. Reply to your recent reviews · High · This week · +6 · → 98 · Presence → Reviews, reply inbox (stays in Presence)
   4. Add your customer details · Medium · This week · +2 · → 100 · Google listing, Customer details
   - Then "Website speed: not scored yet" (up to 3 pts), with no button.
   - The running score rounds 99.6 to 100, matching Overview's projection.
-- **Review fixes go to a Growth page** (Get more reviews). Following "Fix it" there switches the sidebar to the Growth tab; that's expected.
+- **Replies stay in Presence** (Reviews). Only "Get fresh reviews" leaves Presence; its button says "Get more reviews (in Growth) →", and following it switches the sidebar to the Growth tab.
 - **Each Presence page gets a one-line summary of its own fixes**, linking to Fix plan:
   - **Google listing:** "Fix this 1 and your Google listing goes 28 → 30 pts (score 78 → 80)" (in mockup 05).
   - **Reviews:** "Fix these 2 and Visibility & Reputation goes 21 → 40 pts (score 78 → 97)".
@@ -302,8 +303,11 @@ Hair Express: hours match (+0.6), replies (+6) and customer details (+2) are "Th
 ### Reviews split
 | From (`website-reviews/ReviewsView.tsx`) | To |
 |---|---|
-| `GetMoreReviews`, `ReviewGuide`, `CounterTools`, `SignStudio`, reply drafter, inbox, `GbpReplyCheckConnect` | `app/business/[id]/get-reviews/` |
-| `ReviewSocialProof`, `ReviewGapLine`, rubric `CategoryCard`, `LiveUnavailableNote` | Stays on Reviews (Presence) |
+| `GetMoreReviews`, `ReviewGuide`, `CounterTools`, `SignStudio` (asking) | `app/business/[id]/get-reviews/` (Growth) |
+| `ReviewReplyDrafter`, `GoogleReviewsInbox`, `GbpReplyCheckConnect` (replying) | **Stay on Reviews (Presence)**: replies are a score check ("Replying to reviews"), so they live with the points |
+| `ReviewSocialProof`, `ReviewGapLine`, rubric `CategoryCard`, `LiveUnavailableNote` | Stay on Reviews (Presence) |
+
+The Growth plan's weekly "Reply to your 10 newest unanswered reviews" task and its Approve button stay as they are. They're a shortcut that sends the **same** drafts as the Reviews inbox (one set of drafts; approving in one place marks them sent in the other).
 
 ### Campaigns split
 | From | To |
@@ -346,18 +350,21 @@ Hashes never reach the server, so hash-based moves need a small client redirect 
 | Overview, score card | See your action plan → | Fix plan |
 | Overview, Your Google listing card | Open your Google listing → | Google listing |
 | Google listing (top bar) | See what your listing brings in → | Google results |
-| Google listing, Reviews row | Reply in Get more reviews → | Get more reviews |
+| Google listing, Reviews row | Reply in Reviews → | Reviews (Presence) |
 | Google listing, end of section 2 | Fix plan / Growth plan | both |
 | Google results (top info bar only) | Fix your listing → | Google listing |
 | Google results, What to do this week | (same items as Growth plan) | Growth plan → This week's plan |
 | Growth plan (link line under This week's plan) | See what Google brought you last month → Google results | Google results |
 | Growth plan, More customers | Get your review link & QR → / Customer offers / Local events / Print kit / Campaigns | each Growth page |
-| Reviews (Presence) "Grow this" bar | Get more reviews → | Get more reviews |
-| Get more reviews | See what customers say → | Reviews |
+| Reviews (Presence): goal card + Review count / recency rows | Get more reviews (in Growth) → | Get more reviews |
+| Overview, Top recommendations (Reviews) | Get more reviews (in Growth) → | Get more reviews |
+| Any other Presence link into Get more reviews | always worded "Get more reviews (in Growth) →" | Get more reviews |
+| Get more reviews | See what customers say and reply → | Reviews |
+| Growth plan, "Reply to your 10 newest reviews" | (Approve here = the same drafts as the Reviews inbox) | Reviews (shared state) |
 | Website (Presence) "Grow this" bar | (after launch) Build a better site → PostStudio | PostStudio |
 | Competitors "Grow this" bar | Win more customers than them → | Growth plan |
 | Price check "Grow this" bar | Run an offer → | Customer offers |
-| Fix plan | Each fix's button → its editor (Google listing row, Website, Get more reviews) | Presence pages (+ Get more reviews) |
+| Fix plan | Each fix's button → its spot (Google listing row, Reviews inbox, Website); "Get fresh reviews" → "Get more reviews (in Growth) →" | Presence pages (+ Get more reviews) |
 | Campaigns | Running coupons and referrals are in Customer offers → | Customer offers |
 
 **One weekly list, two views.** "What to do this week" on Google results and "This week's plan" on Growth plan are the same list with the same state. **Same items, same order** on both pages (the plan's own priority order; ranked by tier impact (§2c); for Hair Express: **post → replies → answers → photos**). Google results adds the lever chips above the list.
@@ -377,7 +384,8 @@ The rule from CLAUDE.md applies everywhere: **Grow tells you what's wrong and sh
 | Google listing | ✓/!/✕ rows and "+N pts" visible (it's the audit); steps locked; editors hidden | Rows + step-by-step how-to per row + Premium line; "Changes by anyone else" shown with how to change it back yourself | One-click editors (preview → approve → 7-day undo), "Change back", holiday hours/services writes |
 | Google results | Locked preview: no numbers shown, "Connect Google with Grow to see your calls, direction requests and website clicks" | **Decided:** all numbers (hero, tiles, funnel, search terms, Since you did this); This week as steps | Everything + Approve all |
 | Growth plan | Locked preview (mockup 06): the page badge reads **"Locked"** (on every Growth page), "?", what it would measure, real task titles blurred | Tier, requirements, This week's plan as steps with "I did this" | Tier, requirements, **"Approve 3 tasks" / "12 items go to Google"**, "Needs you · N min" items |
-| Get more reviews | Today's Free Reviews: link, QR, guide rule visible, rest locked, 3 free reply drafts | Today's Grow | Today's Premium (unlimited, inbox) |
+| Get more reviews | Link, QR, guide rule visible, the rest locked | Guide fully open, basic sign | Full Sign Studio |
+| Reviews (Presence) | Rating, count, points; 3 free reply drafts (paste); inbox locked | 3 free reply drafts + "Unlimited with Premium"; steps to reply on Google + "Premium does this for you in one click →" | Inbox with drafts + Approve, unlimited |
 | Customer offers | Today's Campaigns showroom | 2 styles, tracking | Full customization |
 | Campaigns | Locked | Locked "Premium" chip | Coming soon |
 | Local events | Coming soon | Coming soon | Coming soon |
@@ -675,6 +683,7 @@ These notes used to sit inside the mockups as dashed yellow boxes. They're revie
 | 03 | `growth-plan.html` | Tier hero (Building + Test account), active weeks, To reach Growing / After that: Thriving, This week's plan ("Approve 3 tasks"), link line to Google results, More customers |
 | 03b | `growth-plan-not-connected.html` | Connect banner, the same tier, "I did this" steps, R1 needs Google |
 | 07 | `fix-plan.html` | Fix plan: This week 78 → 87 · every fix 100 · A, 4 ranked fixes tagged This week / Takes a few weeks with +pts, running score and Fix it, the not-scored-yet speed row |
+| 08 | `reviews.html` | Presence → Reviews: rating/count, fix line, reply inbox ("Approve 10 replies", review text live from Google, never saved), paste-a-review drafter, review points with +pts |
 | 04b | `google-results-not-connected.html` | Only the Connect card (what they'll see + Connect Google) and "Your weekly tasks are on Growth plan →" |
 | 04 | `google-results.html` | Growth line, hero 21.6% ("took action…"), tiles, estimate, What to do this week (same order, "Approve 3 tasks"), Since you did this (gray decreases, note above), Searches → actions, search terms; "Fix your listing →" only in the top bar |
 | 05 | `google-listing.html` | Listing rows with "+N pts", Show up for more, Protection & changes, "See what your listing brings in" |
