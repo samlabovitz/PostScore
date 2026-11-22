@@ -125,7 +125,9 @@ describe("the upgrade box shows only on Free", () => {
     expect(row("googleProfile")).toMatch(/^Edit your Google listing from PostScore \(Beta\) .*Premium$/);
     expect(row("googleProfile")).not.toContain("Coming soon");
     expect(row("googleProfile")).not.toMatch(/photos/i);
-    expect(row("aiReplies")).toMatch(/Coming soon Premium$/);
+    // Posting replies is Beta (Nov 21), like editing the listing — no Coming soon pill.
+    expect(row("aiReplies")).toMatch(/^Replies posted for you \(Beta\) .*Premium$/);
+    expect(row("aiReplies")).not.toContain("Coming soon");
     expect(row("campaignHub")).toMatch(/Coming soon Premium$/);
     expect(row("postaiUnlimited")).not.toContain("Coming soon");
     expect(row("postStudio")).toMatch(/\$30\/mo on its own.*Coming soon Add-on$/);

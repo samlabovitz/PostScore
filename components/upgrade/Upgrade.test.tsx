@@ -49,7 +49,9 @@ describe("the promo cards at the bottom of every main page", () => {
       expect(html.match(/<li /g), page).toHaveLength(3);
       expect(html, page).not.toContain('data-testid="promo-box"');
     }
-    expect(text(render(ctx("grow", "reviews"), <PromoCards />))).toContain("AI-drafted review replies soon");
+    // AI-drafted replies work today (Nov 21): no "soon" on the chip.
+    expect(text(render(ctx("grow", "reviews"), <PromoCards />))).toContain("AI-drafted review replies");
+    expect(text(render(ctx("grow", "reviews"), <PromoCards />))).not.toContain("AI-drafted review replies soon");
     expect(text(render(ctx("free", "pricing"), <PromoCards />))).toContain("Price check tools");
   });
 

@@ -396,6 +396,7 @@ export type MessageKey =
   | "dashboard.upgrade.feature.replies.name"
   | "dashboard.upgrade.feature.replies.b1"
   | "dashboard.upgrade.feature.replies.b2"
+  | "dashboard.upgrade.feature.replies.b2Live"
   | "dashboard.upgrade.feature.postStudio.name"
   | "dashboard.upgrade.feature.postStudio.b1"
   | "dashboard.upgrade.feature.postStudio.b2"
@@ -509,6 +510,7 @@ export type MessageKey =
   | "dashboard.free.planList.googleProfile.hLive"
   | "dashboard.free.planList.googleProfile.l"
   | "dashboard.free.planList.aiReplies.h"
+  | "dashboard.free.planList.aiReplies.hLive"
   | "dashboard.free.planList.aiReplies.l"
   | "dashboard.free.planList.campaignHub.h"
   | "dashboard.free.planList.campaignHub.l"
@@ -517,6 +519,7 @@ export type MessageKey =
   | "dashboard.free.fixPlan.seeEverything"
   | "dashboard.free.fixPlan.hideEverything"
   | "dashboard.free.tile.repliesPostedForYou"
+  | "dashboard.free.tile.repliesPostedForYouLive"
   | "dashboard.free.postaiFixOnGrow"
   | "dashboard.free.postai.line"
   | "dashboard.free.postai.left"
@@ -6734,7 +6737,8 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.replies.errorUnavailable": "Reply drafts aren't available right now. Please try again later.",
     "dashboard.upgrade.feature.replies.name": "Unlimited AI review replies",
     "dashboard.upgrade.feature.replies.b1": "Draft a reply to every review, as many as you need",
-    "dashboard.upgrade.feature.replies.b2": "With Google connect: every review you haven't answered, and replies posted for you",
+    "dashboard.upgrade.feature.replies.b2": "With Google connect: every review you haven't answered, and replies posted for you (Beta)",
+    "dashboard.upgrade.feature.replies.b2Live": "With Google connect: every review you haven't answered, and replies posted for you",
     "dashboard.upgrade.feature.postStudio.name": "PostStudio",
     "dashboard.upgrade.feature.postStudio.b1": "A full website we build and host",
     "dashboard.upgrade.feature.postStudio.b2": "$30/mo on its own · +$15 on Grow · +$8 on Premium · included in Multi",
@@ -6847,7 +6851,8 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.free.planList.googleProfile.h": "Edit your Google listing from PostScore (Beta)",
     "dashboard.free.planList.googleProfile.hLive": "Edit your Google listing from PostScore",
     "dashboard.free.planList.googleProfile.l": "Connect Google on Premium to update your listing, publish this week's post, and see your Google results: calls, directions and website clicks.",
-    "dashboard.free.planList.aiReplies.h": "Replies posted for you",
+    "dashboard.free.planList.aiReplies.h": "Replies posted for you (Beta)",
+    "dashboard.free.planList.aiReplies.hLive": "Replies posted for you",
     "dashboard.free.planList.aiReplies.l": "See every review you haven't answered and post replies from PostScore.",
     "dashboard.free.planList.campaignHub.h": "Email, text and social campaigns",
     "dashboard.free.planList.campaignHub.l": "Send your offers to customers from one place.",
@@ -6855,7 +6860,8 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.free.planList.postStudio.l": "PostStudio: a multi-page site on your own domain — $30/mo on its own, less with a plan.",
     "dashboard.free.fixPlan.seeEverything": "See everything in each plan",
     "dashboard.free.fixPlan.hideEverything": "Hide the full list ↑",
-    "dashboard.free.tile.repliesPostedForYou": "AI review replies posted for you",
+    "dashboard.free.tile.repliesPostedForYou": "AI review replies posted for you (Beta)",
+    "dashboard.free.tile.repliesPostedForYouLive": "AI review replies posted for you",
     "dashboard.free.postaiFixOnGrow": "I can explain what this means and why it matters to your customers — the full step-by-step plan to fix it is on Grow (Settings → Compare plans).",
     "dashboard.free.postai.line": "Ask questions about your score — 3 free questions a week.",
     "dashboard.free.postai.left": "{left} of {total} free questions left · resets {date}",
@@ -13418,7 +13424,8 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.replies.errorUnavailable": "Los borradores de respuestas no están disponibles ahora. Inténtelo más tarde.",
     "dashboard.upgrade.feature.replies.name": "Respuestas ilimitadas con IA",
     "dashboard.upgrade.feature.replies.b1": "Redacte una respuesta para cada reseña, todas las que necesite",
-    "dashboard.upgrade.feature.replies.b2": "Con la conexión a Google: cada reseña que no ha respondido, y publicamos las respuestas por usted",
+    "dashboard.upgrade.feature.replies.b2": "Con la conexión a Google: cada reseña que no ha respondido, y publicamos las respuestas por usted (Beta)",
+    "dashboard.upgrade.feature.replies.b2Live": "Con la conexión a Google: cada reseña que no ha respondido, y publicamos las respuestas por usted",
     "dashboard.upgrade.feature.postStudio.name": "PostStudio",
     "dashboard.upgrade.feature.postStudio.b1": "Un sitio web completo que construimos y alojamos",
     "dashboard.upgrade.feature.postStudio.b2": "$30/mes por sí solo · +$15 con Grow · +$8 con Premium · incluido en Multi",
@@ -13531,7 +13538,8 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.free.planList.googleProfile.h": "Edite su ficha de Google desde PostScore (Beta)",
     "dashboard.free.planList.googleProfile.hLive": "Edite su ficha de Google desde PostScore",
     "dashboard.free.planList.googleProfile.l": "Conecte Google con Premium para actualizar su ficha, publicar la entrada de esta semana y ver sus resultados de Google: llamadas, indicaciones y clics a su sitio.",
-    "dashboard.free.planList.aiReplies.h": "Respuestas que publicamos por usted",
+    "dashboard.free.planList.aiReplies.h": "Respuestas que publicamos por usted (Beta)",
+    "dashboard.free.planList.aiReplies.hLive": "Respuestas que publicamos por usted",
     "dashboard.free.planList.aiReplies.l": "Vea cada reseña sin responder y publique respuestas desde PostScore.",
     "dashboard.free.planList.campaignHub.h": "Campañas por correo, texto y redes sociales",
     "dashboard.free.planList.campaignHub.l": "Envíe sus ofertas a sus clientes desde un solo lugar.",
@@ -13539,7 +13547,8 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.free.planList.postStudio.l": "PostStudio: un sitio de varias páginas con su propio dominio — $30/mes por sí solo, menos con un plan.",
     "dashboard.free.fixPlan.seeEverything": "Ver todo lo que incluye cada plan",
     "dashboard.free.fixPlan.hideEverything": "Ocultar la lista completa ↑",
-    "dashboard.free.tile.repliesPostedForYou": "Respuestas a reseñas con IA que publicamos por usted",
+    "dashboard.free.tile.repliesPostedForYou": "Respuestas a reseñas con IA que publicamos por usted (Beta)",
+    "dashboard.free.tile.repliesPostedForYouLive": "Respuestas a reseñas con IA que publicamos por usted",
     "dashboard.free.postaiFixOnGrow": "Puedo explicarle qué significa esto y por qué importa a sus clientes — el plan completo paso a paso para arreglarlo está en Grow (Configuración → Comparar planes).",
     "dashboard.free.postai.line": "Haga preguntas sobre su puntuación — 3 preguntas gratis por semana.",
     "dashboard.free.postai.left": "Le quedan {left} de {total} preguntas gratis · se renuevan el {date}",

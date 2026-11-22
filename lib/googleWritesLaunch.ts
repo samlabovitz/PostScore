@@ -37,6 +37,10 @@ const COPY = {
   doneForYouChip: ["dashboard.upgrade.chip.doneForYou", "dashboard.upgrade.chip.doneForYouLive"],
   planListGoogleProfile: ["dashboard.free.planList.googleProfile.h", "dashboard.free.planList.googleProfile.hLive"],
   promoGoogleProfileB1: ["dashboard.upgrade.feature.googleProfile.b1", "dashboard.upgrade.feature.googleProfile.b1Live"],
+  // Posting review replies (Nov 21: Beta, like every Google write — was "coming soon").
+  repliesPostedTile: ["dashboard.free.tile.repliesPostedForYou", "dashboard.free.tile.repliesPostedForYouLive"],
+  planListAiReplies: ["dashboard.free.planList.aiReplies.h", "dashboard.free.planList.aiReplies.hLive"],
+  promoRepliesB2: ["dashboard.upgrade.feature.replies.b2", "dashboard.upgrade.feature.replies.b2Live"],
 } as const satisfies Record<string, readonly [MessageKey, MessageKey]>;
 
 export type GoogleWritesCopy = keyof typeof COPY;
@@ -49,8 +53,8 @@ export function googleWritesCopy(id: GoogleWritesCopy, launched: boolean = GOOGL
 /** Every pair, for tests. */
 export const GOOGLE_WRITES_COPY = COPY;
 
-/** Posting review replies to Google stays "coming soon" in the promo chips,
- * the plan list and the promo box until launch (the Premium bullet decides). */
+/** Was: posting review replies "coming soon" in the promos. Since Nov 21 those
+ * lines say "(Beta)" through googleWritesCopy instead; kept for tests. */
 export function postingRepliesSoon(launched: boolean = GOOGLE_WRITES_FOR_EVERYONE): boolean {
   return !launched;
 }

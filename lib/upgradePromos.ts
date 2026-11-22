@@ -15,7 +15,7 @@ import { t, type Locale, type MessageKey } from "./i18n";
 import type { Plan } from "./plan";
 import { MIN_RANKED_COMPETITORS } from "./competitorComparison";
 import { PLAN_COPY } from "./planComparison";
-import { googleWritesCopy, postingRepliesSoon } from "./googleWritesLaunch";
+import { googleWritesCopy } from "./googleWritesLaunch";
 
 export type ShowcasePage = "overview" | "growth" | "campaigns" | "reviews" | "website" | "competitors" | "pricing" | "reports";
 export const SHOWCASE_PAGES: ShowcasePage[] = ["overview", "growth", "campaigns", "reviews", "website", "competitors", "pricing", "reports"];
@@ -242,7 +242,8 @@ export function promoContent(feature: PromoFeature, f: PromoFacts, locale: Local
     case "replies":
       // After the 3 free AI review reply drafts: Premium is unlimited;
       // seeing every unanswered review and posting need Google connect.
-      return named("replies", [line(U("feature.replies.b1")), line(U("feature.replies.b2"), postingRepliesSoon())]);
+      // Posting replies is Beta ("(Beta)" in the line, dropped at launch) — never "coming soon".
+      return named("replies", [line(U("feature.replies.b1")), line(googleWritesCopy("promoRepliesB2"))]);
     case "postStudio":
       return { plan, feature: { title: t(locale, U("feature.postStudio.name")), lines: [line(U("feature.postStudio.b1"), true), line(U("feature.postStudio.b2"))] }, plans: boxPlans("premium", locale) };
     case "premium":
@@ -297,7 +298,8 @@ const chip = (id: string, soon = false): Chip => ({ key: U(`chip.${id}`), soon }
 // Editing the Google listing says "(Beta)" in its own wording (no "soon");
 // AI replies posted to Google stay "soon" until lib/googleWritesLaunch.ts flips.
 const DONE_FOR_YOU: Chip = { key: googleWritesCopy("doneForYouChip"), soon: false };
-const AI_REPLIES: Chip = chip("aiReplies", postingRepliesSoon());
+// AI-drafted review replies work on every plan today.
+const AI_REPLIES: Chip = chip("aiReplies");
 
 const PREMIUM_CHIPS: Record<ShowcasePage, Chip[]> = {
   overview: [DONE_FOR_YOU, AI_REPLIES, chip("postai"), chip("designs")],

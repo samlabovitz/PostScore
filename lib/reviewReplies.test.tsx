@@ -244,7 +244,7 @@ describe("the drafter", () => {
     expect(box.feature!.title).toBe("Unlimited AI review replies · Premium");
     expect(box.feature!.lines).toEqual([
       { text: "Draft a reply to every review, as many as you need", soon: false },
-      { text: "With Google connect: every review you haven't answered, and replies posted for you", soon: true },
+      { text: "With Google connect: every review you haven't answered, and replies posted for you (Beta)", soon: false },
     ]);
   });
 

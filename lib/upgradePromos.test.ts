@@ -68,8 +68,10 @@ describe("who sees which promo card", () => {
 
   test("anything not built is marked soon", () => {
     const all = SHOWCASE_PAGES.flatMap((p) => cardChips("premium", p));
-    for (const id of ["aiReplies", "searchInsights", "campaignChannels", "postStudio"])
+    for (const id of ["searchInsights", "campaignChannels", "postStudio"])
       expect(all.filter((c) => c.key.endsWith(`.${id}`)).every((c) => c.soon), id).toBe(true);
+    // AI-drafted review replies work today: never "soon".
+    expect(all.filter((c) => c.key.endsWith(".aiReplies")).every((c) => !c.soon)).toBe(true);
     // Editing the Google listing is built: "(Beta)" in its wording, no "soon".
     const edit = all.filter((c) => c.key.endsWith(".doneForYou"));
     expect(edit.length).toBeGreaterThan(0);
