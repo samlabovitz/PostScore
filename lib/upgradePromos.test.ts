@@ -68,8 +68,14 @@ describe("who sees which promo card", () => {
 
   test("anything not built is marked soon", () => {
     const all = SHOWCASE_PAGES.flatMap((p) => cardChips("premium", p));
-    for (const id of ["searchInsights", "campaignChannels", "postStudio"])
+    for (const id of ["campaignChannels", "postStudio"])
       expect(all.filter((c) => c.key.endsWith(`.${id}`)).every((c) => c.soon), id).toBe(true);
+    // Google results are live since Day 22B: never "soon", named as on Compare plans.
+    const results = all.filter((c) => c.key.endsWith(".searchInsights"));
+    expect(results.length).toBeGreaterThan(0);
+    expect(results.every((c) => !c.soon)).toBe(true);
+    expect(t("en", "dashboard.upgrade.chip.searchInsights")).toBe("Your Google results: calls, directions, website clicks and searches");
+    expect(t("es", "dashboard.upgrade.chip.searchInsights")).toBe("Sus resultados de Google: llamadas, indicaciones, clics a su sitio web y búsquedas");
     // AI-drafted review replies work today: never "soon".
     expect(all.filter((c) => c.key.endsWith(".aiReplies")).every((c) => !c.soon)).toBe(true);
     // Editing the Google listing is built: "(Beta)" in its wording, no "soon".

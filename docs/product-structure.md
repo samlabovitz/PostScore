@@ -108,7 +108,7 @@ Nothing is lost in the move: templates, pass-on options, double-sided, numbering
 - Review link, QR code, review sign designer (Sign Studio), review stats.
 - **Reply to a review** (AI reply drafts, built — option B, nothing from Google): the owner copies a review from Google and pastes it in (stars optional); PostAI drafts a short, polite reply in the business's language (thanks them, answers what they said; never an offer, discount or gift, never asks to change the review, never made-up facts — a draft that breaks a rule is refused and doesn't count); the owner edits it, then "Copy reply" + "Open my Google reviews" (their listing on Google Maps by place id). The pasted review is never saved, only the reply. `components/reviews/ReviewReplyDrafter.tsx`, `app/actions/reviewReplies.ts`, rules in `lib/reviewReplies.ts`.
   - Where: the Free Overview's reviews section, and the Reviews page (Grow and up, in the reply assistant block).
-  - Limit: **3 free drafts per business, lifetime, on Free and Grow** ("2 of 3 free replies left"), counted on the server in `review_reply_drafts` (`supabase/review-reply-drafts.sql` — written only by the service role; a draft reserves its row first so two clicks can't pass the limit; failures don't count; each row records the PostAI tokens used). After 3: "You've used your 3 free replies." + the side-by-side plans box (feature `replies`: Premium = unlimited). Grow also sees "Unlimited with Premium". **Premium/Multi: unlimited.**
+  - Limit: **Free: 3 drafts per business per week**, on the Free re-scan clock, reserved in `free_ai_usage` before any AI call (`lib/freeAiUsage.server.ts`, plus the `FREE_AI_MONTHLY_CAP` guard). **Grow: 10 drafts per business per week**, on the same clock, counted on the server in `review_reply_drafts` (`supabase/review-reply-drafts.sql` — written only by the service role; a draft reserves its row first so two clicks can't pass the limit; failures don't count; each row records the PostAI tokens used). Limits in `lib/reviewReplies.ts` (`FREE_REPLY_DRAFTS`, `GROW_REPLY_DRAFTS`). At the limit: "You've used this week's free drafts. They reset {date} — or get 10 a week on Grow, unlimited on Premium." (Grow: "You've used this week's 10 drafts. They reset {date} — or draft unlimited replies on Premium."), plus the side-by-side plans box (feature `replies`: Premium = unlimited). Grow also sees "Unlimited with Premium". **Premium/Multi: unlimited.**
   - Footer, Free/Grow: "Drafts only — paste it into Google yourself. With Premium, PostScore shows every review you haven't answered and posts replies for you (coming soon)." Premium/Multi: the same with "With Google connect…".
   - Until the SQL is run the block says drafts aren't available (no button).
 - Later: every unanswered review + posting replies for them (Premium, needs Google connect) — "Coming soon".
@@ -125,7 +125,7 @@ Nothing is lost in the move: templates, pass-on options, double-sided, numbering
 - **No website, or only a Facebook/social page: never an empty page.** It leads with:
   1. an honest header ("You don't have a website yet — it's one of the biggest gaps in your PostScore", with the real points it costs them);
   2. the Starter website generator with a live real-data preview (Grow/Premium: full use + download; Free: full use + a watermarked full preview, download with Grow);
-  3. directly under it, the PostStudio card comparing starter vs PostStudio, with the prices ("$30/mo on its own · +$15 on Grow · +$8 on Premium · included in Multi"), "Add PostStudio" (opens the PostStudio box) and "See PostStudio →" (the full-screen page).
+  3. directly under it, the PostStudio card comparing starter vs PostStudio, with the prices ("$30/mo on its own · +$15 on Grow · +$10 on Premium · included in Multi"), "Add PostStudio" (opens the PostStudio box) and "See PostStudio →" (the full-screen page).
 
   With the add-on (or Multi), the card becomes "Continue in PostStudio →".
 - FAQ draft (today) stays under the options.
@@ -143,7 +143,7 @@ Nothing is lost in the move: templates, pass-on options, double-sided, numbering
   - "Your site checklist" from real data (✓ ready from the listing / ○ you'll add this; `lib/postStudio.ts`);
   - "What PostStudio includes": the three tiles (no page outlines here or in the PostStudio box; the Website page's PostStudio card keeps its four wireframe outlines);
   - starter vs PostStudio comparison;
-  - the price for their plan, and "PostStudio isn't open yet — there's nothing to buy today", with the ways to get it side by side (PostStudio only $30/mo · Grow + PostStudio $40/mo · Premium + PostStudio $48/mo, Best value · Included in Multi), their plan highlighted;
+  - the price for their plan, and "PostStudio isn't open yet — there's nothing to buy today", with the ways to get it side by side (PostStudio only $30/mo · Grow + PostStudio $40/mo · Premium + PostStudio $50/mo, Best value · Included in Multi), their plan highlighted;
   - "Want something now? Use the free starter website →".
 - Later: website builder + hosting (auto-refreshing rating/reviews/hours after every scan), Menu & catalog, Logo Studio.
 - **Booking + online ordering connections** (plan only, `docs/day5-website-studio-plan.md` §10):
@@ -194,7 +194,7 @@ Anything not built says "coming soon".
 **Premium · $40/mo · "We do the work for you"** (highlighted, "Best value") — Connect Google and PostScore fixes things for you.
 - One-click fixes to your Google listing: hours, info, photos (coming soon)
 - Unlimited replies; with Google connect, every unanswered review + posting for you (coming soon)
-- See who searches for you and who calls or clicks (coming soon)
+- Your Google results: calls, directions, website clicks and searches
 - Email, text and social campaigns (coming soon)
 - Every design tool unlocked, with no PostScore branding
 - Unlimited PostAI, and PostStudio websites at a discount (PostStudio coming soon)
@@ -218,14 +218,14 @@ Anything not built says "coming soon".
 | AI review replies | 3 to try | 3 to try | unlimited · auto-post coming soon | unlimited · auto-post coming soon |
 | Fixes done for you (Google connect) | — | — | ✓ coming soon | ✓ coming soon |
 | Reports | — (no monthly email) | weekly recap | weekly + PDF | weekly + PDF |
-| PostStudio — your full website (coming soon) | $30/mo on its own | +$15/mo | +$8/mo | ✓ included |
+| PostStudio — your full website (coming soon) | $30/mo on its own | +$15/mo | +$10/mo | ✓ included |
 | Locations | 1 | 1 | 1 | up to 5, +$25/mo each extra |
 
 **PostStudio — your full website** (coming soon), its own section under the
 four plan cards (`PostStudioSection` in `components/settings/SettingsParts.tsx`,
 the options from `components/studio/PostStudioOptions.tsx`):
 - a multi-page site, hosted for you, your own domain, rating/hours updated after every scan, built to pass every website check;
-- the ways to get it: **PostStudio only $30/mo** (the free audit + PostStudio; Grow/Premium tools stay locked — plan `free` + addon `poststudio`) · Grow + PostStudio $40/mo (+$15) · Premium + PostStudio $48/mo (+$8, Best value) · included in Multi; the owner's plan highlighted;
+- the ways to get it: **PostStudio only $30/mo** (the free audit + PostStudio; Grow/Premium tools stay locked — plan `free` + addon `poststudio`) · Grow + PostStudio $40/mo (+$15) · Premium + PostStudio $50/mo (+$10, Best value) · included in Multi; the owner's plan highlighted;
 - "PostStudio is coming soon — nothing is charged today."
 
 Desktop: the four plan cards, the PostStudio section and this table, Premium
@@ -242,7 +242,7 @@ On Free the **Overview is the audit**, top to bottom:
 4. "More customers, whatever your score" (the original design, no thumbnails): the same tiles as Grow; "Get more Google reviews" keeps its star and title but, on Free, shows short tips instead of the stats and goal (those, the link and the QR are in the Reviews section right above): "Ask every customer right after a good visit, put your QR code where people wait, and reply to reviews so customers see you care." + the small line "Never offer a discount or gift for a review — it's against Google's rules." No button, no numbers. Grow/Premium/Multi keep the stats, goal and "Get your review link & QR →"; Competitors is free (a normal link); Coupons, Referrals, Weekly routine and Price check show a lock + "Grow" chip and open the promo box; the section ends with the big pair "Unlock with Grow" / "Unlock with Premium" ("Best value");
 5. PostAI showroom: real starter questions and one labeled, generic "Example answer" — the questions, the box and Send open the promo box; `sendAssistantMessage` refuses on Free (no AI call);
 6. competitor rank, with "You're #N of M nearby…" when they trail;
-7. "Unlock more with a plan" — 12 locked tiles (2 columns; 1 on a phone), each with its plan chip, a real count where there is one, skeleton rows with the feature's real icon, its OWN unlock line and a small "See plans": action plan, weekly routine, fix guides for their builder, Re-check, **downloading** the starter website (building it is free on the Website page), price check, weekly reports (PDF on Premium), campaign hub (coming soon), Google Profile fixes + insights (coming soon), AI review replies (coming soon), unlimited PostAI, PostStudio ("$30/mo alone · +$15 on Grow · +$8 on Premium", coming soon; its lock opens the PostStudio box);
+7. "Unlock more with a plan" — 12 locked tiles (2 columns; 1 on a phone), each with its plan chip, a real count where there is one, skeleton rows with the feature's real icon, its OWN unlock line and a small "See plans": action plan, weekly routine, fix guides for their builder, Re-check, **downloading** the starter website (building it is free on the Website page), price check, weekly reports (PDF on Premium), campaign hub (coming soon), Google Profile fixes + insights (coming soon), AI review replies (coming soon), unlimited PostAI, PostStudio ("$30/mo alone · +$15 on Grow · +$10 on Premium", coming soon; its lock opens the PostStudio box);
 8. the Grow + Premium ("Best value") promo cards.
 
 **Website page — two paths, every plan** (`app/business/[id]/website/page.tsx` + `WebsiteGeneratorSection`):
@@ -268,7 +268,7 @@ On Free the **Overview is the audit**, top to bottom:
 - Every other lock is small (`UpgradeTrigger`'s default): a lock chip naming the plan ("Grow", or "Premium" with a crown; "Add-on" for PostStudio) and a "See plans" text link (`plain` drops the chip where the block already names its plan, e.g. `LockedPreview`). Locked actions (`UpgradeButton`) keep their own look.
 - **Every promo box is never cut off** (`PromoBox`, the one box behind every lock): fixed and fully on screen — centered on desktop, a bottom sheet on a phone — at most the viewport height minus a margin; the title + × and the footer stay visible while the middle scrolls. No backdrop; the page keeps working.
 - Any lock click opens the side-by-side box: both plans always, Premium "Best value", the clicked feature's plan highlighted (Premium-only features lead with Premium).
-- **PostStudio has its own box** (every PostStudio lock, tile and "Add PostStudio", on every plan that doesn't have it): the three tiles (Website, Menu & catalog, Logo Studio), then the three ways side by side — "PostStudio only" $30/mo · "Grow + PostStudio" $40/mo · "Premium + PostStudio" $48/mo (Best value) — plus "Included in Multi", the plan they're on highlighted (Free → PostStudio only), and the footer "Coming soon — nothing is charged today."
+- **PostStudio has its own box** (every PostStudio lock, tile and "Add PostStudio", on every plan that doesn't have it): the three tiles (Website, Menu & catalog, Logo Studio), then the three ways side by side — "PostStudio only" $30/mo · "Grow + PostStudio" $40/mo · "Premium + PostStudio" $50/mo (Best value) — plus "Included in Multi", the plan they're on highlighted (Free → PostStudio only), and the footer "Coming soon — nothing is charged today."
 - One unlock line per section, never repeated on a page.
 - Every locked footer is the same `LockFooter` (`components/plan/LockedPreview.tsx`): the unlock line left (max 2 lines), "See plans →" right as a small pill that never wraps, ≥16px apart, vertically centered; on a phone the link drops below the line, left-aligned. Locked tiles stretch to the row's height with the footer pinned to the bottom. Used by `LockedPreview`, the PostAI showroom, the rank line and the compact website score.
 

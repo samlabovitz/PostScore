@@ -75,8 +75,8 @@ export function compareRows(monthlyReportsLive = false): CompareRow[] {
     row("reports", no, text("weeklyRecap"), text("weeklyPdf")),
     row("monthlyEmail", no, monthly, monthly),
     // PostStudio (coming soon): $30/mo on its own (the free audit +
-    // PostStudio), +$15 on Grow, +$8 on Premium, included in Multi.
-    row("postStudio", text("alone30"), text("plus15"), text("plus8"), text("included", true)),
+    // PostStudio), +$15 on Grow, +$10 on Premium, included in Multi.
+    row("postStudio", text("alone30"), text("plus15"), text("plus10"), text("included", true)),
     row("locations", text("one"), text("one"), text("one"), text("upTo5")),
   ];
 }

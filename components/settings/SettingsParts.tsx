@@ -217,7 +217,7 @@ export function PlanCard({ plan, monthlyReportsLive = false }: { plan: Plan; mon
 }
 
 /** Under the four plan cards: PostStudio, its own option — what it is,
- * the ways to get it ($30 alone · Grow +$15 · Premium +$8 · in Multi),
+ * the ways to get it ($30 alone · Grow +$15 · Premium +$10 · in Multi),
  * and "Coming soon". Nothing here can be bought. */
 function PostStudioSection({ plan }: { plan: Plan }) {
   const locale = useLocale();

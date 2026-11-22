@@ -95,7 +95,7 @@ describe("PostAI and Google posts", () => {
   });
 
   test("PostAI never has its own plan prices: every price comes from PLAN FACTS (the pricing page's strings)", () => {
-    expect(ASSISTANT_SYSTEM_RULES).not.toMatch(/\$(25|30|40|50|58|150)\/mo|\+\$(8|15)\b/);
+    expect(ASSISTANT_SYSTEM_RULES).not.toMatch(/\$(25|30|40|50|58|150)\/mo|\+\$(8|10|15)\b/);
     expect(ASSISTANT_SYSTEM_RULES).toContain("{Premium's price, copied exactly from PLAN FACTS}");
   });
 });

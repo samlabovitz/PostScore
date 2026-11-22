@@ -296,20 +296,21 @@ export interface Chip {
 }
 const chip = (id: string, soon = false): Chip => ({ key: U(`chip.${id}`), soon });
 // Editing the Google listing says "(Beta)" in its own wording (no "soon");
-// AI replies posted to Google stay "soon" until lib/googleWritesLaunch.ts flips.
 const DONE_FOR_YOU: Chip = { key: googleWritesCopy("doneForYouChip"), soon: false };
 // AI-drafted review replies work on every plan today.
 const AI_REPLIES: Chip = chip("aiReplies");
+// Google results (calls, directions, clicks, searches) are live since Day 22B.
+const SEARCH_INSIGHTS: Chip = chip("searchInsights");
 
 const PREMIUM_CHIPS: Record<ShowcasePage, Chip[]> = {
   overview: [DONE_FOR_YOU, AI_REPLIES, chip("postai"), chip("designs")],
-  growth: [DONE_FOR_YOU, chip("searchInsights", true), chip("postai"), AI_REPLIES],
+  growth: [DONE_FOR_YOU, SEARCH_INSIGHTS, chip("postai"), AI_REPLIES],
   campaigns: [chip("campaignChannels", true), chip("designs"), chip("postai"), DONE_FOR_YOU],
   reviews: [AI_REPLIES, chip("designs"), chip("postai"), DONE_FOR_YOU],
-  website: [chip("postStudio", true), DONE_FOR_YOU, chip("postai"), chip("searchInsights", true)],
-  competitors: [chip("searchInsights", true), DONE_FOR_YOU, chip("postai"), AI_REPLIES],
-  pricing: [chip("postai"), chip("searchInsights", true), DONE_FOR_YOU, chip("campaignChannels", true)],
-  reports: [chip("pdfReports"), chip("searchInsights", true), chip("postai"), DONE_FOR_YOU],
+  website: [chip("postStudio", true), DONE_FOR_YOU, chip("postai"), SEARCH_INSIGHTS],
+  competitors: [SEARCH_INSIGHTS, DONE_FOR_YOU, chip("postai"), AI_REPLIES],
+  pricing: [chip("postai"), SEARCH_INSIGHTS, DONE_FOR_YOU, chip("campaignChannels", true)],
+  reports: [chip("pdfReports"), SEARCH_INSIGHTS, chip("postai"), DONE_FOR_YOU],
 };
 const GROW_CHIPS: Record<ShowcasePage, Chip[]> = {
   overview: [chip("fixGuides"), chip("weeklyPlan"), chip("recheck"), chip("starterSite")],

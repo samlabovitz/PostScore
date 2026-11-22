@@ -76,7 +76,7 @@ describe("Settings pieces", () => {
       "Weekly recap",
       "Weekly + PDF",
       "+$15/mo",
-      "+$8/mo",
+      "+$10/mo",
       "Coming soon",
       "Preview",
       "Not included",
@@ -99,7 +99,7 @@ describe("Settings pieces", () => {
     expect([studio.free, studio.grow, studio.premium, studio.multi]).toEqual([
       { kind: "text", key: "dashboard.settings.plans.value.alone30" },
       { kind: "text", key: "dashboard.settings.plans.value.plus15" },
-      { kind: "text", key: "dashboard.settings.plans.value.plus8" },
+      { kind: "text", key: "dashboard.settings.plans.value.plus10" },
       { kind: "text", key: "dashboard.settings.plans.value.included", check: true },
     ]);
   });
@@ -120,7 +120,7 @@ describe("Settings pieces", () => {
       "Built to pass every website check",
       "PostStudio only $30/mo The free audit + PostStudio",
       "Grow + PostStudio $40/mo Grow + $15/mo for PostStudio",
-      "Premium + PostStudio $48/mo Premium + $8/mo for PostStudio",
+      "Premium + PostStudio $50/mo Premium + $10/mo for PostStudio",
       "Included in Multi",
       "Coming soon — nothing is charged today.",
       "PostStudio — your full website, built and hosted for you (coming soon)",
@@ -133,7 +133,7 @@ describe("Settings pieces", () => {
     expect(t).not.toMatch(/Buy|Checkout|Subscribe/i);
     expect(wrap(<PlanCard plan="premium" />)).toMatch(/data-option="premium" data-highlighted="true"/);
     const es = text(wrap(<PlanCard plan="grow" />, "es"));
-    for (const s of ["PostStudio: su sitio web completo", "Solo PostStudio", "$30/mes", "Grow + PostStudio", "$40/mes", "$48/mes", "Incluido en Multi", "Próximamente: hoy no se cobra nada.", "$30/mes por sí solo", "Su plan"]) expect(es).toContain(s);
+    for (const s of ["PostStudio: su sitio web completo", "Solo PostStudio", "$30/mes", "Grow + PostStudio", "$40/mes", "$50/mes", "Incluido en Multi", "Próximamente: hoy no se cobra nada.", "$30/mes por sí solo", "Su plan"]) expect(es).toContain(s);
   });
 
   test("plan card in Spanish (usted)", () => {

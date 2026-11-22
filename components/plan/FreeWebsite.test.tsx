@@ -246,7 +246,7 @@ describe("PostStudio on the Website page: one card, no publishing steps on Free"
       for (const page of ["Home", "About", "Services", "Contact"]) expect(t).toContain(page);
       expect(t).toContain("Page outlines — not a real site yet");
       for (const row of ["Pages", "Hosting", "Auto-updates", "Website checks", "Built to pass every check"]) expect(t).toContain(row);
-      expect(t).toContain("$30/mo on its own · +$15 on Grow · +$8 on Premium · included in Multi");
+      expect(t).toContain("$30/mo on its own · +$15 on Grow · +$10 on Premium · included in Multi");
       expect(t).toContain("Coming soon");
       // "Add PostStudio" opens the PostStudio box (a button, not a checkout).
       expect(html).toMatch(/<button[^>]*data-testid="poststudio-add"[^>]*>Add PostStudio<\/button>/);
@@ -292,7 +292,7 @@ describe("PostStudio on the Website page: one card, no publishing steps on Free"
       expect(fresh, plan).toContain("Build a one-page starter site →");
       expect(fresh, plan).not.toContain('data-testid="starter-preview-column"');
       expect(fresh, plan).toContain('data-mode="showcase"');
-      expect(text(fresh), plan).toContain("+$15 on Grow · +$8 on Premium");
+      expect(text(fresh), plan).toContain("+$15 on Grow · +$10 on Premium");
       expect(fresh, plan).not.toContain('data-testid="poststudio-line"');
     }
     expect(section({ plan: "multi", realSite: true })).toContain('data-mode="continue"');

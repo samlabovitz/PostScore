@@ -30,9 +30,9 @@ describe("PostStudio pricing: its own $30 option, or added to a plan", () => {
     expect(PLANS).toEqual(["free", "grow", "premium", "multi"]);
   });
 
-  test("prices: $30 alone; Grow +$15 = $40; Premium ($40 since Day 23D) +$8 = $48; Multi included", () => {
+  test("prices: $30 alone; Grow +$15 = $40; Premium ($40 since Day 23D) +$10 = $50; Multi included", () => {
     expect(POSTSTUDIO_OPTIONS).toEqual(["solo", "grow", "premium", "multi"]);
-    expect(POSTSTUDIO_PRICES).toEqual({ solo: { addOn: 30, total: 30 }, grow: { addOn: 15, total: 40 }, premium: { addOn: 8, total: 48 } });
+    expect(POSTSTUDIO_PRICES).toEqual({ solo: { addOn: 30, total: 30 }, grow: { addOn: 15, total: 40 }, premium: { addOn: 10, total: 50 } });
     expect(postStudioOptionFor("free")).toBe("solo");
     expect(postStudioOptionFor("grow")).toBe("grow");
     expect(postStudioOptionFor("premium")).toBe("premium");
@@ -40,8 +40,8 @@ describe("PostStudio pricing: its own $30 option, or added to a plan", () => {
   });
 
   test("the copy everywhere names the $30 option and stays 'coming soon'; nothing says it can be bought today", () => {
-    expect(t("en", "dashboard.free.tile.postStudioPrice")).toBe("$30/mo alone · +$15 on Grow · +$8 on Premium");
-    expect(t("en", "dashboard.website.studioShowcase.price")).toBe("$30/mo on its own · +$15 on Grow · +$8 on Premium · included in Multi");
+    expect(t("en", "dashboard.free.tile.postStudioPrice")).toBe("$30/mo alone · +$15 on Grow · +$10 on Premium");
+    expect(t("en", "dashboard.website.studioShowcase.price")).toBe("$30/mo on its own · +$15 on Grow · +$10 on Premium · included in Multi");
     expect(unlockLine("postStudio", NO_FACTS, "en")).toBe("A full website we build and host for you — $30/mo on its own, or add it to Grow or Premium. PostStudio, coming soon.");
     expect(unlockLine("postStudio", NO_FACTS, "es")).toContain("$30/mes por sí solo");
     expect(t("es", "dashboard.website.studioShowcase.price")).toContain("$30/mes por sí solo");
@@ -52,7 +52,7 @@ describe("PostStudio pricing: its own $30 option, or added to a plan", () => {
 
   test("PostAI says only that PostStudio is coming later — never a price, add-on cost or discount (Nov 21)", () => {
     expect(ASSISTANT_SYSTEM_RULES).toContain('Say only "PostStudio is coming later" — never a price, a discount, an add-on cost, or which plan includes it');
-    expect(ASSISTANT_SYSTEM_RULES).not.toMatch(/\$(30|40|58)\/mo|\+\$(8|15)\b/);
+    expect(ASSISTANT_SYSTEM_RULES).not.toMatch(/\$(30|40|48|50|58)\/mo|\+\$(8|10|15)\b/);
     const facts = planFactsText();
     expect(facts).toContain("PostStudio — a full website built and hosted for you (coming later)");
     expect(facts).not.toMatch(/PostStudio[^;\n]*(\$\d|discount|included)/i);
