@@ -67,6 +67,11 @@ export const POSTAI_LINK_TARGETS: Record<string, LinkTarget> = {
   "reviews.connect": { path: "/connect-gbp", label: "dashboard.assistant.link.connect" },
   growth: { path: "", to: (id) => growthPlanHref(id), label: "dashboard.assistant.link.growth" },
   "growth.weekly_routine": { path: "", to: (id) => growthPlanHref(id, { hash: "weekly-routine" }), label: "dashboard.assistant.link.weeklyRoutine" },
+  // Day 23E: this week's Google post and the answers — the Growth page's
+  // "More ways to bring people in" cards (Growth plan → This week's plan
+  // once Day 25B moves them; the anchor id stays).
+  "google.posts": { path: "", to: (id) => growthPlanHref(id, { hash: "more-ways" }), label: "dashboard.assistant.link.googlePost" },
+  "google.answers": { path: "", to: (id) => growthPlanHref(id, { hash: "more-ways" }), label: "dashboard.assistant.link.answers" },
   "growth.coupon": { path: "", to: (id) => offersHref(id, "coupons"), label: "dashboard.assistant.link.coupon" },
   "growth.referral": { path: "", to: (id) => offersHref(id, "referrals"), label: "dashboard.assistant.link.referral" },
   competitors: { path: "/competitors", label: "dashboard.assistant.link.competitors" },

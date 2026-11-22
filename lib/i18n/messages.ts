@@ -3741,6 +3741,8 @@ export type MessageKey =
   | "dashboard.assistant.link.connect"
   | "dashboard.assistant.link.growth"
   | "dashboard.assistant.link.weeklyRoutine"
+  | "dashboard.assistant.link.googlePost"
+  | "dashboard.assistant.link.answers"
   | "dashboard.assistant.link.coupon"
   | "dashboard.assistant.link.referral"
   | "dashboard.assistant.link.competitors"
@@ -10328,6 +10330,8 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.assistant.link.connect": "Connect your Google Business Profile →",
     "dashboard.assistant.link.growth": "Open your Growth recap →",
     "dashboard.assistant.link.weeklyRoutine": "Open your weekly routine →",
+    "dashboard.assistant.link.googlePost": "Open this week's Google post →",
+    "dashboard.assistant.link.answers": "Answer your customers' common questions →",
     "dashboard.assistant.link.coupon": "Make a coupon →",
     "dashboard.assistant.link.referral": "Make a referral card →",
     "dashboard.assistant.link.competitors": "See the Competitors page →",
@@ -16795,6 +16799,8 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.assistant.link.connect": "Conecte su Perfil de Empresa en Google →",
     "dashboard.assistant.link.growth": "Abra su Resumen de crecimiento →",
     "dashboard.assistant.link.weeklyRoutine": "Abra su rutina semanal →",
+    "dashboard.assistant.link.googlePost": "Abra la publicación de Google de esta semana →",
+    "dashboard.assistant.link.answers": "Responda las preguntas frecuentes de sus clientes →",
     "dashboard.assistant.link.coupon": "Cree un cupón →",
     "dashboard.assistant.link.referral": "Cree una tarjeta de referidos →",
     "dashboard.assistant.link.competitors": "Vea la página Competencia →",

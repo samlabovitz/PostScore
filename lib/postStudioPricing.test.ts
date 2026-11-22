@@ -4,6 +4,8 @@ import { hasPostStudio, POSTSTUDIO_OPTIONS, POSTSTUDIO_PRICES, postStudioOptionF
 import { isAddon, PLANS } from "./plan";
 import { messages, t } from "./i18n";
 import { NO_FACTS, unlockLine } from "./upgradePromos";
+import { planFactsText } from "./planFacts";
+import { featureMapFor } from "./postaiFeatureMap";
 import { ASSISTANT_SYSTEM_RULES } from "./assistant";
 
 describe("PostStudio pricing: its own $30 option, or added to a plan", () => {
@@ -48,9 +50,16 @@ describe("PostStudio pricing: its own $30 option, or added to a plan", () => {
         if (/postStudio|PostStudio/.test(key)) expect(value, key).not.toMatch(/buy now|available now|disponible ahora|compre ahora/i);
   });
 
-  test("PostAI knows the $30 option, the totals, and that it's coming soon", () => {
-    for (const s of ['"PostStudio only" for $30/mo', "Grow + PostStudio for $40/mo", "Premium + PostStudio for $58/mo", "included in Multi", "PostStudio is coming soon and there is nothing to buy yet"])
-      expect(ASSISTANT_SYSTEM_RULES).toContain(s);
+  test("PostAI says only that PostStudio is coming later — never a price, add-on cost or discount (Nov 21)", () => {
+    expect(ASSISTANT_SYSTEM_RULES).toContain('Say only "PostStudio is coming later" — never a price, a discount, an add-on cost, or which plan includes it');
+    expect(ASSISTANT_SYSTEM_RULES).not.toMatch(/\$(30|40|58)\/mo|\+\$(8|15)\b/);
+    const facts = planFactsText();
+    expect(facts).toContain("PostStudio — a full website built and hosted for you (coming later)");
+    expect(facts).not.toMatch(/PostStudio[^;\n]*(\$\d|discount|included)/i);
+    for (const plan of ["free", "grow", "premium", "multi"] as const) {
+      const note = featureMapFor(plan, { couponsOk: true, referralOk: true, pricingOk: true, hasWebsite: true }).find((e) => e.id === "postStudio")?.note ?? "";
+      expect(note).not.toMatch(/\$\d/);
+    }
   });
 
   test("docs carry the $30 standalone option", () => {

@@ -20,7 +20,6 @@ import { replyDraftLimit } from "@/lib/reviewReplies";
 import { FREE_AI_WEEKLY } from "@/lib/freeAiAllowance";
 import { FREE_RESCAN_DAYS, RESCAN_COOLDOWN_HOURS } from "@/lib/rescanPolicy";
 import { GROW_RESCAN_COMPETITOR_DAYS } from "@/lib/competitorScanPolicy";
-import { postStudioPriceKey } from "@/lib/navPlans";
 import { t, type MessageKey } from "@/lib/i18n";
 import { GOOGLE_WRITES_FOR_EVERYONE, postingRepliesSoon } from "@/lib/googleWritesLaunch";
 import type { Plan } from "@/lib/plan";
@@ -140,6 +139,20 @@ export function featureMapFor(plan: Plan, o: FeatureMapOptions): FeatureEntry[] 
 
   const growthLocked = lockedOn(plan, "growth");
   add({ id: "fixSteps", name: "Step-by-step fix guides and the weekly action plan", status: growthLocked ? "locked" : "usable", where: tab("growth"), unlocks: growthLocked ? "grow" : null });
+  // Day 23E — live, never "coming soon": this week's Google post and the
+  // answers to customers' common questions ("More ways to bring people in").
+  add({
+    id: "weeklyPost",
+    name: "This week's Google post and \"Answer your customers' common questions\" (drafted by PostScore)",
+    status: growthLocked ? "locked" : "usable",
+    where: `${tab("growth")} ("More ways to bring people in")${paid(plan) ? ", and the Google Profile page's \"What to do this week\" (with Approve all)" : ""}`,
+    unlocks: growthLocked ? "grow" : paid(plan) ? null : "premium",
+    note: growthLocked
+      ? undefined
+      : paid(plan)
+        ? "edit, then publish or apply in one click (Approve all sends every ready item); writing to Google is Beta and needs Google connected — see the Google Business Profile connection line"
+        : "drafts to copy and post yourself, with the steps; Premium does it in one click",
+  });
   add({ id: "routine", name: en("dashboard.growth.checklist.sectionHeading"), status: growthLocked ? "locked" : "usable", where: `${tab("growth")} ("${en("dashboard.growth.checklist.sectionHeading")}")`, unlocks: growthLocked ? "grow" : null });
 
   if (o.pricingOk) {
@@ -177,11 +190,11 @@ export function featureMapFor(plan: Plan, o: FeatureMapOptions): FeatureEntry[] 
       unlocks: unlocked && !soon ? null : badge === "addOn" ? "add-on" : badge,
       note:
         extra.id === "postStudio"
-          ? en(postStudioPriceKey(plan))
+          ? "coming later — never give a price, discount or add-on cost"
           : extra.id === "monthlyEmail"
             ? `included with Grow, Premium and Multi; not on Free${soon ? " — not sending yet" : ""}`
             : extra.id === "googleProfile" && !GOOGLE_WRITES_FOR_EVERYONE
-              ? "Beta: editing the listing from PostScore is switched on for a few businesses only and needs Google connected — never promise it works for this business; search insights are coming soon"
+              ? "Beta: editing the listing, uploading photos and publishing posts from PostScore is switched on for a few businesses only and needs Google connected — never promise it works for this business. With Google connected, the Google numbers (calls, direction requests, website clicks, bookings, search terms) are live"
               : undefined,
     });
   }
@@ -194,7 +207,7 @@ export function featureMapFor(plan: Plan, o: FeatureMapOptions): FeatureEntry[] 
     unlocks: reportsLocked ? "grow" : null,
     note: reportsLocked ? "no monthly report emails on Free — those come with Grow and Premium" : plan === "grow" ? "the weekly recap; the PDF report is on Premium" : "the weekly recap and the PDF report",
   });
-  add({ id: "repliesPosted", name: en("dashboard.free.tile.repliesPostedForYou"), status: postingRepliesSoon() ? "soon" : paid(plan) ? "usable" : "locked", where: "the Reviews page", unlocks: postingRepliesSoon() || !paid(plan) ? "premium" : null });
+  add({ id: "repliesPosted", name: "Review replies posted to Google for you (the Reviews inbox) — about review replies only, not Google posts", status: postingRepliesSoon() ? "soon" : paid(plan) ? "usable" : "locked", where: "the Reviews page", unlocks: postingRepliesSoon() || !paid(plan) ? "premium" : null });
   add({ id: "plans", name: "Plans and prices (Compare plans)", status: "usable", where: `${tab("settings")} → Plan & billing → "Compare plans"`, unlocks: null });
   return out;
 }

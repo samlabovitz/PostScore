@@ -21,7 +21,8 @@ import { businessRowToScoringInput } from "@/lib/scoring";
 import { autoDetectedBizProfile, resolveBizProfile } from "@/config/bizProfiles";
 import { priceLevelToSymbol } from "@/lib/priceLevel";
 import { buildWeeklyChecklistItems } from "@/lib/weeklyChecklist";
-import { getPlan } from "@/lib/premium";
+import { canConnectGbp, getPlan } from "@/lib/premium";
+import { googleWritesAllowed } from "@/lib/gbpReviewPractice";
 import { callAnthropicChat, AnthropicApiError } from "@/lib/anthropicClient";
 import {
   ASSISTANT_MAX_TOKENS,
@@ -376,7 +377,12 @@ async function loadContext(businessId: string): Promise<LoadContextResult> {
     weeklyRoutine,
     competitors,
     profile: businessProfile,
-    gbp: { connected: gbpStatus.status === "ok" && gbpStatus.connected },
+    gbp: {
+      connected: gbpStatus.status === "ok" && gbpStatus.connected,
+      canConnect: canConnectGbp(),
+      // Practice mode is never used in production, so it is not a reason here.
+      writesToGoogle: googleWritesAllowed(scored.business.place_id ?? null),
+    },
     planGuide: await planGuideFor(profile, businessWebsiteUrl(scored.business) !== null),
     // The facts every answer is checked against (lib/postaiFacts.ts).
     facts: buildPostaiFacts(breakdown, {

@@ -96,6 +96,13 @@ export function planFacts(locale: Locale = "en"): PlanFact[] {
 const STATUS: Record<FactStatus, string> = { available: "available now", preview: "preview only", "not included": "not included", beta: "BETA", "coming soon": "COMING SOON" };
 
 /** The plan facts as a prompt section. */
+/** PostAI never states anything about PostStudio's cost (prices, add-ons,
+ * discounts, "included"): every PostStudio item becomes one line. */
+const POSTSTUDIO_LATER = "PostStudio — a full website built and hosted for you (coming later)";
+function withoutPostStudioCost(items: string[]): string[] {
+  return Array.from(new Set(items.map((item) => (/PostStudio/.test(item) ? POSTSTUDIO_LATER : item))));
+}
+
 export function planFactsText(locale: Locale = "en"): string {
   const lines = ['PLAN FACTS (from Settings → Plan & billing → "Compare plans" — the only plan details that exist; never add to them):'];
   for (const p of planFacts(locale)) {
@@ -110,10 +117,10 @@ export function planFactsText(locale: Locale = "en"): string {
       // soon)", is already covered by the rows above).
       ...p.bullets.filter((b) => b.soon && !/;|, and |, y /.test(b.text)).map((b) => b.text),
     ];
-    lines.push(`  AVAILABLE NOW: ${now.join("; ")}.`);
-    if (preview.length > 0) lines.push(`  PREVIEW ONLY: ${preview.join("; ")}.`);
-    if (beta.length > 0) lines.push(`  BETA (built, but switched on for a few businesses only and needs Google connected — never promise it works for this business): ${beta.join("; ")}.`);
-    if (soon.length > 0) lines.push(`  COMING SOON (never a current benefit): ${soon.join("; ")}.`);
+    lines.push(`  AVAILABLE NOW: ${withoutPostStudioCost(now).join("; ")}.`);
+    if (preview.length > 0) lines.push(`  PREVIEW ONLY: ${withoutPostStudioCost(preview).join("; ")}.`);
+    if (beta.length > 0) lines.push(`  BETA (built, but switched on for a few businesses only and needs Google connected — never promise it works for this business): ${withoutPostStudioCost(beta).join("; ")}.`);
+    if (soon.length > 0) lines.push(`  COMING SOON (never a current benefit): ${withoutPostStudioCost(soon).join("; ")}.`);
     void STATUS;
   }
   // What each paid plan adds over the plan below — available now only (the
@@ -133,7 +140,7 @@ export function planFactsText(locale: Locale = "en"): string {
         return a !== b && !a.startsWith(b) && !b.startsWith(a);
       })
       .map((f) => `${f.feature}${f.value ? ` (${f.value})` : ""}`);
-    lines.push(`${up.name.toUpperCase()} ADDS OVER ${lo.name.toUpperCase()} — AVAILABLE NOW (the only benefits to list for ${up.name}): ${adds.join("; ")}.`);
+    lines.push(`${up.name.toUpperCase()} ADDS OVER ${lo.name.toUpperCase()} — AVAILABLE NOW (the only benefits to list for ${up.name}): ${withoutPostStudioCost(adds).join("; ")}.`);
   }
   return lines.join("\n");
 }

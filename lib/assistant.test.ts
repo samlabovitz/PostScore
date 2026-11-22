@@ -312,25 +312,28 @@ describe("buildAssistantContextText", () => {
   test("points to the connect flow honestly when Google Business Profile isn't connected", () => {
     const text = buildAssistantContextText(BASE_CONTEXT);
     expect(text).toContain("Google Business Profile connection: not connected");
-    expect(text).toContain("Reviews page or Overview page's connect prompt");
+    expect(text).toContain("Free and Grow from their reviews area, Premium and Multi from the Google Profile tab");
+    // Connecting closed: never tell the owner to connect.
+    expect(buildAssistantContextText({ ...BASE_CONTEXT, gbp: { connected: false, canConnect: false } })).toContain("Connecting Google isn't open to owners yet, so don't tell them to connect.");
   });
 
-  test("says data still isn't synced even when connected, rather than implying it's live", () => {
-    const connected: AssistantBusinessContext = {
-      ...BASE_CONTEXT,
-      gbp: { connected: true },
-    };
-    const text = buildAssistantContextText(connected);
-    expect(text).toContain("Google Business Profile connection: connected");
-    expect(text).toContain("it does NOT itself unlock anything yet");
-    expect(text).toContain("are ALL still not built/synced (a later update) — this is true connected or not");
+  test("connected: says what the connection powers today (Day 22B/23E) and whether changes really go to Google", () => {
+    const readOnly = buildAssistantContextText({ ...BASE_CONTEXT, gbp: { connected: true, writesToGoogle: false } });
+    expect(readOnly).toContain("Google Business Profile connection: connected");
+    expect(readOnly).toContain("the Google numbers on the Google Profile tab");
+    expect(readOnly).toContain('This week\'s Google post and the answers to customers\' common questions are live features, never "coming soon"');
+    expect(readOnly).toContain("this listing isn't on yet");
+    expect(readOnly).toContain('never call it "coming soon"');
+    expect(readOnly).not.toMatch(/not built\/synced|does NOT itself unlock anything/);
+    const live = buildAssistantContextText({ ...BASE_CONTEXT, gbp: { connected: true, writesToGoogle: true } });
+    expect(live).toContain("Changes from PostScore DO go to Google for this listing");
   });
 
   test("says the shareable review link/QR sign never needed a GBP connection at all, connected or not", () => {
     const connected: AssistantBusinessContext = { ...BASE_CONTEXT, gbp: { connected: true } };
     const notConnected: AssistantBusinessContext = { ...BASE_CONTEXT, gbp: { connected: false } };
     expect(buildAssistantContextText(connected)).toContain("never required this connection");
-    expect(buildAssistantContextText(notConnected)).toContain("with no connection needed");
+    expect(buildAssistantContextText(notConnected)).toContain("work with no connection");
   });
 
   test("reflects zero open tasks honestly when the action plan is empty", () => {

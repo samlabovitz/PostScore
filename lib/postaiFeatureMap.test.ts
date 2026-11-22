@@ -108,7 +108,9 @@ describe("plan facts come from Compare plans, with coming soon flagged", () => {
       expect(p.features.map((f) => f.feature)).toEqual(COMPARE_ROWS.map((r) => t("en", r.key)));
     }
     const text = planFactsText();
-    for (const price of ["$0", "$25/mo", "$50/mo", "$150/mo", "Up to 5 (+$25 each extra)", "$30/mo on its own", "+$15/mo", "+$8/mo"]) expect(text).toContain(price);
+    for (const price of ["$0", "$25/mo", "$50/mo", "$150/mo", "Up to 5 (+$25 each extra)"]) expect(text).toContain(price);
+    // PostStudio: "coming later", never a cost (Nov 21).
+    for (const price of ["$30/mo on its own", "+$15/mo", "+$8/mo"]) expect(text).not.toContain(price);
   });
 
   test("coming soon is never a current benefit: soon cells, coming-soon values and the PostStudio row", () => {
