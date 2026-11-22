@@ -28,6 +28,7 @@ All numbers are Hair Express's real numbers: scan of Nov 20, 2026 (78 · C), and
 21. **Fix plan: one score, two targets:** "This week: 78 → 87" (big) and "When every fix is done: 100 · A" (smaller). Each row is tagged "This week" or "Takes a few weeks", from a `thisWeek` field on every fix type (§2b). Overview keeps its single 100 · A.
 22. **Google results shows Growth content only:** the closing listing box is removed; "Fix your listing →" stays only in the top bar. Not connected (04b): only the Connect card + "Your weekly tasks are on Growth plan →". Rule: Growth pages never show Presence content (§2, §6.5).
 23. **Replies live in Presence → Reviews:** the reply inbox and drafter (`ReviewReplyDrafter`, `GoogleReviewsInbox`, `GbpReplyCheckConnect`) move to Reviews; Get more reviews (Growth) keeps only asking. Fix plan's reply fix and Google listing's "Reply in Reviews →" stay in Presence; every Presence link into Growth says "Get more reviews (in Growth) →". The Growth plan's weekly reply task + Approve stay (same drafts). New mockup 08.
+24. **Honest review points:** review fixes come from the real scoring rules, split into "Get 3 new reviews in the next 90 days" (+4.7, Takes a few weeks), "Grow to 40 reviews" (+1.7, Takes months) and "Keep growing toward 150 reviews" (up to +6.8, Takes months). Used on Fix plan (07), Overview (02) and Reviews (08). 100 · A stays, with "Some fixes take months". Overview's "Replying to reviews +6" gets "Reply in Reviews →". Google results says "Down from 24.6% in September" (no points on Growth pages). The live-app places with "+13 for 3 reviews" are listed in §2b.
 
 ---
 
@@ -108,7 +109,7 @@ Columns: Tab · Page · Route · What's on it · Source.
 | **Overview** | `/business/[id]` (unchanged) | See §2a. | `BusinessScoreView.tsx`, `TopRecommendations.tsx`, `GrowMoreCustomers.tsx`, `GoogleListingCard.tsx`, `StudioComingSoon.tsx` |
 | **Fix plan** (Presence sidebar, 2nd, under Overview) | `/business/[id]/fix-plan` (new) | Every PostScore score fix, ranked from most urgent to least, each with "+N pts", a running projected score, and **Fix it →** to the exact spot (§2b). Replaces today's Growth recap: the weekly "+14 within reach" cap goes, Bigger projects become lower rows in the same list, and re-check website and celebrations stay. | `growth/GrowthView.tsx` (recap part), `ActionPlanSection.tsx`, `FreeGrowthPlan.tsx` (Free locked view) |
 | **Google listing** | `/business/[id]/google-listing` (new) | Today's Google Profile sections 4 Your listing, 5 Show up for more, 6 Protection & changes. A top bar links "See what your listing brings in →" to Google results. Scored rows show "+N pts". Jump menu: 1 Your listing · 2 Show up for more · 3 Changes. | `GoogleProfileTab.tsx`: `ListingSection`, `NextSection`, `ProtectionSection`, `GoogleEditsBanner`, `PartHeader` "edit"/"protection" |
-| **Reviews** | `/business/[id]/website-reviews` (URL kept) | What customers say **and your replies** (mockup 08): rating, count, review goal vs nearby, the fix line ("Fix these 2 and Visibility & Reputation goes 21 → 40 pts (score 78 → 97)"), **the reply inbox + reply drafts** (recent reviews live from Google, oldest first, "Approve 10 replies", "Paste a review" for the drafter), and the Visibility & Reputation checks with "+N pts". Links into Growth say **"Get more reviews (in Growth) →"**. | `ReviewsView.tsx` (social proof, `ReviewGapLine`, rubric `CategoryCard`), `ReviewReplyDrafter`, `GoogleReviewsInbox`, `GbpReplyCheckConnect` |
+| **Reviews** | `/business/[id]/website-reviews` (URL kept) | What customers say **and your replies** (mockup 08): rating, count, review goal vs nearby, the fix line ("Reply to your reviews and get 3 new ones: Visibility & Reputation goes 21 → 32 pts (score 78 → 89)"; with the rest coming as reviews grow), **the reply inbox + reply drafts** (recent reviews live from Google, oldest first, "Approve 10 replies", "Paste a review" for the drafter), and the Visibility & Reputation checks with "+N pts". Links into Growth say **"Get more reviews (in Growth) →"**. | `ReviewsView.tsx` (social proof, `ReviewGapLine`, rubric `CategoryCard`), `ReviewReplyDrafter`, `GoogleReviewsInbox`, `GbpReplyCheckConnect` |
 | **Website** | `/business/[id]/website` | Unchanged. | — |
 | **Competitors** | `/business/[id]/competitors` | Unchanged (rank map tab arrives in 25C). | — |
 | **Price check** | `/business/[id]/pricing` | Unchanged. | — |
@@ -168,7 +169,7 @@ On screens under 860px, each row shows the status icon, then the field name, val
   - **Takes a few weeks:** it depends on customers, Google or time.
   - It's a field on every fix type, `thisWeek: true | false`, in the same table as the check (next to `lib/fixDestination.ts`), so it works for every business.
   - **Dynamic override:** a "This week" fix whose Google edit is held for review ("Pending Google review") shows "Takes a few weeks" until it's live.
-- **All "This week" fixes done:** the top card says "This week's fixes done ✓ · Next: fresh reviews (+13)" (the highest-points remaining fix).
+- **All "This week" fixes done:** the top card says "This week's fixes done ✓ · Next: get 3 new reviews (+4.7)" (the most urgent remaining fix).
 
 | Fix type (check) | Area | `thisWeek` | Why |
 |---|---|---|---|
@@ -202,7 +203,36 @@ On screens under 860px, each row shows the status icon, then the field name, val
 | Services / products | Website | **true** | Same |
 | Social media links | Website | **true** | Same |
 
-Hair Express: hours match (+0.6), replies (+6) and customer details (+2) are "This week": 78 + 8.6 = 86.6 → **87**. Fresh reviews (+13) is "Takes a few weeks". 87 + 13 = 99.6 → **100**.
+Hair Express: hours match (+0.6), replies (+6) and customer details (+2) are "This week": 78 + 8.6 = 86.6 → **87**. The review fixes take weeks or months: +4.7 + 1.7 + 6.8 = 13.2, so 86.6 + 13.2 = 99.8 → **100**.
+
+**Honest review points (decided Nov 21).** Review fixes are computed from the real scoring rules in `lib/scoring.ts`, never as one lump:
+- **Recency:** reviews in the last 90 days: 0 → 0, 1 → 2, 2 → 4, 3+ → 6 points.
+- **Review count:** √(count / 150) × 14.
+- **Rating:** the rating curve × a trust factor that reaches full at 40 reviews (0.85 at 25), × 14.
+- Points shown are what **N new reviews actually earn**, assuming the current star rating holds.
+
+The review fix is split into three honest rows:
+
+| Row | Hair Express | Points | Tag |
+|---|---|---|---|
+| Get 3 new reviews in the next 90 days | 30 → 33, recency 2 → 6 | **+4.7** (recency +4, rating +0.4, count +0.3) | Takes a few weeks |
+| Grow to 40 reviews | 33 → 40: rating counts fully, count grows | **+1.7** (rating +1.0, count +0.7) | Takes months |
+| Keep growing toward 150 reviews | 40 → 150 | **up to +6.8** (count) | Takes months |
+
+The rows add up to the old +13.2, so the 100 · A projection is unchanged. A small line under it reads: "Some fixes take months (reviews grow over time)".
+
+**Fix this in the live app in 25B** (no app code changed now):
+- `lib/actionPlan.ts` `mergeReviewTasks`: the merged reviews card sums the full rating + count + recency gaps into `promisedPoints` (+13.2) and labels it with `dashboard.actionPlan.weeklyReviewTarget` ("Get {count}+ new reviews this week ({before} → {after}+)", EN + ES in `lib/i18n/messages.ts`).
+- **Seen live on Hair Express (Nov 20 screenshots):**
+  - Overview → Top recommendations: "Reviews · Get 3+ new reviews this week (30 → 33+) · +13 pts".
+  - Growth recap card #2: the same label with "Up to +5 pts", so the live app already disagrees with itself.
+- **Other places that read the same action plan and need checking:**
+  - `components/overview/TopRecommendations.tsx`;
+  - `app/business/[id]/ActionPlanSection.tsx`;
+  - `lib/overviewTiles.ts` (the Overview "Biggest boost" / projection);
+  - `app/actions/assistant.ts` (PostAI answers);
+  - `lib/monthlyReport.ts`, `lib/reports/reportData.server.ts` and `app/api/cron/monthly-reports/route.ts` (report emails, in testing mode).
+- **Also:** "this week" is the wrong time frame for 3 new reviews; use "in the next 90 days".
 - **Rows**, ranked from most urgent to least (Urgent → High priority → Medium → Low; within a level, the most points first). Each row shows:
   - number, title, one-line why, and a priority badge;
   - where "Fix it" goes;
@@ -213,15 +243,19 @@ Hair Express: hours match (+0.6), replies (+6) and customer details (+2) are "Th
     - the Website check.
 - **Hair Express** (scan of Nov 20; Top recommendations' own order and points):
   1. Match your website's hours to Google · Urgent · This week · +0.6 · → 79 · Website
-  2. Get fresh reviews · High · Takes a few weeks · +13 · → 92 · button **"Get more reviews (in Growth) →"** (count + rating + recency move together)
-  3. Reply to your recent reviews · High · This week · +6 · → 98 · Presence → Reviews, reply inbox (stays in Presence)
-  4. Add your customer details · Medium · This week · +2 · → 100 · Google listing, Customer details
+  2. Reply to your recent reviews · High · This week · +6 · → 85 · Presence → Reviews, reply inbox (stays in Presence)
+  3. Get 3 new reviews in the next 90 days · High · Takes a few weeks · +4.7 · → 89 · button **"Get more reviews (in Growth) →"**
+  4. Add your customer details · Medium · This week · +2 · → 91 · Google listing, Customer details
+  5. Grow to 40 reviews · Low · Takes months · +1.7 · → 93 · "Get more reviews (in Growth) →"
+  6. Keep growing toward 150 reviews · Low · Takes months · up to +6.8 · → 100 · "Get more reviews (in Growth) →"
   - Then "Website speed: not scored yet" (up to 3 pts), with no button.
-  - The running score rounds 99.6 to 100, matching Overview's projection.
-- **Replies stay in Presence** (Reviews). Only "Get fresh reviews" leaves Presence; its button says "Get more reviews (in Growth) →", and following it switches the sidebar to the Growth tab.
+  - The running score rounds 99.8 to 100, matching Overview's projection.
+  - Within a priority level, more points rank first (replies +6 before 3 new reviews +4.7).
+  - Tags: **This week** · **Takes a few weeks** · **Takes months**. `thisWeek` becomes `when: "this_week" | "weeks" | "months"`; review-count growth beyond the next 3 reviews is `months`.
+- **Replies stay in Presence** (Reviews). Only the "new reviews" rows leave Presence; its button says "Get more reviews (in Growth) →", and following it switches the sidebar to the Growth tab.
 - **Each Presence page gets a one-line summary of its own fixes**, linking to Fix plan:
   - **Google listing:** "Fix this 1 and your Google listing goes 28 → 30 pts (score 78 → 80)" (in mockup 05).
-  - **Reviews:** "Fix these 2 and Visibility & Reputation goes 21 → 40 pts (score 78 → 97)".
+  - **Reviews:** "Reply to your reviews and get 3 new ones: Visibility & Reputation goes 21 → 32 pts (score 78 → 89). The rest comes as your reviews grow."
   - **Website:** "Fix this 1 and your Website goes 29 → 29.5 pts (score 78 → 79)", plus "Speed is checked on your next scan".
   - With nothing left to fix: "Nothing to fix here. Your [area] has every point it can get right now."
 - **Overview:** "See your action plan" and "View all" open Fix plan.

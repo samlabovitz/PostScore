@@ -92,17 +92,19 @@ Mockup 07. "This week's fixes" is renamed **Fix plan** and sits second in the Pr
   - Big: "**This week: 78 → 87**" (the fixes the owner can finish alone today: hours match, replies, customer details).
   - Smaller: "When every fix is done: **100 · A**" (the same as Overview, which keeps only this one).
 - Each row is tagged **This week** or **Takes a few weeks**, from a `thisWeek` field on every fix type. The full list is in spec §2b.
-- When all "This week" fixes are done, the card says "This week's fixes done ✓ · Next: fresh reviews (+13)".
+- When all "This week" fixes are done, the card says "This week's fixes done ✓ · Next: get 3 new reviews (+4.7)".
 - **Every score fix, ranked from most urgent to least**, with "+pts", the running score and **Fix it →** (the existing `fixDestination` links):
 
   | # | Fix | Priority | Points | Running score | Goes to |
   |---|---|---|---|---|---|
-  | 1 | Match your website's hours to Google | Urgent | +0.6 | 79 | Website |
-  | 2 | Get fresh reviews | High | +13 | 92 | Get more reviews |
-  | 3 | Reply to recent reviews | High | +6 | 98 | Get more reviews, reply inbox |
-  | 4 | Add customer details | Medium | +2 | 100 | Google listing, Customer details |
+  | 1 | Match your website's hours to Google | Urgent · This week | +0.6 | 79 | Website |
+  | 2 | Reply to recent reviews | High · This week | +6 | 85 | Reviews, reply inbox |
+  | 3 | Get 3 new reviews in the next 90 days | High · Takes a few weeks | +4.7 | 89 | Get more reviews (in Growth) |
+  | 4 | Add customer details | Medium · This week | +2 | 91 | Google listing, Customer details |
+  | 5 | Grow to 40 reviews | Low · Takes months | +1.7 | 93 | Get more reviews (in Growth) |
+  | 6 | Keep growing toward 150 reviews | Low · Takes months | up to +6.8 | 100 | Get more reviews (in Growth) |
 
-  Then "Website speed: not scored yet". These come from the Nov 20 scan, and the running score rounds 99.6 to 100.
+  Then "Website speed: not scored yet". These come from the Nov 20 scan and the real scoring rules, and the running score rounds 99.8 to 100.
 - **Each Presence page gets one line about its own fixes.** Google listing (in 05): "Fix this 1 and your Google listing goes 28 → 30 pts (score 78 → 80)". The Reviews and Website wording is in spec §2b.
 - **Plans:** Free sees the full ranked list with points, steps locked. Grow sees steps + "I did this" + "Premium does this for you in one click". Premium's "Fix it" lands on the one-click action.
 
@@ -126,6 +128,25 @@ Mockup 07. "This week's fixes" is renamed **Fix plan** and sits second in the Pr
 - Every Presence link into Get more reviews says "(in Growth)"; that includes Overview's Reviews button.
 - **Growth plan's weekly reply task + Approve stay.** They send the same drafts as the Reviews inbox.
 - **Screenshots:** new `08-reviews`; re-taken `05-google-listing` and `07-fix-plan`, plus `02-overview`, `02b-overview-disconnected` (button wording) and `03b-growth-plan-not-connected` ("PostAI drafts each reply on Reviews").
+
+## 7c. Honest review points
+
+- **The problem:** the old "Get fresh reviews +13" lumped every review point together. 3 new reviews actually earn **+4.7** for Hair Express: recency 2 → 6, rating +0.4 (more trust at 33 reviews), count +0.3.
+- **The split** (from the real rules in `lib/scoring.ts`):
+  - "Get 3 new reviews in the next 90 days": +4.7, Takes a few weeks;
+  - "Grow to 40 reviews": +1.7, Takes months;
+  - "Keep growing toward 150 reviews": up to +6.8, Takes months.
+- **Where the honest numbers are used:**
+  - Fix plan (07);
+  - Overview Top recommendations (02): "Get 3 new reviews in the next 90 days (30 → 33) · +4.7";
+  - the Reviews fix line (08): 21 → 32 pts (score 78 → 89);
+  - the Reviews point rows: rating "+1.4 at 40 reviews", count "up to +7.8 at 150", recency "+4 with 3 in 90 days".
+- **Projections:** "This week: 78 → 87" is unchanged. "When every fix is done: 100 · A" stays, with "Some fixes take months (reviews grow over time)".
+- **Live app (fix in 25B):**
+  - `mergeReviewTasks` in `lib/actionPlan.ts` sums the full gaps (+13.2) under "Get 3+ new reviews this week (30 → 33+)".
+  - Seen live: Overview Top recommendations ("+13 pts") and Growth recap card #2 (same label, "Up to +5 pts"; inconsistent).
+  - Also to check: TopRecommendations, ActionPlanSection, overviewTiles, the PostAI assistant, and the monthly report code. The full list is in spec §2b.
+- **Also:** Overview's "Replying to reviews +6" gets "Reply in Reviews →". Google results says "Down from 24.6% in September".
 
 ## 8. Every file changed in this round
 
