@@ -54,6 +54,12 @@ Next.js 14 + Supabase. These rules are standing: follow them in every session.
   - `--plan=free|grow|premium|multi` views the pages as that plan, in the script's own browser only. Free and paid plans show different Website cards, so check both.
   - It uses `playwright-core` with the installed Google Chrome (no browser download).
 
+## Before launch
+- **Growth tier reset:** before launch (or when Sam says), wipe every business's Growth tier and the activity history used for tiers, for ALL accounts, the dev test login included. Every tier then starts fresh from real owner actions after that date. Test/dev activity from before the reset never counts for anyone.
+  - Run it with `scripts/reset-growth-tiers.ts` (built in Day 25B): dry run first, listing what would be cleared. It runs only when Sam asks, never automatically.
+  - It never touches PostScore scores, scans or the Google listing.
+- Until then: test and practice rows never count toward a real owner's tier. Only the dev test login's businesses count their own test activity, shown with a "Test account" tag.
+
 ## Committing
 - **Never commit until Sam has tested in the browser** and says so. Push only when Sam says push.
 - Commit messages end with `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`.

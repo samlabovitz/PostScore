@@ -1,0 +1,359 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Google results</title><style>
+@font-face{font-family:Fraunces;src:url(../../../app/fonts/Fraunces-latin-wght.woff2) format("woff2");font-weight:400 700}
+@font-face{font-family:Inter;src:url(../../../app/fonts/Inter-latin-wght.woff2) format("woff2");font-weight:400 600}
+:root{--ink:#14243f;--ink-soft:#3a4a66;--ink-mute:#6b7890;--brass:#b8862f;--green:#2e6b45;--red:#b23a2f;--amber:#c77d28;--paper:#f5f1e8;--paper-deep:#eae4d5;--paper-line:#e0dac8;--navy2:#1d3050}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--paper);color:var(--ink);font-family:Inter,Arial,sans-serif;font-size:14px;line-height:1.45;-webkit-font-smoothing:antialiased}
+a{color:inherit;text-decoration:none}
+.serif{font-family:Fraunces,Georgia,serif}
+.ic{flex-shrink:0;vertical-align:middle}
+.app{display:flex;min-height:100vh}
+/* sidebar */
+.sb{width:250px;flex-shrink:0;background:var(--ink);padding:20px 16px;display:flex;flex-direction:column;min-height:100vh}
+.sb.static{position:static;height:auto;min-height:760px;border-radius:14px}
+.logo{font-family:Fraunces,serif;font-size:21px;font-weight:600;padding:0 8px;display:flex;justify-content:space-between;align-items:center}
+.logo .p{color:#fff}.logo .s{color:var(--brass)}
+.biz{margin-top:20px;border:1px solid rgba(255,255,255,.09);background:rgba(255,255,255,.06);border-radius:11px;padding:12px}
+.biz b{display:block;color:#fff;font-size:13.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.biz span{display:block;color:#9FB0C7;font-size:11px;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tabs{margin-top:16px;display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:4px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);border-radius:12px}
+.tab{border-radius:9px;padding:8px 10px 9px;color:#B7C4D8;display:flex;flex-direction:column;gap:1px;position:relative}
+.tab .tl{font-size:12.5px;font-weight:600;display:flex;align-items:center;gap:5px}
+.tab .tv{font-size:11.5px;color:#8C9BB2;display:flex;align-items:center;gap:5px}
+.tab .tv b{font-family:Fraunces,serif;font-size:17px;color:#fff;font-weight:600}
+.tab.on{background:#fff;color:var(--ink)}
+.tab.on .tv{color:var(--ink-mute)}.tab.on .tv b{color:var(--ink)}
+.tab.on::after{content:"";position:absolute;left:10px;right:10px;bottom:-1px;height:2px;border-radius:2px;background:var(--brass)}
+.tq{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:50%;border:1.5px dashed #8C9BB2;font-family:Fraunces,serif;font-size:12px;font-weight:700;color:#fff}
+.tab.on .tq{color:var(--ink);border-color:var(--ink-mute)}
+.nav{margin-top:12px;display:flex;flex-direction:column;gap:2px;flex:1}
+.ni{display:flex;align-items:center;gap:11px;white-space:nowrap;border-radius:9px;padding:9px 12px;font-size:14px;font-weight:500;color:#B7C4D8}
+.ni.on{background:var(--brass);color:#fff}
+.ni .lk{margin-left:auto;color:var(--brass)}
+.ni.on .lk{color:#fff}
+.ni .soon{margin-left:auto;font-size:10px;font-weight:600;color:#9FB0C7;border:1px solid rgba(255,255,255,.15);border-radius:99px;padding:1px 7px;white-space:nowrap}
+.nav-sep{height:1px;background:rgba(255,255,255,.09);margin:8px 4px}
+.newdot{margin-left:auto;width:8px;height:8px;border-radius:50%;background:var(--brass);box-shadow:0 0 0 3px rgba(184,134,47,.25)}
+.acct{display:flex;align-items:center;gap:10px;padding:10px 8px 2px;color:#fff;font-size:14px;font-weight:500;border-top:1px solid rgba(255,255,255,.09);margin-top:8px}
+.acct .av{width:28px;height:28px;border-radius:8px;background:var(--brass);position:relative;display:flex;align-items:center;justify-content:center}
+.acct .badge{position:absolute;top:-7px;right:-9px;background:var(--red);color:#fff;font-size:9.5px;font-weight:700;border-radius:99px;padding:1px 5px}
+/* main */
+.main{flex:1;min-width:0}
+.wrap{max-width:1060px;padding:34px 40px 80px}
+.topbar{display:none}
+.back{font-size:13px;color:var(--ink-soft);display:flex;align-items:center;gap:6px}
+h1{font-family:Fraunces,serif;font-size:27px;font-weight:600;margin:10px 0 0;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.sub{color:var(--ink-soft);font-size:14px;margin:6px 0 0}
+.pill{display:inline-flex;align-items:center;gap:6px;border-radius:99px;font-family:Inter,sans-serif;font-size:12px;font-weight:600;padding:3px 10px;border:1px solid var(--paper-line);background:#fff;color:var(--ink);white-space:nowrap}
+.pill.brass{background:#faf3e4;border-color:#ead7b0;color:#8a6420}
+.pill.green{background:#eaf3ec;border-color:#cfe3d5;color:var(--green)}
+.pill.amber{background:#fbf0e2;border-color:#f0d9b8;color:#9a5c16}
+.pill.ink{background:var(--ink);border-color:var(--ink);color:#fff}
+.pill.dashed{border-style:dashed}
+.card{background:#fff;border:1px solid #ebe5d6;border-radius:16px;box-shadow:0 14px 34px -26px rgba(20,36,63,.4)}
+.pad{padding:20px 22px}
+.h2{font-family:Fraunces,serif;font-size:19px;font-weight:600;margin:0}
+.sec{margin-top:30px}
+.sec-h{display:flex;align-items:center;gap:12px;margin-bottom:12px}
+.sec-h .ln{flex:1;height:1px;background:var(--paper-line)}
+.eyebrow{font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--brass)}
+.mute{color:var(--ink-mute)}.soft{color:var(--ink-soft)}
+.small{font-size:12.5px}.tiny{font-size:11.5px}
+.row{display:flex;align-items:center;gap:12px}
+.btn{display:inline-flex;align-items:center;gap:7px;border-radius:9px;font-size:13px;font-weight:600;padding:8px 14px;border:1px solid var(--paper-line);background:#fff;color:var(--ink);white-space:nowrap}
+.btn.dark{background:var(--ink);border-color:var(--ink);color:#fff}
+.btn.gold{background:var(--brass);border-color:var(--brass);color:#fff}
+.btn.sm{padding:6px 11px;font-size:12.5px}
+.link{font-weight:600;font-size:13px;display:inline-flex;align-items:center;gap:5px;text-decoration:underline;text-decoration-color:var(--brass);text-underline-offset:3px}
+.pts{display:inline-flex;align-items:center;border-radius:99px;font-size:11.5px;font-weight:700;padding:2px 9px;background:#faf3e4;border:1px solid #ead7b0;color:#8a6420;white-space:nowrap}
+.note{margin-top:14px;border:1.5px dashed #d9b46a;background:#fffaf0;border-radius:12px;padding:10px 14px;font-size:12.5px;color:#5d4a22}
+.note b{color:#8a6420}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.hr{height:1px;background:#efe9dc;margin:0}
+.navy{background:var(--ink);color:#fff;border-radius:16px}
+.gold-num{color:#e2b866}
+.chip{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--paper-line);border-radius:99px;padding:5px 11px;font-size:12.5px;font-weight:500;background:#fff}
+.dot{width:7px;height:7px;border-radius:50%;display:inline-block}
+.d-amber{background:var(--amber)}.d-red{background:var(--red)}.d-green{background:var(--green)}
+.ready{font-size:12px;font-weight:600;color:var(--green);background:#eaf3ec;border-radius:8px;padding:4px 9px;white-space:nowrap}
+.needs{font-size:12px;font-weight:600;color:#9a5c16;background:#fbf0e2;border-radius:8px;padding:4px 9px;white-space:nowrap}
+.task{display:flex;align-items:center;gap:14px;padding:12px 0;border-top:1px solid #efe9dc}
+.task:first-child{border-top:0}
+.task .tx{flex:1;min-width:0}
+.task .tt{font-size:14px;font-weight:500}
+.task .td{font-size:12.5px;color:var(--ink-mute);margin-top:2px}
+.prem{font-size:12px;color:#8a6420;font-weight:600;margin-top:5px;display:inline-flex;gap:5px;align-items:center}
+.jump{display:flex;gap:4px;align-items:center;background:#fff;border:1px solid #ebe5d6;border-radius:14px;padding:5px;overflow-x:auto;white-space:nowrap}
+.jump a{padding:6px 12px;border-radius:99px;font-size:13px;font-weight:500;color:var(--ink)}
+.jump a .n{color:var(--brass);margin-right:4px}
+.jump a.on{background:var(--ink);color:#fff}
+.jump .dv{width:1px;height:20px;background:var(--paper-line)}
+.statline{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--ink-soft);background:#fff;border:1px solid #ebe5d6;border-radius:12px;padding:9px 14px;margin-top:14px}
+.lr{display:grid;grid-template-columns:28px 150px 1fr auto;gap:12px;align-items:center;padding:11px 14px;border-top:1px solid #efe9dc}
+.lr .lv{font-size:13.5px}.lr .ld{font-size:12px;color:var(--ink-mute)}
+.lr .lf{font-size:13.5px;font-weight:600}
+.grp{font-size:10.5px;font-weight:700;letter-spacing:.1em;color:var(--ink-mute);text-transform:uppercase;padding:9px 14px;background:#faf8f2;border-top:1px solid #efe9dc}
+.st{width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff}
+.st.ok{background:var(--green)}.st.warn{background:var(--amber)}.st.bad{background:var(--red)}
+.kpi{padding:14px 16px}
+.kpi .v{font-family:Fraunces,serif;font-size:26px;font-weight:600;line-height:1.1}
+.kpi .l{font-size:13px;color:var(--ink-soft)}
+.kpi .c{font-size:12px;margin-top:3px;color:var(--ink-mute)}
+.up{color:var(--green)}.down{color:var(--red)}
+table.t{width:100%;border-collapse:collapse;font-size:13px}
+table.t td,table.t th{padding:6px 4px;border-top:1px solid #efe9dc;text-align:right}
+table.t td:not(:first-child){white-space:nowrap}
+table.t th{font-weight:500;color:var(--ink-mute);font-size:12px;border-top:0}
+table.t td:first-child,table.t th:first-child{text-align:left}
+.bar{height:9px;border-radius:99px;background:var(--paper-deep);overflow:hidden}
+.bar i{display:block;height:100%;background:var(--brass);border-radius:99px}
+.bar.navyb i{background:var(--ink)}
+/* tier */
+.track{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-top:16px}
+.step{border-radius:10px;padding:9px 10px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);font-size:12px;color:#9FB0C7}
+.step b{display:block;font-size:13px;color:#cdd6e4;font-weight:600}
+.step.done{background:rgba(184,134,47,.16);border-color:rgba(184,134,47,.4)}
+.step.done b{color:#e9cf9c}
+.step.cur{background:var(--brass);border-color:var(--brass);color:#fff}
+.step.cur b{color:#fff}
+.step.next{border-style:dashed;border-color:#e2b866}
+.weeks{display:flex;gap:6px;align-items:flex-end;flex-wrap:wrap}
+.wk{display:flex;flex-direction:column;align-items:center;gap:4px;font-size:10.5px;color:#9FB0C7}
+.wk i{width:26px;height:26px;border-radius:7px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);display:flex;align-items:center;justify-content:center;color:#fff}
+.wk.a i{background:var(--brass);border-color:var(--brass)}
+.wk.now i{outline:2px solid #e2b866;outline-offset:2px}
+.req{display:flex;gap:10px;align-items:flex-start;padding:9px 0;border-top:1px solid #efe9dc;font-size:13.5px}
+.req:first-of-type{border-top:0}
+.req .ck{width:20px;height:20px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;margin-top:1px}
+.req .ck.y{background:var(--green);color:#fff}
+.req .ck.n{border:1.5px solid var(--paper-line);color:var(--ink-mute)}
+.lockwrap{position:relative;overflow:hidden;border-radius:12px}
+.lockwrap .blur{filter:blur(5px);opacity:.55;pointer-events:none;user-select:none}
+.lockwrap .over{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:8px;text-align:center;padding:16px;background:linear-gradient(180deg,rgba(255,255,255,.15),rgba(255,255,255,.85))}
+.ring{width:132px;height:132px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-direction:column;flex-shrink:0}
+.mtile{display:flex;gap:12px;align-items:flex-start;border:1px solid #ebe5d6;border-radius:13px;padding:14px;background:#fff}
+.mtile .mi{width:34px;height:34px;border-radius:9px;background:#faf3e4;border:1px solid #f0e2c4;display:flex;align-items:center;justify-content:center;color:var(--brass);flex-shrink:0}
+.mtile b{font-size:14px;font-weight:600;display:flex;align-items:center;gap:6px}
+.mtile p{margin:3px 0 0;font-size:12.5px;color:var(--ink-soft)}
+.board{display:flex;gap:22px;flex-wrap:wrap;align-items:flex-start}
+.board > div{display:flex;flex-direction:column;gap:8px}
+.cap{font-size:12.5px;font-weight:600;color:var(--ink-soft)}
+.phonebar{display:none}
+.appr{display:flex;flex-direction:column;align-items:flex-end;gap:4px}
+.dn-gray{color:var(--ink-mute)}
+.tierfx{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:6px;font-size:12px;font-weight:600;color:var(--green)}
+.tierfx span{display:inline-flex;align-items:center;gap:4px}
+.tierjump{display:flex;gap:10px;align-items:flex-start;background:#eef5f0;border:1px solid #cfe3d5;border-radius:12px;padding:11px 14px;font-size:13.5px;color:#234f35;margin-top:12px}
+.ttag{display:inline-flex;align-items:center;font-family:Inter,sans-serif;font-size:10.5px;font-weight:600;color:#4b5567;background:#e4e6ea;border-radius:99px;padding:1px 8px;white-space:nowrap;letter-spacing:0}
+.tab .ttag{margin-top:4px;align-self:flex-start;font-size:9.5px;padding:0 6px}
+.tab:not(.on) .ttag{background:rgba(255,255,255,.12);color:#B7C4D8}
+@media (max-width:859px){
+  .sb:not(.static){display:none}
+  .topbar{display:flex;align-items:center;justify-content:space-between;background:var(--ink);color:#fff;padding:12px 16px;position:sticky;top:0;z-index:5}
+  .topbar .logo{padding:0}
+  .topbar .tb-r{display:flex;align-items:center;gap:10px;font-size:12px;color:#B7C4D8}
+  .tbtabs{display:flex;gap:6px;padding:8px 16px;background:#1b2d4c;overflow-x:auto}
+  .tbtabs a{font-size:12.5px;font-weight:600;color:#B7C4D8;border-radius:99px;padding:5px 12px;border:1px solid rgba(255,255,255,.12);white-space:nowrap}
+  .tbtabs a.on{background:#fff;color:var(--ink);border-color:#fff}
+  .wrap{padding:18px 16px 60px}
+  h1{font-size:23px}
+  .grid2,.grid4{grid-template-columns:1fr 1fr}
+  .grid2.st1{grid-template-columns:1fr!important}
+  .navy[id=hero]{grid-template-columns:1fr!important}
+  .mtile[style*="span 2"]{grid-row:auto!important}
+  .lr{grid-template-columns:24px 1fr;row-gap:4px}
+  .lr .la{grid-column:2}
+  .lr .lf{grid-column:2}
+  .lr > .st{grid-row:1/3}
+  .fxrow{flex-wrap:nowrap!important}
+  .fxrow .tx{flex-basis:auto!important}
+  .fxrow{display:grid!important;grid-template-columns:28px 1fr;column-gap:14px}
+  .fxsrc{text-align:left!important}
+  .fx{grid-column:2;justify-content:flex-start;flex-direction:row!important;align-items:center!important;flex-wrap:wrap;margin-left:0}
+  .lr .lb{grid-column:2;justify-content:flex-start!important;flex-wrap:wrap;margin-top:4px}
+  .appr{align-items:flex-start!important}
+  .statline{flex-wrap:wrap}
+  .statline .link{margin-left:0!important}
+  .track{grid-template-columns:repeat(5,minmax(0,1fr))}
+  .step{padding:7px 6px;font-size:10.5px}
+  .step b{font-size:11px}
+  .pad{padding:16px}
+  .hide-phone{display:none!important}
+  .task{flex-wrap:wrap}
+  .task .tx{flex-basis:100%}
+  .board{flex-direction:column}
+}
+@media (min-width:860px){.tbtabs{display:none}}
+</style></head>
+<body><div class="app"><aside class="sb ">
+    <div class="logo"><span><span class="p">Post</span><span class="s">Score</span></span></div>
+    <div class="biz"><b>Hair express on Broadway</b><span>9 S Broadway, Tarrytown, NY 10591</span></div>
+    <div class="tabs" role="tablist">
+      <a class="tab " role="tab"><span class="tl">Presence</span><span class="tv"><b>78</b> /100 · C</span></a>
+      <a class="tab on" role="tab"><span class="tl">Growth</span><span class="tv"><b>2</b> Building</span><span class="ttag">Test account</span></a>
+    </div>
+    <nav class="nav"><a class="ni "><svg class="ic " width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path stroke="none" d="M0 0h24v24H0z" fill="none" />
+  <path d="M3 17l6 -6l4 4l8 -8" />
+  <path d="M14 7l7 0l0 7" /></svg>Growth plan</a><a class="ni on"><svg class="ic " width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path stroke="none" d="M0 0h24v24H0z" fill="none" />
+  <path d="M4 19l16 0" />
+  <path d="M4 15l4 -6l4 2l4 -5l4 4" /></svg>Google results</a><a class="ni "><svg class="ic " width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path stroke="none" d="M0 0h24v24H0z" fill="none" />
+  <path d="M8 9h8" />
+  <path d="M8 13h4.5" />
+  <path d="M10.325 19.605l-2.325 1.395v-3h-2a3 3 0 0 1 -3 -3v-8a3 3 0 0 1 3 -3h12a3 3 0 0 1 3 3v4.5" />
+  <path d="M17.8 20.817l-2.172 1.138a.392 .392 0 0 1 -.568 -.41l.415 -2.411l-1.757 -1.707a.389 .389 0 0 1 .217 -.665l2.428 -.352l1.086 -2.193a.392 .392 0 0 1 .702 0l1.086 2.193l2.428 .352a.39 .39 0 0 1 .217 .665l-1.757 1.707l.414 2.41a.39 .39 0 0 1 -.567 .411l-2.172 -1.138" /></svg>Get more reviews</a><a class="ni "><svg class="ic " width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path stroke="none" d="M0 0h24v24H0z" fill="none" />
+  <path d="M9 15l6 -6" />
+  <path d="M9 9.5a.5 .5 0 1 0 1 0a.5 .5 0 1 0 -1 0" fill="currentColor" />
+  <path d="M14 14.5a.5 .5 0 1 0 1 0a.5 .5 0 1 0 -1 0" fill="currentColor" />
+  <path d="M3 12a9 9 0 1 0 18 0a9 9 0 1 0 -18 0" /></svg>Customer offers</a><a class="ni "><svg class="ic " width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path stroke="none" d="M0 0h24v24H0z" fill="none" />
+  <path d="M18 8a3 3 0 0 1 0 6" />
+  <path d="M10 8v11a1 1 0 0 1 -1 1h-1a1 1 0 0 1 -1 -1v-5" />
+  <path d="M12 8l4.524 -3.77a.9 .9 0 0 1 1.476 .692v12.156a.9 .9 0 0 1 -1.476 .692l-4.524 -3.77h-8a1 1 0 0 1 -1 -1v-4a1 1 0 0 1 1 -1h8" /></svg>Campaigns</a><a class="ni "><svg class="ic " width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path stroke="none" d="M0 0h24v24H0z" fill="none" />
+  <path d="M4 5a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v4a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1l0 -4" />
+  <path d="M7 17l0 .01" />
+  <path d="M14 5a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v4a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1l0 -4" />
+  <path d="M7 7l0 .01" />
+  <path d="M4 15a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v4a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1l0 -4" />
+  <path d="M17 7l0 .01" />
+  <path d="M14 14l3 0" />
+  <path d="M20 14l0 .01" />
+  <path d="M14 14l0 3" />
+  <path d="M14 20l3 0" />
+  <path d="M17 17l3 0" />
+  <path d="M20 17l0 3" /></svg>Print kit & QR</a><a class="ni "><svg class="ic " width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path stroke="none" d="M0 0h24v24H0z" fill="none" />
+  <path d="M4 7a2 2 0 0 1 2 -2h12a2 2 0 0 1 2 2v12a2 2 0 0 1 -2 2h-12a2 2 0 0 1 -2 -2l0 -12" />
+  <path d="M16 3l0 4" />
+  <path d="M8 3l0 4" />
+  <path d="M4 11l16 0" />
+  <path d="M8 15h2v2h-2l0 -2" /></svg>Local events<span class="soon">Coming soon</span></a>
+      <div class="nav-sep"></div>
+      <a class="ni"><svg class="ic " width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path stroke="none" d="M0 0h24v24H0z" fill="none" />
+  <path d="M16 18a2 2 0 0 1 2 2a2 2 0 0 1 2 -2a2 2 0 0 1 -2 -2a2 2 0 0 1 -2 2m0 -12a2 2 0 0 1 2 2a2 2 0 0 1 2 -2a2 2 0 0 1 -2 -2a2 2 0 0 1 -2 2m-7 12a6 6 0 0 1 6 -6a6 6 0 0 1 -6 -6a6 6 0 0 1 -6 6a6 6 0 0 1 6 6" /></svg>PostStudio<span class="soon">Coming soon</span></a>
+      <a class="ni "><svg class="ic " width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path stroke="none" d="M0 0h24v24H0z" fill="none" />
+  <path d="M14 3v4a1 1 0 0 0 1 1h4" />
+  <path d="M17 21h-10a2 2 0 0 1 -2 -2v-14a2 2 0 0 1 2 -2h7l5 5v11a2 2 0 0 1 -2 2" />
+  <path d="M9 9l1 0" />
+  <path d="M9 13l6 0" />
+  <path d="M9 17l6 0" /></svg>Reports<span class="newdot" title="New report"></span><span class="sr-only" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)">New report ready</span></a>
+    </nav>
+    <div class="acct"><span class="av"><svg class="ic " width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path stroke="none" d="M0 0h24v24H0z" fill="none" />
+  <path d="M3 12a9 9 0 1 0 18 0a9 9 0 1 0 -18 0" />
+  <path d="M9 10a3 3 0 1 0 6 0a3 3 0 1 0 -6 0" />
+  <path d="M6.168 18.849a4 4 0 0 1 3.832 -2.849h4a4 4 0 0 1 3.834 2.855" /></svg><span class="badge">9+</span></span>Account<span style="margin-left:auto;color:#9FB0C7"><svg class="ic " width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path stroke="none" d="M0 0h24v24H0z" fill="none" />
+  <path d="M6 9l6 6l6 -6" /></svg></span></div>
+  </aside><main class="main"><div class="topbar"><span class="logo"><span><span class="p">Post</span><span class="s">Score</span></span></span><span class="tb-r">Growth · Building · Test account<svg class="ic " width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path stroke="none" d="M0 0h24v24H0z" fill="none" />
+  <path d="M4 6l16 0" />
+  <path d="M4 12l16 0" />
+  <path d="M4 18l16 0" /></svg></span></div><div class="tbtabs"><a class="">Growth plan</a><a class="on">Google results</a><a class="">Get more reviews</a><a class="">Customer offers</a><a class="">Campaigns</a><a class="">Print kit & QR</a><a class="">Local events</a></div><div class="wrap">
+  <h1>Google results <span class="pill brass">Growth · Building</span> <span class="ttag" title="Dev test login only">Test account</span></h1>
+  <p class="sub">What people did after they found you on Google, and what to do this week to get more of it.</p>
+  <div class="statline"><svg class="ic " width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path stroke="none" d="M0 0h24v24H0z" fill="none" />
+  <path d="M3 12a9 9 0 1 0 18 0a9 9 0 0 0 -18 0" />
+  <path d="M12 8v4" />
+  <path d="M12 16h.01" /></svg><span>These numbers show results from Google. They don't change your PostScore score.</span><a class="link" style="margin-left:auto;white-space:nowrap">Fix your listing →</a></div>
+  <div class="jump" style="margin-top:14px"><a class="on"><span class="n">1</span>Last month</a><a><span class="n">2</span>This week</a><a><span class="n">3</span>Since you did this</a><span class="dv"></span><a><span class="n">4</span>Searches → actions</a><a><span class="n">5</span>Search terms</a></div>
+
+  <div class="sec" style="margin-top:20px">
+    <div class="navy" style="padding:24px;display:grid;grid-template-columns:1fr 1.1fr;gap:20px;align-items:center" id="hero">
+      <div>
+        <div style="font-weight:600">Your month on Google</div><div class="small" style="color:#9FB0C7">October (last full month)</div>
+        <div class="serif gold-num" style="font-size:52px;font-weight:600;line-height:1.1;margin-top:8px">21.6%</div>
+        <div style="color:#dfe5ee">of people who found you on Google took action (called, got directions or visited your site)</div>
+        <span class="pill" style="margin-top:10px;background:rgba(178,58,47,.25);border-color:transparent;color:#f3b9b2">▼ 3 vs September</span>
+        <div class="small" style="color:#9FB0C7;margin-top:12px">Updates on the 1st · next: Dec 1</div>
+      </div>
+      <div style="border:1px solid rgba(255,255,255,.14);background:var(--navy2);border-radius:12px;padding:12px 14px"><div class="row small" style="justify-content:space-between;color:#9FB0C7"><span>May–Oct 2026</span><span>Best: Sep 24.6%</span></div><svg viewBox="0 0 380 126" width="100%" style="max-width:420px;display:block"><path d="M20.0,43.8 L88.0,54.2 L156.0,41.6 L224.0,35.6 L292.0,28.8 L360.0,37.0 L360,96 L20,96 Z" fill="rgba(184,134,47,.18)"/><path d="M20.0,43.8 L88.0,54.2 L156.0,41.6 L224.0,35.6 L292.0,28.8 L360.0,37.0" stroke="#b8862f" stroke-width="2.2" fill="none"/><circle cx="20" cy="43.79333333333333" r="3.2" fill="#b8862f"/><circle cx="88" cy="54.18" r="3.2" fill="#b8862f"/><circle cx="156" cy="41.60666666666667" r="3.2" fill="#b8862f"/><circle cx="224" cy="35.593333333333334" r="3.2" fill="#b8862f"/><circle cx="292" cy="28.75999999999999" r="3.2" fill="#b8862f"/><circle cx="360" cy="36.959999999999994" r="3.2" fill="#b8862f"/><text x="20" y="120" fill="#9FB0C7" font-size="10" text-anchor="middle" font-family="Inter">May</text><text x="88" y="120" fill="#9FB0C7" font-size="10" text-anchor="middle" font-family="Inter">Jun</text><text x="156" y="120" fill="#9FB0C7" font-size="10" text-anchor="middle" font-family="Inter">Jul</text><text x="224" y="120" fill="#9FB0C7" font-size="10" text-anchor="middle" font-family="Inter">Aug</text><text x="292" y="120" fill="#9FB0C7" font-size="10" text-anchor="middle" font-family="Inter">Sep</text><text x="360" y="120" fill="#9FB0C7" font-size="10" text-anchor="middle" font-family="Inter">Oct</text><text x="360" y="28.959999999999994" fill="#e2b866" font-size="10.5" text-anchor="middle" font-family="Inter" font-weight="600">21.6%</text></svg></div>
+    </div>
+    <div class="grid4" style="margin-top:12px">
+      <div class="card kpi"><div class="v">30</div><div class="l">calls in October</div><div class="c"><span class="up">▲4</span> vs Sep</div></div>
+      <div class="card kpi"><div class="v">72</div><div class="l">direction requests</div><div class="c"><span class="down">▼2</span> vs Sep</div></div>
+      <div class="card kpi"><div class="v">0</div><div class="l">booked in Google</div><div class="c">Bookings finish on Square's site</div></div>
+      <div class="card kpi"><div class="v">50</div><div class="l">website clicks</div><div class="c"><span class="up">▲4</span> vs Sep</div></div>
+    </div>
+    <p class="small" style="margin:10px 2px 0"><b>November so far (through Nov 19):</b> 17 calls, 29 website clicks, 26 direction requests.</p>
+    <div class="navy" style="margin-top:12px;padding:13px 18px;font-size:14px;display:flex;gap:10px;flex-wrap:wrap;align-items:center"><b>Google brought you about $2,550–$7,600 last month</b><span style="color:#cdd6e4">· Left on the table about $350–$1,050</span><span class="pill" style="background:rgba(255,255,255,.1);color:#cdd6e4;border-color:transparent">Estimate</span><span class="link" style="margin-left:auto;color:#fff">How we got this</span></div>
+  </div>
+
+  <div class="sec">
+    <div class="card pad">
+      <div class="row" style="justify-content:space-between;flex-wrap:wrap;gap:10px;align-items:flex-start"><div><h2 class="h2" style="font-size:17px">What to do this week</h2><div class="small soft" style="margin-top:3px"><b>Will send:</b> 10 review replies · this week's post · the answers</div></div><div class="appr"><span class="btn dark">Approve 3 tasks</span><span class="tiny mute">12 items go to Google</span></div></div>
+      <div class="row" style="flex-wrap:wrap;gap:8px;margin-top:12px"><span class="chip"><svg class="ic " width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path stroke="none" d="M0 0h24v24H0z" fill="none" />
+  <path d="M12 17.75l-6.172 3.245l1.179 -6.873l-5 -4.867l6.9 -1l3.086 -6.253l3.086 6.253l6.9 1l-5 4.867l1.179 6.873l-6.158 -3.245" /></svg>Reviews · 0% replied <i class="dot d-red"></i></span><span class="chip"><svg class="ic " width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path stroke="none" d="M0 0h24v24H0z" fill="none" />
+  <path d="M15 8h.01" />
+  <path d="M3 6a3 3 0 0 1 3 -3h12a3 3 0 0 1 3 3v12a3 3 0 0 1 -3 3h-12a3 3 0 0 1 -3 -3v-12" />
+  <path d="M3 16l5 -5c.928 -.893 2.072 -.893 3 0l5 5" />
+  <path d="M14 14l1 -1c.928 -.893 2.072 -.893 3 0l3 3" /></svg>Photos · 2 mo <i class="dot d-amber"></i></span><span class="chip"><svg class="ic " width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path stroke="none" d="M0 0h24v24H0z" fill="none" />
+  <path d="M4 20h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4" />
+  <path d="M13.5 6.5l4 4" /></svg>Posts · none <i class="dot d-red"></i></span><span class="chip"><svg class="ic " width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path stroke="none" d="M0 0h24v24H0z" fill="none" />
+  <path d="M9 15l6 -6" />
+  <path d="M9 9.5a.5 .5 0 1 0 1 0a.5 .5 0 1 0 -1 0" fill="currentColor" />
+  <path d="M14 14.5a.5 .5 0 1 0 1 0a.5 .5 0 1 0 -1 0" fill="currentColor" />
+  <path d="M3 12a9 9 0 1 0 18 0a9 9 0 1 0 -18 0" /></svg>Deals · none <i class="dot d-red"></i></span><span class="chip"><svg class="ic " width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path stroke="none" d="M0 0h24v24H0z" fill="none" />
+  <path d="M3 12a9 9 0 1 0 18 0a9 9 0 0 0 -18 0" />
+  <path d="M3.6 9h16.8" />
+  <path d="M3.6 15h16.8" />
+  <path d="M11.5 3a17 17 0 0 0 0 18" />
+  <path d="M12.5 3a17 17 0 0 1 0 18" /></svg>Website ✓ <i class="dot d-green"></i></span></div>
+      <div style="margin-top:6px"><div class="task"><div class="tx"><div class="tt">Post on Monday (Nov 23), the day before your busiest call days (Tue–Thu)</div><div class="td">Idea: an invitation to book a new color or cut this season</div><div class="tierfx"><span class="pill green" style="font-size:10.5px;padding:1px 8px">Do this one first</span><span><svg class="ic " width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path stroke="none" d="M0 0h24v24H0z" fill="none" />
+  <path d="M3 17l6 -6l4 4l8 -8" />
+  <path d="M14 7l7 0l0 7" /></svg> Goes out Mon, Nov 23, so next week counts → Growing on Mon, Nov 30</span></div></div><span class="ready">Ready</span><span class="btn sm">Preview / edit</span></div><div class="task"><div class="tx"><div class="tt">Reply to your 10 newest unanswered reviews, oldest first</div><div class="td">0 of your last 20 reviews have a reply</div><div class="tierfx"><span><svg class="ic " width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path stroke="none" d="M0 0h24v24H0z" fill="none" />
+  <path d="M3 17l6 -6l4 4l8 -8" />
+  <path d="M14 7l7 0l0 7" /></svg> Goes out today, in a week that already counts</span></div></div><span class="ready">Ready</span><span class="btn sm">Preview / edit</span></div><div class="task"><div class="tx"><div class="tt">Answer your customers' common questions</div><div class="td">Missing: a description of 250+ characters, prices for your services, parking, accessibility</div><div class="tierfx"><span><svg class="ic " width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path stroke="none" d="M0 0h24v24H0z" fill="none" />
+  <path d="M3 17l6 -6l4 4l8 -8" />
+  <path d="M14 7l7 0l0 7" /></svg> Goes out today, in a week that already counts</span></div></div><span class="ready">Ready</span><span class="btn sm">Preview / edit</span></div><div class="task"><div class="tx"><div class="tt">Add 3 photos: inside your salon, finished work, your team</div><div class="td">Your listing has no photos of these types yet</div><div class="tierfx"><span><svg class="ic " width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path stroke="none" d="M0 0h24v24H0z" fill="none" />
+  <path d="M3 17l6 -6l4 4l8 -8" />
+  <path d="M14 7l7 0l0 7" /></svg> Counts for the week you upload them</span></div></div><span class="needs">Needs you · 5 min</span><span class="btn dark sm">Upload your photos</span></div></div>
+    </div>
+    
+  </div>
+
+  <div class="sec">
+    <div class="card pad">
+      <h2 class="h2" style="font-size:17px">Since you did this</h2>
+      <p class="small soft" style="margin:6px 0 0"><b>Last month you:</b> started 1 offer. <b>Not yet:</b> review replies, a Google post.</p>
+      <p class="tiny mute" style="margin:8px 0 0">Other things also affect these numbers (season, weather, ads).</p>
+      <div style="border:1px solid #ebe5d6;border-radius:12px;padding:12px 14px;margin-top:10px">
+        <b style="font-size:14px">Oct 21: started a first-time customer offer</b>
+        <table class="t" style="margin-top:6px"><tr><th>29 days after vs 29 days before</th><th>Before</th><th>After</th><th></th></tr>
+        <tr><td>Calls</td><td>28</td><td><b>24</b></td><td class="dn-gray">▼ 4</td></tr>
+        <tr><td>Website clicks</td><td>52</td><td><b>40</b></td><td class="dn-gray">▼ 12</td></tr>
+        <tr><td>Directions</td><td>76</td><td><b>44</b></td><td class="dn-gray">▼ 32</td></tr></table>
+      </div>
+      <p class="tiny mute" style="margin:8px 0 0">Nov 13 and Nov 20 offers: check back on Nov 27 and Dec 4.</p>
+      
+    </div>
+  </div>
+
+  <div class="sec">
+    <div class="sec-h"><h2 class="h2">How searches became actions</h2><span class="ln"></span><span class="small mute">October 2026</span></div>
+    <div class="card pad">
+      <div class="row"><div style="width:150px"><b style="font-size:13.5px">Saw your listing</b><div class="tiny mute">Search and Maps</div></div><div class="bar" style="flex:1"><i style="width:100%"></i></div><b class="serif" style="width:44px;text-align:right;font-size:17px">704</b></div>
+      <div class="row" style="margin-top:10px"><div style="width:150px"><b style="font-size:13.5px">Took an action</b><div class="tiny mute">call, directions, website</div></div><div class="bar navyb" style="flex:1"><i style="width:21.6%"></i></div><b class="serif" style="width:44px;text-align:right;font-size:17px">152</b></div>
+      <div class="row" style="margin-top:10px"><div style="width:150px"><b style="font-size:13.5px">Called</b><div class="tiny mute">20% of actions</div></div><div class="bar navyb" style="flex:1"><i style="width:4.3%"></i></div><b class="serif" style="width:44px;text-align:right;font-size:17px">30</b></div>
+      <div class="grid2 st1" style="margin-top:16px">
+        <div style="border:1px solid #ebe5d6;border-radius:12px;padding:12px"><b style="font-size:13.5px">Who saw you</b><table class="t" style="margin-top:6px"><tr><th></th><th>May–Oct 2026</th><th>2025</th><th>Change</th></tr><tr><td>Views</td><td><b>3,346</b></td><td>3,766</td><td class="down">▼ 11%</td></tr><tr><td>Interactions</td><td><b>696</b></td><td>545</td><td class="up">▲ 28%</td></tr><tr><td>Actions per 100 viewers</td><td><b>21</b></td><td>14</td><td class="up">▲ 7</td></tr></table></div>
+        <div style="border:1px solid #ebe5d6;border-radius:12px;padding:12px"><b style="font-size:13.5px">Which days they call</b>
+          <div class="row small" style="margin-top:10px"><span style="width:70px">Tue–Thu</span><div class="bar" style="flex:1"><i style="width:100%"></i></div><b style="width:30px;text-align:right">102</b></div>
+          <div class="row small" style="margin-top:8px"><span style="width:70px">Fri–Sat</span><div class="bar" style="flex:1"><i style="width:66%"></i></div><b style="width:30px;text-align:right">67</b></div>
+          <div class="row small" style="margin-top:8px"><span style="width:70px">Sun–Mon</span><div class="bar" style="flex:1"><i style="width:13%"></i></div><b style="width:30px;text-align:right">13</b></div>
+          <p class="tiny mute" style="margin:8px 0 0">May–Oct 2026. Most calls come midweek.</p></div>
+      </div>
+      <p class="small soft" style="margin:12px 0 0">57% find you on Google Search on a phone, where your description and services help you match searches. <a class="link">Fix your listing →</a></p>
+    </div>
+  </div>
+
+  <div class="sec">
+    <div class="sec-h"><h2 class="h2">What people searched to find you</h2><span class="ln"></span><span class="small mute hide-phone">October 2026 · from Google</span></div>
+    <div class="card pad"><div class="row" style="padding:7px 0;border-top:0"><span class="mute small" style="width:16px">1</span><span style="flex:1;font-size:13.5px">tarrytown hair salon</span><div class="bar hide-phone" style="width:110px"><i style="width:100%"></i></div><b style="width:28px;text-align:right">29</b></div><div class="row" style="padding:7px 0;border-top:1px solid #efe9dc"><span class="mute small" style="width:16px">2</span><span style="flex:1;font-size:13.5px">hair salon</span><div class="bar hide-phone" style="width:110px"><i style="width:93.10344827586206%"></i></div><b style="width:28px;text-align:right">27</b></div><div class="row" style="padding:7px 0;border-top:1px solid #efe9dc"><span class="mute small" style="width:16px">3</span><span style="flex:1;font-size:13.5px">hair salon near me</span><div class="bar hide-phone" style="width:110px"><i style="width:82.75862068965517%"></i></div><b style="width:28px;text-align:right">24</b></div><div class="row" style="padding:7px 0;border-top:1px solid #efe9dc"><span class="mute small" style="width:16px">4</span><span style="flex:1;font-size:13.5px">hair salon tarrytown</span><div class="bar hide-phone" style="width:110px"><i style="width:68.96551724137932%"></i></div><b style="width:28px;text-align:right">20</b></div><div class="row" style="padding:7px 0;border-top:1px solid #efe9dc"><span class="mute small" style="width:16px">5</span><span style="flex:1;font-size:13.5px">hair salon tarrytown ny</span><div class="bar hide-phone" style="width:110px"><i style="width:55.172413793103445%"></i></div><b style="width:28px;text-align:right">16</b></div><p class="tiny mute" style="margin:8px 0 0">Google shows search terms used at least 15 times a month.</p></div>
+  </div>
+
+  <div class="card pad" style="margin-top:26px;display:flex;gap:14px;align-items:center;flex-wrap:wrap;background:#fbf8f1">
+    <span class="mtile" style="border:0;padding:0;background:none"><span class="mi"><svg class="ic " width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path stroke="none" d="M0 0h24v24H0z" fill="none" />
+  <path d="M9 11a3 3 0 1 0 6 0a3 3 0 0 0 -6 0" />
+  <path d="M17.657 16.657l-4.243 4.243a2 2 0 0 1 -2.827 0l-4.244 -4.243a8 8 0 1 1 11.314 0" /></svg></span></span>
+    <div style="flex:1;min-width:200px"><b>Your listing, edits and protection are in Presence</b><div class="small soft">5 OK · 1 to fix · 7 to improve. Fixing them can raise your PostScore score.</div></div>
+    <span class="btn dark">Fix your listing →</span>
+  </div></div></main></div></body></html>
