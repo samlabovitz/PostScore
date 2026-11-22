@@ -84,7 +84,8 @@ export const POSTSTUDIO_OPTIONS: PostStudioOption[] = ["solo", "grow", "premium"
 export const POSTSTUDIO_PRICES: Record<Exclude<PostStudioOption, "multi">, { addOn: number; total: number }> = {
   solo: { addOn: 30, total: 30 },
   grow: { addOn: 15, total: 40 },
-  premium: { addOn: 8, total: 58 },
+  // Premium is $40/mo since Day 23D (dashboard.settings.plans.price.premium): $40 + $8.
+  premium: { addOn: 8, total: 48 },
 };
 
 /** The option that matches the plan they're on (Free → PostStudio only). */

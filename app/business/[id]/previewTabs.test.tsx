@@ -236,11 +236,11 @@ describe("PostStudio: full-screen page", () => {
     };
     expect(await price("free")).toBe("PostStudio on its own: $30/mo with your free audit — or add it to Grow (+$15/mo) or Premium (+$8/mo).");
     expect(await price("grow")).toBe("Add PostStudio to Grow for +$15/mo ($40/mo total).");
-    expect(await price("premium")).toBe("PostStudio at a discount: +$8/mo on Premium ($58/mo total).");
+    expect(await price("premium")).toBe("PostStudio at a discount: +$8/mo on Premium ($48/mo total).");
     state.plan = "grow";
     const t = text(await render());
     // The ways to get it, with their plan highlighted.
-    for (const s of ["PostStudio only", "$30/mo", "Grow + PostStudio", "$40/mo", "Premium + PostStudio", "$58/mo", "Included in Multi"]) expect(t).toContain(s);
+    for (const s of ["PostStudio only", "$30/mo", "Grow + PostStudio", "$40/mo", "Premium + PostStudio", "$48/mo", "Included in Multi"]) expect(t).toContain(s);
     expect(await render()).toMatch(/data-option="grow" data-highlighted="true"/);
     expect(t).toContain("PostStudio isn't open yet — there's nothing to buy today.");
     expect(t).toContain("Starter website vs PostStudio");

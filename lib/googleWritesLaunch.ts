@@ -4,8 +4,8 @@
 // businesses on GOOGLE_WRITES_LIVE_PLACES (lib/gbpReviewPractice.ts). So
 // until that is on for real customers, every plan line, card and Compare
 // plans cell about them says Beta (built, switched on for a few businesses
-// so far, never promised as live for everyone), and the Premium plan bullet
-// keeps "Posting replies to Google: coming soon".
+// so far, never promised as live for everyone), including the Premium plan
+// bullet's "Post your replies to Google (Beta)" (was "coming soon" until Nov 21).
 //
 // LAUNCH: set GOOGLE_WRITES_FOR_EVERYONE to true when GOOGLE_WRITES_LIVE_PLACES
 // is on for real customers. Every wording below flips with it, in English

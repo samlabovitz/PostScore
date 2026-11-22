@@ -233,9 +233,9 @@ export function promoContent(feature: PromoFeature, f: PromoFacts, locale: Local
     case "recheck":
       return named("recheck", [...fact("website"), line(U("unlock.recheck"))]);
     case "googleProfile":
-      // Editing the listing is built (Beta); insights aren't; reply posting
-      // stays "coming soon" until lib/googleWritesLaunch.ts flips.
-      return named("googleProfile", [line(googleWritesCopy("promoGoogleProfileB1")), line(U("feature.googleProfile.b2"), true), line(U("feature.googleProfile.b3"), postingRepliesSoon())]);
+      // Editing the listing is built (Beta); Google results (Day 22B) and this
+      // week's post + reply drafts (Day 23E) are live — none "coming soon".
+      return named("googleProfile", [line(googleWritesCopy("promoGoogleProfileB1")), line(U("feature.googleProfile.b2")), line(U("feature.googleProfile.b3"))]);
     case "campaignHub":
       // Email, text and social campaigns — Premium, not built yet.
       return named("campaignHub", [line(U("feature.campaignHub.b1"), true), line(U("feature.campaignHub.b2"), true)]);

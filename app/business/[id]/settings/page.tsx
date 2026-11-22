@@ -1,3 +1,4 @@
+import { isMonthlyReportsLive } from "@/lib/monthlyReportsFeatureFlag";
 import { growthPlanHref } from "@/lib/routes";
 import { Fragment } from "react";
 import { viewLocale } from "@/lib/viewLocale.server";
@@ -159,7 +160,7 @@ export default async function SettingsPage({ params, searchParams = {} }: { para
             </SettingsSection>
 
             <SettingsSection id="plan" icon="card" title={k("nav.plan")} helper={k("plan.helper")}>
-              <PlanCard plan={plan} />
+              <PlanCard plan={plan} monthlyReportsLive={isMonthlyReportsLive()} />
               {plan === "free" ? (
                 <p data-testid="nothing-to-cancel" className="text-[13px] text-ink-soft">
                   {k("plan.freeNothingToCancel")}

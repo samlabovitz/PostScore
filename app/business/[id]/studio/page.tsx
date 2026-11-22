@@ -23,7 +23,7 @@ import { LocaleProvider, t, type MessageKey } from "@/lib/i18n";
  * what PostStudio includes and "Building tools coming soon"; without it,
  * the same checklist and tiles as an honest info page with the price for
  * their plan and the ways to get it ($30/mo on its own, Grow + PostStudio
- * $40, Premium + PostStudio $58, included in Multi). Nothing here is a
+ * $40, Premium + PostStudio $48, included in Multi). Nothing here is a
  * fake site.
  */
 export default async function PostStudioPage({ params, searchParams = {} }: { params: { id: string }; searchParams?: { from?: string } }) {

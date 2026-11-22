@@ -142,7 +142,7 @@ describe("the PostStudio box (its own, not Grow vs Premium)", () => {
     expect(html.indexOf('data-testid="poststudio-features"')).toBeLessThan(html.indexOf('data-testid="poststudio-options"'));
     expect(t).toContain("PostStudio only $30/mo");
     expect(t).toContain("Grow + PostStudio $40/mo");
-    expect(t).toContain("Premium + PostStudio $58/mo");
+    expect(t).toContain("Premium + PostStudio $48/mo");
     expect(t).toContain("Best value");
     expect(t).toContain("Included in Multi");
     expect(html).not.toContain('data-testid="promo-plan"');
@@ -176,7 +176,7 @@ describe("the PostStudio box (its own, not Grow vs Premium)", () => {
 
   test("Spanish (usted)", () => {
     const t = text(body("premium", "es"));
-    for (const s of ["Sitio web", "Menú y catálogo", "Logo Studio", "un código QR que nunca cambia", "Suba su logo", "Solo PostStudio", "$30/mes", "Grow + PostStudio", "$40/mes", "Premium + PostStudio", "$58/mes", "Mejor valor", "Incluido en Multi", "Su plan", "Próximamente"]) expect(t).toContain(s);
+    for (const s of ["Sitio web", "Menú y catálogo", "Logo Studio", "un código QR que nunca cambia", "Suba su logo", "Solo PostStudio", "$30/mes", "Grow + PostStudio", "$40/mes", "Premium + PostStudio", "$48/mes", "Mejor valor", "Incluido en Multi", "Su plan", "Próximamente"]) expect(t).toContain(s);
   });
 });
 

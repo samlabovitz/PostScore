@@ -108,7 +108,8 @@ describe("plan facts come from Compare plans, with coming soon flagged", () => {
       expect(p.features.map((f) => f.feature)).toEqual(COMPARE_ROWS.map((r) => t("en", r.key)));
     }
     const text = planFactsText();
-    for (const price of ["$0", "$25/mo", "$50/mo", "$150/mo", "Up to 5 (+$25 each extra)"]) expect(text).toContain(price);
+    for (const price of ["$0", "$25/mo", "$40/mo", "$150/mo", "Up to 5 (+$25 each extra)"]) expect(text).toContain(price);
+    expect(text).not.toContain("$50/mo");
     // PostStudio: "coming later", never a cost (Nov 21).
     for (const price of ["$30/mo on its own", "+$15/mo", "+$8/mo"]) expect(text).not.toContain(price);
   });
@@ -118,16 +119,21 @@ describe("plan facts come from Compare plans, with coming soon flagged", () => {
     const feature = (name: string) => premium.features.find((f) => f.feature === name)!;
     for (const row of COMPARE_ROWS.filter((r) => r.cells.premium.kind === "soon")) expect(feature(t("en", row.key)).status).toBe("coming soon");
     expect(feature("AI review replies")).toMatchObject({ status: "available", value: "Unlimited", soonValue: null, betaValue: "post to Google (Beta)" });
-    expect(feature("Edit your Google listing from PostScore (Google connect)")).toMatchObject({ status: "beta" });
+    expect(feature("Update your Google listing, photos included (Google connect)")).toMatchObject({ status: "beta" });
+    // Day 23E rows: the weekly post is Beta on Premium; Google results and protection are available.
+    expect(feature("This week's Google post + answers to customers' questions")).toMatchObject({ status: "beta" });
+    expect(feature("Your Google results (calls, directions, clicks, searches)")).toMatchObject({ status: "available" });
+    expect(feature("Alerts when anyone else changes your listing")).toMatchObject({ status: "available" });
     expect(feature(t("en", "dashboard.settings.plans.row.postStudio")).status).toBe("coming soon");
     const premiumLine = planFactsText().split("\n").find((l, i, all) => all[i - 1]?.startsWith("Premium —") && l.includes("AVAILABLE NOW"))!;
     expect(premiumLine).toContain("AI review replies (Unlimited)");
-    expect(premiumLine).not.toMatch(/PostStudio|coming soon|Email, text|Beta|Edit your Google listing/i);
+    expect(premiumLine).not.toMatch(/PostStudio|coming soon|Email, text|Beta|Update your Google listing/i);
     // Beta is its own line: built, never promised for this business.
     const lines = planFactsText().split("\n");
     const start = lines.findIndex((l) => l.startsWith("Premium —"));
     const betaLine = lines.slice(start + 1).find((l) => l.startsWith("  BETA"))!;
-    expect(betaLine).toContain("Edit your Google listing from PostScore (Google connect)");
+    expect(betaLine).toContain("Update your Google listing, photos included (Google connect)");
+    expect(betaLine).toContain("This week's Google post + answers to customers' questions (One tap with Approve all (Beta))");
     expect(betaLine).toContain("AI review replies (post to Google (Beta))");
     expect(betaLine).toContain("never promise it works for this business");
   });

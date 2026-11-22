@@ -272,8 +272,8 @@ describe("“no reviews yet” / “low rating” are caught in upgrade answers 
 describe("Compare plans: honest about what works today", () => {
   test("Premium's promise is true today; editing the Google listing says Beta (EN + ES)", () => {
     const premium = planFacts("en").find((p) => p.plan === "premium")!;
-    expect(premium.promise).toBe("Unlimited PostAI and replies, every design tool, and editing your Google listing from PostScore (Beta).");
-    expect(planFacts("es").find((p) => p.plan === "premium")!.promise).toBe("PostAI y respuestas ilimitadas, todas las herramientas de diseño, y editar su ficha de Google desde PostScore (Beta).");
+    expect(premium.promise).toBe("PostScore writes this week's Google post, your listing updates and your review replies — you just approve. Plus unlimited PostAI and every design tool. (Beta)");
+    expect(planFacts("es").find((p) => p.plan === "premium")!.promise).toBe("PostScore redacta la publicación de Google de esta semana, las actualizaciones de su ficha y las respuestas a sus reseñas; usted solo las aprueba. Además, PostAI ilimitado y todas las herramientas de diseño. (Beta)");
   });
   test("Free gets no monthly report email — PostAI's plan facts follow (EN + ES)", () => {
     for (const locale of ["en", "es"] as const) {
@@ -281,9 +281,12 @@ describe("Compare plans: honest about what works today", () => {
       const reports = free.features.find((f) => /report|informe/i.test(f.feature))!;
       expect(reports).toMatchObject({ status: "not included" });
       expect(JSON.stringify(free)).not.toMatch(/Monthly email|Correo mensual/);
-      const monthly = (plan: string) => planFacts(locale).find((p) => p.plan === plan)!.features.find((f) => /Monthly report email|Informe mensual por correo/.test(f.feature))!;
-      expect(monthly("free").status).toBe("not included");
-      for (const plan of ["grow", "premium", "multi"]) expect(monthly(plan).status).toBe("available");
+      const monthly = (plan: string, live: boolean) => planFacts(locale, live).find((p) => p.plan === plan)!.features.find((f) => /Monthly report email|Informe mensual por correo/.test(f.feature))!;
+      // Until MONTHLY_REPORTS_LIVE is "true" the paid plans say coming soon; then available.
+      for (const live of [false, true]) {
+        expect(monthly("free", live).status).toBe("not included");
+        for (const plan of ["grow", "premium", "multi"]) expect(monthly(plan, live).status).toBe(live ? "available" : "coming soon");
+      }
     }
   });
 });

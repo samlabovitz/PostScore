@@ -89,7 +89,7 @@ describe("the upgrade box shows only on Free", () => {
     expect(html.match(/[\s"]shadow-card[\s"]/g)).toHaveLength(1);
     expect(tx.indexOf("Earn back your missing points, step by step")).toBeLessThan(tx.indexOf("More customers"));
     expect(tx).toContain("Grow · $25/mo");
-    expect(tx).toContain("Premium · $50/mo");
+    expect(tx).toContain("Premium · $40/mo");
     expect(html.match(/href="\/business\/b1\/settings#compare-plans"/g)).toHaveLength(2);
     expect(html).not.toContain('data-testid="more-customers-unlock"');
     expect(tx).not.toContain("Plus tools to bring customers in");

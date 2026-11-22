@@ -2,7 +2,7 @@
 
 // The ways to get PostStudio, side by side (stacked on a phone):
 // "PostStudio only" $30/mo · "Grow + PostStudio" $40/mo · "Premium +
-// PostStudio" $58/mo (Best value), then "Included in Multi". The plan the
+// PostStudio" $48/mo (Best value), then "Included in Multi". The plan the
 // owner is on is highlighted. Shared by the PostStudio box, Settings →
 // Compare plans and the full-screen PostStudio page. PostStudioFeatures:
 // what PostStudio includes — Website, Menu & catalog, Logo Studio. Coming soon: nothing

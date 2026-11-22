@@ -5,7 +5,7 @@
 // available now, a preview, not included, Beta (built, switched on for a few
 // businesses so far — lib/googleWritesLaunch.ts), or coming soon. Pure.
 
-import { COMPARE_PLANS, COMPARE_ROWS, PLAN_COPY, type Cell } from "@/lib/planComparison";
+import { COMPARE_PLANS, compareRows, planCopy, type Cell } from "@/lib/planComparison";
 import { t, type Locale } from "@/lib/i18n";
 import type { Plan } from "@/lib/plan";
 
@@ -72,9 +72,10 @@ function cellFact(cell: Cell, rowLabel: string, locale: Locale): Omit<PlanFeatur
   }
 }
 
-export function planFacts(locale: Locale = "en"): PlanFact[] {
+/** monthlyReportsLive: isMonthlyReportsLive() — the same flag Settings → Compare plans uses. */
+export function planFacts(locale: Locale = "en", monthlyReportsLive = false): PlanFact[] {
   return COMPARE_PLANS.map((plan) => {
-    const copy = PLAN_COPY[plan];
+    const copy = planCopy(monthlyReportsLive)[plan];
     return {
       plan,
       name: t(locale, `dashboard.settings.plan.name.${plan}` as Parameters<typeof t>[1]),
@@ -85,7 +86,7 @@ export function planFacts(locale: Locale = "en"): PlanFact[] {
         const text = t(locale, key);
         return { text, soon: saysSoon(text) };
       }),
-      features: COMPARE_ROWS.map((row) => {
+      features: compareRows(monthlyReportsLive).map((row) => {
         const feature = t(locale, row.key);
         return { feature, ...cellFact(row.cells[plan], feature, locale) };
       }),
@@ -103,9 +104,9 @@ function withoutPostStudioCost(items: string[]): string[] {
   return Array.from(new Set(items.map((item) => (/PostStudio/.test(item) ? POSTSTUDIO_LATER : item))));
 }
 
-export function planFactsText(locale: Locale = "en"): string {
+export function planFactsText(locale: Locale = "en", monthlyReportsLive = false): string {
   const lines = ['PLAN FACTS (from Settings → Plan & billing → "Compare plans" — the only plan details that exist; never add to them):'];
-  for (const p of planFacts(locale)) {
+  for (const p of planFacts(locale, monthlyReportsLive)) {
     lines.push(`${p.name} — ${p.price} — "${p.tagline}"${p.promise ? ` — ${p.promise}` : ""}`);
     const now = p.features.filter((f) => f.status === "available").map((f) => `${f.feature}${f.value ? ` (${f.value})` : ""}`);
     const preview = p.features.filter((f) => f.status === "preview").map((f) => f.feature);
@@ -125,7 +126,7 @@ export function planFactsText(locale: Locale = "en"): string {
   }
   // What each paid plan adds over the plan below — available now only (the
   // upgrade answer's benefits come from these lines and nothing else).
-  const facts = planFacts(locale);
+  const facts = planFacts(locale, monthlyReportsLive);
   for (const [lower, upper] of [["free", "grow"], ["grow", "premium"]] as const) {
     const lo = facts.find((p) => p.plan === lower)!;
     const up = facts.find((p) => p.plan === upper)!;

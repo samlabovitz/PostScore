@@ -30,9 +30,9 @@ describe("PostStudio pricing: its own $30 option, or added to a plan", () => {
     expect(PLANS).toEqual(["free", "grow", "premium", "multi"]);
   });
 
-  test("prices: $30 alone; Grow +$15 = $40; Premium +$8 = $58; Multi included", () => {
+  test("prices: $30 alone; Grow +$15 = $40; Premium ($40 since Day 23D) +$8 = $48; Multi included", () => {
     expect(POSTSTUDIO_OPTIONS).toEqual(["solo", "grow", "premium", "multi"]);
-    expect(POSTSTUDIO_PRICES).toEqual({ solo: { addOn: 30, total: 30 }, grow: { addOn: 15, total: 40 }, premium: { addOn: 8, total: 58 } });
+    expect(POSTSTUDIO_PRICES).toEqual({ solo: { addOn: 30, total: 30 }, grow: { addOn: 15, total: 40 }, premium: { addOn: 8, total: 48 } });
     expect(postStudioOptionFor("free")).toBe("solo");
     expect(postStudioOptionFor("grow")).toBe("grow");
     expect(postStudioOptionFor("premium")).toBe("premium");

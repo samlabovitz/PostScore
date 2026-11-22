@@ -38,34 +38,51 @@ const row = (k: string, free: Cell, grow: Cell, premium: Cell, multi: Cell = pre
   cells: { free, grow, premium, multi },
 });
 
-export const COMPARE_ROWS: CompareRow[] = [
-  row("whatsWrong", yes, yes, yes),
-  row("rank", yes, yes, yes),
-  row("fixes", preview, yes, yes),
-  row("recheck", no, yes, yes),
-  row("designs", preview, text("basic"), text("fullNoBranding")),
-  // "All campaigns" — every running coupon and referral card with its +1
-  // tally — is Grow and up. Email, text and social campaigns are Premium
-  // and not built yet.
-  row("hub", preview, yes, yes),
-  row("channels", no, no, soon),
-  row("website", preview, text("starterSite"), text("starterDiscount"), text("starterIncluded")),
-  row("postai", text("perWeek3"), text("perMonth100"), text("unlimited")),
-  // AI review reply drafts (the owner pastes the review): 3 a week on Free,
-  // 10 a week on Grow; Premium unlimited, and posting them to Google with
-  // Google connected — "(Beta)" until lib/googleWritesLaunch.ts flips.
-  row("replies", text("perWeek3"), text("perWeek10"), { kind: "text", key: googleWritesCopy("repliesValue") }),
-  // Edit on Google (hours, phone, description, website link, customer
-  // details, order or booking link): Premium, Beta until it's on for everyone.
-  row("doneForYou", no, no, googleWrites),
-  // Free gets no monthly report email (lib/plan.ts planIncludesMonthlyReports).
-  row("reports", no, text("weeklyRecap"), text("weeklyPdf")),
-  row("monthlyEmail", no, yes, yes),
-  // PostStudio (coming soon): $30/mo on its own (the free audit +
-  // PostStudio), +$15 on Grow, +$8 on Premium, included in Multi.
-  row("postStudio", text("alone30"), text("plus15"), text("plus8"), text("included", true)),
-  row("locations", text("one"), text("one"), text("one"), text("upTo5")),
-];
+// Day 23E: this week's Google post + the answers — Grow gets drafts to copy,
+// Premium one tap / Approve all (Beta until lib/googleWritesLaunch.ts flips).
+const oneTap: Cell = text(GOOGLE_WRITES_FOR_EVERYONE ? "oneTapApproveLive" : "oneTapApprove");
+
+/** The Compare plans rows. The monthly report email says "Coming soon"
+ * until MONTHLY_REPORTS_LIVE is "true" (lib/monthlyReportsFeatureFlag.ts —
+ * read on the server and passed in). */
+export function compareRows(monthlyReportsLive = false): CompareRow[] {
+  const monthly: Cell = monthlyReportsLive ? yes : soon;
+  return [
+    row("whatsWrong", yes, yes, yes),
+    row("rank", yes, yes, yes),
+    row("fixes", preview, yes, yes),
+    row("recheck", no, yes, yes),
+    row("designs", preview, text("basic"), text("fullNoBranding")),
+    // "All campaigns" — every running coupon and referral card with its +1
+    // tally — is Grow and up. Email, text and social campaigns are Premium
+    // and not built yet.
+    row("hub", preview, yes, yes),
+    row("channels", no, no, soon),
+    row("website", preview, text("starterSite"), text("starterDiscount"), text("starterIncluded")),
+    row("postai", text("perWeek3"), text("perMonth100"), text("unlimited")),
+    // AI review reply drafts (the owner pastes the review): 3 a week on Free,
+    // 10 a week on Grow; Premium unlimited, and posting them to Google with
+    // Google connected — "(Beta)" until lib/googleWritesLaunch.ts flips.
+    row("replies", text("perWeek3"), text("perWeek10"), { kind: "text", key: googleWritesCopy("repliesValue") }),
+    // Edit on Google (hours, phone, description, website link, customer
+    // details, order or booking link): Premium, Beta until it's on for everyone.
+    row("doneForYou", no, no, googleWrites),
+    // Live features (Days 22B–23E). Grow gets Google results in Day 25B.
+    row("weeklyPost", preview, text("draftsToCopy"), oneTap),
+    row("googleResults", no, no, text("withGoogle", true)),
+    row("protection", no, no, text("withGoogle", true)),
+    // Free gets no monthly report email (lib/plan.ts planIncludesMonthlyReports).
+    row("reports", no, text("weeklyRecap"), text("weeklyPdf")),
+    row("monthlyEmail", no, monthly, monthly),
+    // PostStudio (coming soon): $30/mo on its own (the free audit +
+    // PostStudio), +$15 on Grow, +$8 on Premium, included in Multi.
+    row("postStudio", text("alone30"), text("plus15"), text("plus8"), text("included", true)),
+    row("locations", text("one"), text("one"), text("one"), text("upTo5")),
+  ];
+}
+
+/** The honest default (monthly emails not sending yet), for code that can't read the server flag. */
+export const COMPARE_ROWS: CompareRow[] = compareRows(false);
 
 export interface PlanCopy {
   price: MessageKey;
@@ -78,19 +95,33 @@ export interface PlanCopy {
 const k = (s: string) => `dashboard.settings.plans.${s}` as MessageKey;
 const bullets = (plan: Plan, ids: string[]) => ids.map((id) => k(`bullet.${plan}.${id}`));
 
-/** Each plan's card: price, tagline, promise and what it includes. */
-export const PLAN_COPY: Record<Plan, PlanCopy> = {
-  free: { price: k("price.free"), tagline: k("tagline.free"), promise: k("promise.free"), bullets: bullets("free", ["score", "problems", "rank", "reviewGap", "replies"]) },
-  grow: { price: k("price.grow"), tagline: k("tagline.grow"), promise: k("promise.grow"), bullets: bullets("grow", ["guides", "plan", "recheck", "tools", "tracking", "postai"]) },
-  premium: {
-    price: k("price.premium"),
-    tagline: k("tagline.premium"),
-    // The listing-edit and replies lines flip with lib/googleWritesLaunch.ts.
-    promise: googleWritesCopy("premiumPromise"),
-    bullets: [googleWritesCopy("fixesBullet"), googleWritesCopy("repliesBullet"), ...bullets("premium", ["insights", "channels", "designs", "postai"])],
-  },
-  multi: { price: k("price.multi"), tagline: k("tagline.multi"), promise: null, bullets: bullets("multi", ["everything", "studio", "dashboard"]) },
-};
+/** Each plan's card: price, tagline, promise and what it includes. The
+ * prices (dashboard.settings.plans.price.*) are the ONE source for every
+ * place that shows them — Compare plans, the promos, the Fix plan upsell
+ * and PostAI's plan facts. */
+export function planCopy(monthlyReportsLive = false): Record<Plan, PlanCopy> {
+  return {
+    free: { price: k("price.free"), tagline: k("tagline.free"), promise: k("promise.free"), bullets: bullets("free", ["score", "problems", "rank", "reviewGap", "replies"]) },
+    grow: { price: k("price.grow"), tagline: k("tagline.grow"), promise: k("promise.grow"), bullets: bullets("grow", ["guides", "plan", "recheck", "tools", "weeklyPost", "tracking", "postai"]) },
+    premium: {
+      price: k("price.premium"),
+      tagline: k("tagline.premium"),
+      // The weekly post, listing-edit and replies lines flip with lib/googleWritesLaunch.ts.
+      promise: googleWritesCopy("premiumPromise"),
+      bullets: [
+        k(GOOGLE_WRITES_FOR_EVERYONE ? "bullet.premium.weeklyPostLive" : "bullet.premium.weeklyPost"),
+        googleWritesCopy("fixesBullet"),
+        googleWritesCopy("repliesBullet"),
+        ...bullets("premium", ["insights", "channels", "designs", "postai"]),
+        k(monthlyReportsLive ? "bullet.premium.monthlyEmail" : "bullet.premium.monthlyEmailSoon"),
+      ],
+    },
+    multi: { price: k("price.multi"), tagline: k("tagline.multi"), promise: null, bullets: bullets("multi", ["everything", "studio", "dashboard"]) },
+  };
+}
+
+/** The honest default (monthly emails not sending yet), for code that can't read the server flag. */
+export const PLAN_COPY: Record<Plan, PlanCopy> = planCopy(false);
 
 /** On a phone the plans stack, the current plan first. */
 export function phoneOrder(current: Plan): Plan[] {

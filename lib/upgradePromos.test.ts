@@ -99,11 +99,11 @@ describe("the promo box", () => {
   test("title names the feature and the plan; not-built lines say Coming soon", () => {
     const g = promoContent("googleProfile", FACTS, "en");
     expect(g.feature?.title).toBe("Google Profile · Premium");
-    // Editing the listing is Beta (said in the line); insights and posted replies are coming soon.
+    // Editing the listing is Beta (said in the line); Google results and this week's post + replies are live.
     expect(g.feature?.lines.map((l) => [l.text, l.soon])).toEqual([
       ["Edit your Google listing from PostScore (Beta)", false],
-      ["See who searches for you and who calls or clicks", true],
-      ["AI-drafted replies to every review", true],
+      ["Your Google results: calls, directions, website clicks and searches", false],
+      ["This week's Google post and review replies, written for you to approve", false],
     ]);
     const hub = promoContent("campaignHub", FACTS, "en");
     // Only email, text and social campaigns are Premium now — and not built yet.

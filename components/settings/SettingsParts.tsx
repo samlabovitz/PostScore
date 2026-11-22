@@ -14,7 +14,7 @@ import { SAVED_EVENT } from "@/lib/savedEvent";
 import type { Plan } from "@/lib/plan";
 import { t, useLocale, type MessageKey } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
-import { COMPARE_PLANS, COMPARE_ROWS, HIGHLIGHT_PLAN, PLAN_COPY, type Cell } from "@/lib/planComparison";
+import { COMPARE_PLANS, compareRows, HIGHLIGHT_PLAN, planCopy, type Cell } from "@/lib/planComparison";
 import { PostStudioBullets, PostStudioOptions } from "@/components/studio/PostStudioOptions";
 
 /** Icons are named by a plain string key: the Settings page is a Server
@@ -125,8 +125,11 @@ export function SavedToast() {
  * phone the cards stack with the current plan first and each carries its
  * own rows. #compare-plans opens it (every "See plans" link lands here).
  * Copy comes from lib/planComparison.ts. */
-export function PlanCard({ plan }: { plan: Plan }) {
+/** monthlyReportsLive: isMonthlyReportsLive(), read on the server — the monthly email says "Coming soon" until then. */
+export function PlanCard({ plan, monthlyReportsLive = false }: { plan: Plan; monthlyReportsLive?: boolean }) {
   const locale = useLocale();
+  const PLAN_COPY = planCopy(monthlyReportsLive);
+  const COMPARE_ROWS = compareRows(monthlyReportsLive);
   const [open, setOpen] = useState(false);
   useEffect(() => {
     const sync = () => {
@@ -165,7 +168,7 @@ export function PlanCard({ plan }: { plan: Plan }) {
         <summary className="cursor-pointer list-none px-3 py-2 text-[13px] font-semibold text-ink [&::-webkit-details-marker]:hidden">{t(locale, "dashboard.settings.plans.heading")} ▾</summary>
         <div className="grid grid-cols-1 gap-3 border-t border-paper-line p-3 sm:grid-cols-2 xl:grid-cols-4">
           {COMPARE_PLANS.map((p) => (
-            <PlanColumn key={p} plan={p} current={p === plan} />
+            <PlanColumn key={p} plan={p} current={p === plan} monthlyReportsLive={monthlyReportsLive} />
           ))}
         </div>
         <PostStudioSection plan={plan} />
@@ -238,7 +241,9 @@ const HIGHLIGHT_BG = "bg-[color:color-mix(in_srgb,var(--color-brass)_10%,white)]
 
 /** One plan's card in "Compare plans". On a phone the owner's plan comes
  * first (order-first) and the card lists the comparison rows itself. */
-function PlanColumn({ plan, current }: { plan: Plan; current: boolean }) {
+function PlanColumn({ plan, current, monthlyReportsLive }: { plan: Plan; current: boolean; monthlyReportsLive: boolean }) {
+  const PLAN_COPY = planCopy(monthlyReportsLive);
+  const COMPARE_ROWS = compareRows(monthlyReportsLive);
   const locale = useLocale();
   const copy = PLAN_COPY[plan];
   const best = plan === HIGHLIGHT_PLAN;

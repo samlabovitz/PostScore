@@ -5,6 +5,7 @@ vi.mock("@/app/actions/businesses", () => ({ unsubscribeFromAllEmails: vi.fn() }
 vi.mock("next/navigation", () => ({ useRouter: () => ({ back: vi.fn(), push: vi.fn(), refresh: vi.fn() }) }));
 
 import { LocaleProvider } from "@/lib/i18n";
+import { compareRows } from "@/lib/planComparison";
 import { CancelPlanButton, MonthlyEmailFreeNote, PlanCard, SettingsNav, UnsubscribeAllButton } from "./SettingsParts";
 import RefundPolicyPage from "@/app/refund-policy/page";
 import TermsPage from "@/app/terms/page";
@@ -33,11 +34,16 @@ describe("Settings pieces", () => {
   test("Compare plans: four plans, Premium highlighted as Best value, the owner's plan marked, every row", () => {
     const html = wrap(<PlanCard plan="grow" />);
     const t = text(html);
-    for (const s of ["$0", "$25/mo", "$50/mo", "$150/mo", "Fix it yourself, step by step", "We do the work for you", "Premium for every location"]) expect(t).toContain(s);
-    expect(t).toContain("Unlimited PostAI and replies, every design tool, and editing your Google listing from PostScore (Beta).");
-    // Posting replies stays "coming soon" on the Premium card until lib/googleWritesLaunch.ts flips.
-    expect(t).toContain("Posting replies to Google: coming soon");
-    expect(t).toContain("Edit your Google listing from PostScore: hours, phone, description, website link and customer details (Beta)");
+    for (const s of ["$0", "$25/mo", "$40/mo", "$150/mo", "Fix it yourself, step by step", "We do the work for you", "Premium for every location"]) expect(t).toContain(s);
+    expect(t).toContain("PostScore writes this week's Google post, your listing updates and your review replies — you just approve. Plus unlimited PostAI and every design tool. (Beta)");
+    // Posting replies is Beta on the Premium card (Nov 21), like every Google write.
+    expect(t).toContain("Post your replies to Google (Beta)");
+    expect(t).not.toContain("Posting replies to Google: coming soon");
+    expect(t).toContain("Update your Google listing from PostScore: hours, holiday hours, phone, description, services, website link, customer details and photos (Beta)");
+    // Day 23E rows and bullets.
+    expect(t).toContain("This week's Google post + answers to customers' questions");
+    expect(t).toContain("Your Google results every month: calls, directions, website clicks and what people searched (with Google connected)");
+    expect(t).not.toMatch(/who calls or clicks \(coming soon\)/);
     expect(t).not.toMatch(/photos \(coming soon\)/);
     expect(t).not.toContain("Connect Google and PostScore fixes things for you.");
     expect(t).toContain("Everything in Premium for up to 5 locations (+$25 each extra)");
@@ -55,7 +61,13 @@ describe("Settings pieces", () => {
       "Campaign hub (every coupon and referral, with +1)",
       "Email, text & social campaigns",
       "Track every coupon and referral in one place",
-      "Edit your Google listing from PostScore (Google connect)",
+      "Update your Google listing, photos included (Google connect)",
+      "This week's Google post + answers to customers' questions",
+      "Your Google results (calls, directions, clicks, searches)",
+      "Alerts when anyone else changes your listing",
+      "Drafts to copy",
+      "One tap with Approve all (Beta)",
+      "With Google connected",
       "Basic",
       "Full, no branding",
       "Starter + PostStudio discount",
@@ -108,7 +120,7 @@ describe("Settings pieces", () => {
       "Built to pass every website check",
       "PostStudio only $30/mo The free audit + PostStudio",
       "Grow + PostStudio $40/mo Grow + $15/mo for PostStudio",
-      "Premium + PostStudio $58/mo Premium + $8/mo for PostStudio",
+      "Premium + PostStudio $48/mo Premium + $8/mo for PostStudio",
       "Included in Multi",
       "Coming soon — nothing is charged today.",
       "PostStudio — your full website, built and hosted for you (coming soon)",
@@ -121,15 +133,15 @@ describe("Settings pieces", () => {
     expect(t).not.toMatch(/Buy|Checkout|Subscribe/i);
     expect(wrap(<PlanCard plan="premium" />)).toMatch(/data-option="premium" data-highlighted="true"/);
     const es = text(wrap(<PlanCard plan="grow" />, "es"));
-    for (const s of ["PostStudio: su sitio web completo", "Solo PostStudio", "$30/mes", "Grow + PostStudio", "$40/mes", "$58/mes", "Incluido en Multi", "Próximamente: hoy no se cobra nada.", "$30/mes por sí solo", "Su plan"]) expect(es).toContain(s);
+    for (const s of ["PostStudio: su sitio web completo", "Solo PostStudio", "$30/mes", "Grow + PostStudio", "$40/mes", "$48/mes", "Incluido en Multi", "Próximamente: hoy no se cobra nada.", "$30/mes por sí solo", "Su plan"]) expect(es).toContain(s);
   });
 
   test("plan card in Spanish (usted)", () => {
     const t = text(wrap(<PlanCard plan="premium" />, "es"));
     expect(t).toContain("Comparar planes");
     expect(t).toContain("Nosotros hacemos el trabajo por usted");
-    expect(t).toContain("PostAI y respuestas ilimitadas, todas las herramientas de diseño, y editar su ficha de Google desde PostScore (Beta).");
-    expect(t).toContain("$50/mes");
+    expect(t).toContain("PostScore redacta la publicación de Google de esta semana, las actualizaciones de su ficha y las respuestas a sus reseñas; usted solo las aprueba.");
+    expect(t).toContain("$40/mes");
     expect(t).toContain("Mejor valor");
   });
 
@@ -147,9 +159,13 @@ describe("Settings pieces", () => {
       const t = text(wrap(<PlanCard plan="free" />, locale));
       expect(t).not.toMatch(/Monthly email|Correo mensual/);
     }
-    // Its own row: Free not included; Grow, Premium and Multi ✓ (EN + ES).
-    const monthly = COMPARE_ROWS.find((r) => r.key.endsWith(".monthlyEmail"))!.cells;
-    expect([monthly.free, monthly.grow, monthly.premium, monthly.multi]).toEqual([{ kind: "no" }, { kind: "yes" }, { kind: "yes" }, { kind: "yes" }]);
+    // Its own row: Free not included; Grow, Premium and Multi say Coming soon
+    // until MONTHLY_REPORTS_LIVE is "true", then ✓ (EN + ES).
+    const monthly = (live: boolean) => compareRows(live).find((r) => r.key.endsWith(".monthlyEmail"))!.cells;
+    expect([monthly(false).free, monthly(false).grow, monthly(false).premium, monthly(false).multi]).toEqual([{ kind: "no" }, { kind: "soon" }, { kind: "soon" }, { kind: "soon" }]);
+    expect([monthly(true).free, monthly(true).grow, monthly(true).premium, monthly(true).multi]).toEqual([{ kind: "no" }, { kind: "yes" }, { kind: "yes" }, { kind: "yes" }]);
+    expect(text(wrap(<PlanCard plan="premium" />))).toContain("Monthly report emails (coming soon)");
+    expect(text(wrap(<PlanCard plan="premium" monthlyReportsLive />))).toContain("A monthly report by email");
     expect(text(wrap(<PlanCard plan="free" />))).toContain("Monthly report email");
     expect(text(wrap(<PlanCard plan="free" />, "es"))).toContain("Informe mensual por correo");
   });

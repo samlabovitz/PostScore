@@ -445,7 +445,7 @@ async function planGuideFor(profile: { couponsOk: boolean; referralOk: boolean; 
   const { count } = await createClient().from("businesses").select("id", { count: "exact", head: true });
   return {
     featureMap: featureMapText(plan, featureMapFor(plan, { couponsOk: profile.couponsOk, referralOk: profile.referralOk, pricingOk: profile.pricingOk, hasWebsite, monthlyReportsLive: isMonthlyReportsLive() })),
-    planFacts: planFactsText(),
+    planFacts: planFactsText("en", isMonthlyReportsLive()),
     businessCount: count ?? 1,
   };
 }

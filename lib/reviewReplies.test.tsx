@@ -284,13 +284,13 @@ describe("the drafter", () => {
 });
 
 describe("plan copy and PostAI", () => {
-  test("Free's bullets add '3 PostAI questions and 3 AI review replies a week'; Premium: unlimited + Google connect coming soon; the Compare row (3 a week / 10 a week)", () => {
+  test("Free's bullets add '3 PostAI questions and 3 AI review replies a week'; Premium: unlimited + posting replies (Beta); the Compare row (3 a week / 10 a week)", () => {
     expect(PLAN_COPY.free.bullets.map((k) => t("en", k))).toContain("3 PostAI questions and 3 AI review replies a week");
-    expect(t("en", "dashboard.settings.plans.bullet.premium.replies")).toBe("Unlimited AI reply drafts · With Google connected, see every review in one place · Posting replies to Google: coming soon");
-    expect(t("es", "dashboard.settings.plans.bullet.premium.replies")).toBe("Borradores de respuesta con IA ilimitados · Con Google conectado, vea todas sus reseñas en un solo lugar · Publicar respuestas en Google: próximamente");
+    expect(t("en", "dashboard.settings.plans.bullet.premium.replies")).toBe("Unlimited AI reply drafts · With Google connected, all your reviews in one place · Post your replies to Google (Beta)");
+    expect(t("es", "dashboard.settings.plans.bullet.premium.replies")).toBe("Borradores de respuesta con IA ilimitados · Con Google conectado, todas sus reseñas en un solo lugar · Publique sus respuestas en Google (Beta)");
     // Posting works only for the businesses on GOOGLE_WRITES_LIVE_PLACES: the
-    // bullet keeps "coming soon" and the Compare cell says Beta — both flip
-    // together in lib/googleWritesLaunch.ts.
+    // bullet and the Compare cell both say Beta — both flip together in
+    // lib/googleWritesLaunch.ts.
     expect(t("en", "dashboard.settings.plans.value.repliesUnlimited")).toBe("Unlimited · post to Google (Beta)");
     const row = COMPARE_ROWS.find((r) => r.key.endsWith(".replies"))!;
     expect(t("en", row.key)).toBe("AI review replies");

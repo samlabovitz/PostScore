@@ -732,7 +732,8 @@ function upgradeFlags(answer: string, system: string): string[] {
     for (const w of SOON_WORDS) if (sentence.toLowerCase().includes(w.toLowerCase())) flags.push(`a coming-soon feature outside the "Coming soon:" line: "${sentence.slice(0, 120)}"`);
   }
   if (!/^\s*\**\s*coming soon/im.test(answer) && /coming soon/i.test(answer)) flags.push("coming soon mixed into the text instead of its own line");
-  const prices = new Set(["$0", "$25", "$50", "$150", "$30", "$15", "$8", "$40", "$58"]);
+  // Plan prices only (PLAN FACTS); PostAI never states a PostStudio price (Nov 21).
+  const prices = new Set(["$0", "$25", "$40", "$150"]);
   for (const m of answer.match(/\$\d+/g) ?? []) if (!prices.has(m)) flags.push(`a price not in PLAN FACTS: ${m}`);
   for (const n of inventedPoints(answer, system)) flags.push(`a points number not in the data: ${n}`);
   if (/precomputed/i.test(answer)) flags.push("internal jargon (\"precomputed\")");

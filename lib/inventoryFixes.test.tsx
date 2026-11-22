@@ -27,7 +27,7 @@ describe("Google writes: one launch switch (lib/googleWritesLaunch.ts)", () => {
     expect(postingRepliesSoon(true)).toBe(false);
   });
 
-  test("every wording has EN + ES both ways; until launch it says Beta (or, for the Premium replies bullet, coming soon); after, neither", () => {
+  test("every wording has EN + ES both ways; until launch it says Beta; after, no Beta", () => {
     for (const [id, [beta, live]] of Object.entries(GOOGLE_WRITES_COPY)) {
       expect(googleWritesCopy(id as keyof typeof GOOGLE_WRITES_COPY, false)).toBe(beta);
       expect(googleWritesCopy(id as keyof typeof GOOGLE_WRITES_COPY, true)).toBe(live);
@@ -36,8 +36,8 @@ describe("Google writes: one launch switch (lib/googleWritesLaunch.ts)", () => {
         const after = messages[locale][live];
         expect(before, `${locale} ${beta}`).toBeTruthy();
         expect(after, `${locale} ${live}`).toBeTruthy();
-        if (id === "repliesBullet") expect(before).toMatch(/coming soon|próximamente/);
-        else expect(before, `${locale} ${beta}`).toContain("Beta");
+        // Nov 21: posting replies is Beta like every other Google write (was "coming soon").
+        expect(before, `${locale} ${beta}`).toContain("Beta");
         // After launch: no Beta, and posting replies is no longer "coming soon"
         // (Google insights still are — they aren't built).
         expect(after, `${locale} ${live}`).not.toContain("Beta");
@@ -50,14 +50,18 @@ describe("Google writes: one launch switch (lib/googleWritesLaunch.ts)", () => {
     for (const locale of ["en", "es"] as const)
       for (const key of ["dashboard.googleProfile.connectBody", "dashboard.gbp.premiumUpsell", "dashboard.settings.plans.promise.premium", "dashboard.upgrade.unlock.connect", "dashboard.free.showroom.growth.p1", "dashboard.settings.plans.value.repliesUnlimited"] as const)
         expect(t(locale, key), `${locale} ${key}`).not.toMatch(/fixes are coming soon|arreglos de la ficha llegan|auto-post|automática próximamente|fix your listing for you|arregle su ficha por usted|fixes done for you|arreglos hechos por usted/i);
-    // The Premium bullet keeps "coming soon" for posting replies, as decided.
-    expect(t("en", "dashboard.settings.plans.bullet.premium.replies")).toContain("Posting replies to Google: coming soon");
+    // Nov 21: the Premium bullet says posting replies is Beta, never "coming soon".
+    expect(t("en", "dashboard.settings.plans.bullet.premium.replies")).toContain("Post your replies to Google (Beta)");
+    expect(t("es", "dashboard.settings.plans.bullet.premium.replies")).toContain("Publique sus respuestas en Google (Beta)");
   });
 
-  test("photos aren't editable: no wording says they are (EN + ES)", () => {
-    for (const locale of ["en", "es"] as const)
-      for (const key of ["dashboard.googleProfile.editingBody", "dashboard.settings.plans.bullet.premium.fixes", "dashboard.settings.plans.bullet.premium.fixesLive", "dashboard.free.planList.googleProfile.l"] as const)
+  test("photos: Premium uploads them (app/actions/gbpPhotos.ts, Beta) — the plan bullet says so; the editing card doesn't (EN + ES)", () => {
+    for (const locale of ["en", "es"] as const) {
+      expect(t(locale, "dashboard.settings.plans.bullet.premium.fixes"), locale).toMatch(/photos|fotos/);
+      expect(t(locale, "dashboard.settings.plans.bullet.premium.fixes"), locale).toContain("(Beta)");
+      for (const key of ["dashboard.googleProfile.editingBody", "dashboard.free.planList.googleProfile.l"] as const)
         expect(t(locale, key), `${locale} ${key}`).not.toMatch(/photo|foto/i);
+    }
     expect(t("en", "dashboard.googleProfile.editingBody")).toBe("Hours, phone and description — without leaving PostScore.");
     expect(t("es", "dashboard.googleProfile.editingBody")).toBe("Horario, teléfono y descripción — sin salir de PostScore.");
   });
