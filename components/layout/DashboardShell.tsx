@@ -6,6 +6,7 @@ import Link from "next/link";
 import { IconMenu2 } from "@tabler/icons-react";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { AnchorHighlight } from "@/components/layout/AnchorHighlight";
+import { LegacyHashRedirect } from "@/components/layout/LegacyHashRedirect";
 import { cn } from "@/lib/utils";
 import type { BusinessSummary } from "@/app/actions/businesses";
 import { getCurrentUserEmail } from "@/app/actions/auth";
@@ -91,6 +92,7 @@ export function DashboardShell({
     <LocaleProvider locale={locale} timeZone={business?.time_zone}>
       <UpgradeProvider value={upgrade}>
         <AnchorHighlight />
+        <LegacyHashRedirect />
         <div className="min-h-screen bg-paper" data-locale={locale}>
           <div className="sticky top-0 z-30 flex h-14 items-center justify-between bg-ink px-4 nav:hidden">
             <button

@@ -6,6 +6,7 @@
 // uploads themselves are app/api/gbp/photos/route.ts. Off
 // GOOGLE_WRITES_LIVE_PLACES every write is refused ("editing_off").
 
+import { googlePagePaths } from "@/lib/routes";
 import { revalidatePath } from "next/cache";
 import type { GbpEditBlock } from "@/lib/gbpEditGate.server";
 import type { PhotoUndo } from "@/lib/gbpPhotos.server";
@@ -42,7 +43,7 @@ export async function finishPhotoBatch(businessId: string): Promise<{ status: "o
     await refreshPhotosAndPosts(c.admin, businessId).catch(() => null);
     const { forgetRealListing } = await import("@/lib/gbpRealListing.server");
     forgetRealListing(businessId);
-    revalidatePath(`/business/${businessId}/growth`);
+    for (const p of googlePagePaths(businessId)) revalidatePath(p);
   }
   return { status: "ok", undo: await latestUndo(c.admin, businessId, c.practice).catch(() => null) };
 }
@@ -59,7 +60,7 @@ export async function undoPhotosAction(businessId: string, batchId: string): Pro
   if (!c.practice) {
     const { refreshPhotosAndPosts } = await import("@/lib/gbpMediaPosts.server");
     await refreshPhotosAndPosts(c.admin, businessId).catch(() => null);
-    revalidatePath(`/business/${businessId}/growth`);
+    for (const p of googlePagePaths(businessId)) revalidatePath(p);
   }
   return r.status === "undone" ? r : { status: "error", error: r.error };
 }

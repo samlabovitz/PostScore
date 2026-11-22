@@ -13,6 +13,7 @@
 //   ONLY from the owner's click (lib/gbpPosts.server.ts).
 // Free never calls these (its post item is unchanged).
 
+import { googlePagePaths } from "@/lib/routes";
 import { revalidatePath } from "next/cache";
 import { GROW_POST_REDRAFTS, savedDraftUsable, cleanPostText, ctaChoices, isPostType, offerTemplate, postProblems, postSystemPrompt, postTemplate, postUserMessage, qaPostText, requestGivesStory, weekStartOf, type PostCta, type PostOffer, type PostPhoto, type PostProblem, type PostTopic, type PostType } from "@/lib/gbpPosts";
 import type { SpellingFlag } from "@/lib/serviceSpelling";
@@ -309,7 +310,7 @@ export async function publishPostAction(businessId: string, input: { text: unkno
   if (!c.canEdit) return { status: "editing_off" };
   const { publishWith } = await import("@/lib/gbpPostsPublish.server");
   const r = await publishWith(c, { text, cta: input.cta, photoName: input.photoName, kind: input.kind, timeZone: input.timeZone, promoId: input.promoId, keep: input.keep }, practiceOutcome, null);
-  if (r.status === "published" && !c.practice) revalidatePath(`/business/${businessId}/growth`);
+  if (r.status === "published" && !c.practice) for (const p of googlePagePaths(businessId)) revalidatePath(p);
   return r;
 }
 
@@ -337,7 +338,7 @@ export async function undoPostAction(businessId: string, batchId: string): Promi
   if (!c.practice) {
     const { refreshPhotosAndPosts } = await import("@/lib/gbpMediaPosts.server");
     await refreshPhotosAndPosts(c.admin, businessId).catch(() => null);
-    revalidatePath(`/business/${businessId}/growth`);
+    for (const p of googlePagePaths(businessId)) revalidatePath(p);
   }
   return r;
 }

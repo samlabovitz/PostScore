@@ -1,3 +1,4 @@
+import { getReviewsHref, growthPlanHref, offersHref } from "@/lib/routes";
 import {
   IconUsers,
   IconTicket,
@@ -18,7 +19,7 @@ export interface GrowBannerTool {
 /** The featured Reviews tile's button: the review link & QR sign (the
  * Review QR tool folds into it). */
 export function reviewToolHref(businessId: string): string {
-  return `/business/${businessId}/website-reviews#get-more-reviews`;
+  return getReviewsHref(businessId, { hash: "get-more-reviews" });
 }
 
 /**
@@ -58,7 +59,7 @@ export function buildGrowBannerTools(businessId: string, profileTools: ProfileTo
       icon: IconTicket,
       labelKey: "dashboard.overview.growBanner.tools.coupons.shortLabel",
       descKey: "dashboard.overview.growBanner.tools.coupons.desc",
-      href: `/business/${businessId}/campaigns?tab=coupons`,
+      href: offersHref(businessId, "coupons"),
     });
   }
 
@@ -67,7 +68,7 @@ export function buildGrowBannerTools(businessId: string, profileTools: ProfileTo
       icon: IconUsers,
       labelKey: "dashboard.overview.growBanner.tools.referral.shortLabel",
       descKey: "dashboard.overview.growBanner.tools.referral.desc",
-      href: `/business/${businessId}/campaigns?tab=referrals`,
+      href: offersHref(businessId, "referrals"),
     });
   }
 
@@ -75,7 +76,7 @@ export function buildGrowBannerTools(businessId: string, profileTools: ProfileTo
     icon: IconCalendarCheck,
     labelKey: "dashboard.overview.growBanner.tools.weeklyRoutine.shortLabel",
     descKey: "dashboard.overview.growBanner.tools.weeklyRoutine.desc",
-    href: `/business/${businessId}/growth#weekly-routine`,
+    href: growthPlanHref(businessId, { hash: "weekly-routine" }),
   });
   if (pricingOk) {
     tools.push({

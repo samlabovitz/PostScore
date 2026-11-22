@@ -2,6 +2,8 @@
 // ?tab=referrals) so links and back/forward land on the right one. The
 // old Growth tab names (?tab=referral) still work. Pure.
 
+import { offersHref } from "@/lib/routes";
+
 export type CampaignsTab = "all" | "coupons" | "referrals";
 
 /** Every paid plan opens on "All campaigns": the hub is Grow and up
@@ -14,6 +16,7 @@ export function campaignsTabFromParam(param: string | null | undefined, tools: {
   return "all";
 }
 
+/** The Campaigns page's coupon and referral tabs: Customer offers (lib/routes.ts). */
 export function campaignsHref(businessId: string, tab: CampaignsTab = "all"): string {
-  return `/business/${businessId}/campaigns${tab === "all" ? "" : `?tab=${tab}`}`;
+  return offersHref(businessId, tab);
 }

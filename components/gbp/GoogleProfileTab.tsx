@@ -17,6 +17,7 @@
 // Not connected (and not practice): one card, what connecting unlocks.
 // The wording never says PostScore caused a change in the rate.
 
+import { fixPlanHref } from "@/lib/routes";
 import type { NowMatchPrompts } from "@/lib/detailsMismatch.server";
 import { NowMatchPrompt } from "@/components/gbp/NowMatchPrompt";
 import Link from "next/link";
@@ -1844,7 +1845,7 @@ function NextSection(props: GoogleProfileTabProps & { sample: boolean }) {
               {t(locale, K(extras ? "ideas.none" : "ideas.noRead"))}
             </Box>
           )}
-          <p className="text-[12px] text-ink-mute">{t(locale, K("ideas.recapLink.before"))} <Link href={`/business/${props.businessId}/growth`} className="font-semibold text-ink underline underline-offset-2">{t(locale, K("ideas.recapLink.link"))}</Link></p>
+          <p className="text-[12px] text-ink-mute">{t(locale, K("ideas.recapLink.before"))} <Link href={fixPlanHref(props.businessId)} className="font-semibold text-ink underline underline-offset-2">{t(locale, K("ideas.recapLink.link"))}</Link></p>
         </div>
       )}
     </SectionHead>

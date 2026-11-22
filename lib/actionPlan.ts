@@ -10,6 +10,7 @@
 // reconcileTasks() below, which only marks a task complete once a real
 // re-scan shows the underlying check actually reached full points.
 
+import { getReviewsHref, reviewsHref } from "@/lib/routes";
 import { websiteWholePoints } from "@/lib/categoryPoints";
 import {
   applyCheckFix,
@@ -1360,19 +1361,19 @@ export function buildMarkOpenStep(locale: Locale = DEFAULT_LOCALE): ActionPlanTa
  * Multi on the Connect page. */
 export function connectGoogleHref(businessId: string, plan: Plan): string {
   if (plan === "free") return `/business/${businessId}#reply-check`;
-  if (plan === "grow") return `/business/${businessId}/website-reviews#reply-check`;
+  if (plan === "grow") return reviewsHref(businessId, { hash: "reply-check" });
   return `/business/${businessId}/connect-gbp`;
 }
 
 /** A task's links: the PostScore tool for it first (when there is one),
  * then official Google pages (officialLinksFor). */
 export function stepLinks(checkId: string, businessId: string, locale: Locale = DEFAULT_LOCALE): TaskLink[] {
-  const app = (path: string, label: MessageKey): TaskLink => ({ href: `/business/${businessId}${path}`, label: t(locale, label), external: false });
+  const app = (href: string, label: MessageKey): TaskLink => ({ href, label: t(locale, label), external: false });
   const tool =
     checkId === "visibility.review_replies"
-      ? [app("/website-reviews#reply-to-reviews", "content.actionPlan.link.replyDrafter")]
+      ? [app(reviewsHref(businessId, { hash: "reply-to-reviews" }), "content.actionPlan.link.replyDrafter")]
       : REVIEW_CHECK_IDS.includes(checkId) || checkId === MERGED_REVIEW_CHECK_ID
-        ? [app("/website-reviews#get-more-reviews", "content.actionPlan.link.reviewLink")]
+        ? [app(getReviewsHref(businessId, { hash: "get-more-reviews" }), "content.actionPlan.link.reviewLink")]
         : [];
   return [...tool, ...officialLinksFor(checkId, locale)];
 }

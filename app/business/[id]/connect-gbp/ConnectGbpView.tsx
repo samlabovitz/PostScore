@@ -1,5 +1,6 @@
 "use client";
 
+import { googleResultsHref } from "@/lib/routes";
 import { GbpMessagingStep, GoogleAiAnswersLine } from "@/components/gbp/GbpMessagingStep";
 import Link from "next/link";
 import {
@@ -80,7 +81,7 @@ function buildUnlocks(
       icon: IconChartFunnel,
       title: t(locale, "dashboard.connectGbp.unlockSearchDemandTitle"),
       body: t(locale, "dashboard.connectGbp.unlockSearchDemandBody"),
-      preview: { href: `/business/${businessId}/growth?tab=google#searches`, label: t(locale, "dashboard.connectGbp.unlockSearchDemandPreview") },
+      preview: { href: googleResultsHref(businessId, { hash: "searches" }), label: t(locale, "dashboard.connectGbp.unlockSearchDemandPreview") },
     },
   ];
 }

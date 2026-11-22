@@ -1,5 +1,6 @@
 "use server";
 
+import { googleListingHref } from "@/lib/routes";
 import { withLiveListingFor } from "@/lib/ownerListing.server";
 import { businessTimeZone } from "@/lib/businessTimeZone";
 import { createClient } from "@/lib/supabase/server";
@@ -80,7 +81,7 @@ export async function getGrowthMoveSignals(
   const { getPlan } = await import("@/lib/premium");
   const signals: GrowthMoveSignals = {
     businessId,
-    photoUploadHref: isPremiumPlan(await getPlan()) ? `/business/${businessId}/growth?tab=google#edit-photos` : null,
+    photoUploadHref: isPremiumPlan(await getPlan()) ? googleListingHref(businessId, { hash: "edit-photos" }) : null,
     referralOk: profileTools.referralOk,
     couponsOk: profileTools.couponsOk,
     pricingOk: profileTools.pricingOk,

@@ -1,5 +1,6 @@
 "use client";
 
+import { campaignsPageHref } from "@/lib/routes";
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -75,7 +76,7 @@ export function CampaignsView({
     else params.set("tab", next);
     const query = params.toString();
     // push (not replace) so back/forward moves between tabs.
-    router.push(`/business/${businessId}/campaigns${query ? `?${query}` : ""}`, { scroll: false });
+    router.push(campaignsPageHref(businessId, { query: Object.fromEntries(new URLSearchParams(query)) }), { scroll: false });
   }
 
   function saved(id: string) {

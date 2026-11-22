@@ -8,6 +8,7 @@
 // write to Google through the normal safety flow, and off the live list are
 // refused ("editing_off") — the tab shows the steps on Google instead.
 
+import { googlePagePaths } from "@/lib/routes";
 import { revalidatePath } from "next/cache";
 import type { GbpEditBlock } from "@/lib/gbpEditGate.server";
 import type { FieldUndo } from "@/lib/gbpFieldWrite.server";
@@ -29,7 +30,7 @@ async function context(businessId: string, practiceOutcome: unknown = null) {
 async function refreshTab(businessId: string) {
   const { forgetRealListing } = await import("@/lib/gbpRealListing.server");
   forgetRealListing(businessId);
-  revalidatePath(`/business/${businessId}/growth`);
+  for (const p of googlePagePaths(businessId)) revalidatePath(p);
 }
 
 export type CheckNowResult = { status: "ok"; open: GoogleEditRow[]; checkedAt: string } | { status: "too_soon"; checkedAt: string } | { status: "unavailable" } | { status: "failed" } | Blocked;
@@ -59,7 +60,7 @@ export async function keepGoogleVersion(businessId: string, editId: string): Pro
   // Google's edits are always the real ones (never practice rows).
   const row = await resolveGoogleEdit(c.admin, businessId, editId, "kept", false);
   if (!row) return { status: "not_found" };
-  revalidatePath(`/business/${businessId}/growth`);
+  for (const p of googlePagePaths(businessId)) revalidatePath(p);
   return { status: "ok" };
 }
 
@@ -76,7 +77,7 @@ export async function keepAllGoogleVersions(businessId: string, editIds: string[
     if (!row || row.field === "title" || row.field === "address") continue;
     if (await ge.resolveGoogleEdit(c.admin, businessId, id, "kept", false)) kept++;
   }
-  revalidatePath(`/business/${businessId}/growth`);
+  for (const p of googlePagePaths(businessId)) revalidatePath(p);
   return { status: "ok", kept };
 }
 
@@ -86,7 +87,7 @@ export async function reopenGoogleEditAction(businessId: string, editId: string)
   if (!c.ok) return c.result;
   const { reopenGoogleEdit } = await import("@/lib/gbpGoogleEdits.server");
   if (!(await reopenGoogleEdit(c.admin, businessId, editId, false))) return { status: "not_found" };
-  revalidatePath(`/business/${businessId}/growth`);
+  for (const p of googlePagePaths(businessId)) revalidatePath(p);
   return { status: "ok" };
 }
 

@@ -5,6 +5,7 @@
 // and the details-mismatch tasks. Premium with Google writes: "PostScore can
 // do this for you"; everyone else: a verb to where it's fixed.
 
+import { isFixPlanStepsHref } from "@/lib/routes";
 import Link from "next/link";
 import { IconWand } from "@tabler/icons-react";
 import { useGbpEdit } from "@/components/gbp/CustomerDetailsGoogleEdit";
@@ -57,7 +58,7 @@ export function FixButton({
   if (!dest) return null;
   const label = fixLabel(dest, locale);
   const icon = dest.kind === "do_it" ? <IconWand size={14} aria-hidden /> : null;
-  const ownSteps = onSteps && dest.kind === "steps" && dest.href.includes("/growth?open=howto#");
+  const ownSteps = onSteps && dest.kind === "steps" && isFixPlanStepsHref(dest.href);
   const line = premiumLine ? <PremiumOneClickLine businessId={businessId} item={item} className="w-full" /> : null;
   if (ownSteps) {
     return (

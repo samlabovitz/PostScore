@@ -3,6 +3,7 @@
 // data isn't there, the result says so ("none", null) and the UI shows
 // an honest empty state instead.
 
+import { fixPlanHref } from "@/lib/routes";
 import { isScoringUpdate } from "@/lib/websiteRecheckPolicy";
 import { checkOutcome } from "@/lib/checkOutcome";
 import type { ActionPlanTask, WebsiteBanner } from "@/lib/actionPlan";
@@ -131,10 +132,11 @@ export function taskFixLink(checkId: string, businessId: string, options: LinkOp
 function linkForCheck(checkId: string, businessId: string, options: LinkOptions): { href: string; label: MessageKey | null } {
   const target =
     resolveLinkTarget(postaiTargetForCheck(checkId), businessId, options) ??
-    // A merged card (e.g. the reviews card) has a synthetic id — fall back
-    // to its category's page, then to Growth.
-    resolveLinkTarget(checkId.startsWith("visibility") || checkId.startsWith("reviews") ? "reviews" : checkId.startsWith("website") ? "website" : "growth", businessId, options);
-  if (!target) return { href: `/business/${businessId}/growth`, label: "dashboard.assistant.link.growth" };
+    // A merged card (e.g. the reviews card, which asks for reviews) has a
+    // synthetic id — fall back to its category's page (asking for reviews:
+    // the review link), then to Growth.
+    resolveLinkTarget(checkId.startsWith("visibility") || checkId.startsWith("reviews") ? "reviews.review_count" : checkId.startsWith("website") ? "website" : "growth", businessId, options);
+  if (!target) return { href: fixPlanHref(businessId), label: "dashboard.assistant.link.growth" };
   const onOverview = target.href.startsWith(`/business/${businessId}#`);
   return { href: target.href, label: onOverview ? null : target.label };
 }

@@ -1,5 +1,6 @@
 // Day 23B: which of the Google Profile tab's rows the Overview card shows,
 // and where each opens. Pure.
+import { googleListingHref } from "@/lib/routes";
 import type { ListingGroup, ListingRow } from "@/lib/googleProfileTab";
 
 export const OVERVIEW_LISTING_ROWS = 3;
@@ -26,7 +27,7 @@ export function overviewListingRows(groups: ListingGroup[], max: number = OVERVI
 
 /** That row on the Google Profile tab, its editor open where it has one. */
 export function rowHref(businessId: string, row: ListingRow): string {
-  const tab = `/business/${businessId}/growth?tab=google`;
+  const tab = googleListingHref(businessId);
   // The booking steps panel (case B) has its own hash.
   if (row.id === "booking" && row.action?.kind === "editor" && row.action.editor === "booking_steps") return `${tab}#edit-booking-steps`;
   if (ROW_HASH[row.id]) return `${tab}#${ROW_HASH[row.id]}`;

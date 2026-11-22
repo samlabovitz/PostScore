@@ -6,6 +6,7 @@
 // (7.4:1+). Translucent colors use color-mix(): Tailwind's "/70"
 // shorthand produces no CSS for this project's var()-based colors.
 
+import { fixPlanHref } from "@/lib/routes";
 import { useState } from "react";
 import Link from "next/link";
 import { IconArrowDown, IconArrowUp, IconChevronDown, IconSparkles } from "@tabler/icons-react";
@@ -262,12 +263,12 @@ export function ScoreBand({
               <span className="font-serif text-2xl font-bold text-paper">{projectedScore}</span>
               <span className="text-sm text-[color:color-mix(in_srgb,var(--color-paper)_70%,transparent)]">{t(locale, "dashboard.overview.scoreOutOf100WithGrade", { grade: projectedGrade })}</span>
             </div>
-            <Link href={`/business/${businessId}/growth`} className="w-fit text-[12.5px] font-medium text-[color:color-mix(in_srgb,var(--color-paper)_80%,transparent)] hover:text-paper hover:underline">
+            <Link href={fixPlanHref(businessId)} className="w-fit text-[12.5px] font-medium text-[color:color-mix(in_srgb,var(--color-paper)_80%,transparent)] hover:text-paper hover:underline">
               {t(locale, "dashboard.overview.seeActionPlan")}
             </Link>
             {biggestBoost && (
               <Link
-                href={`/business/${businessId}/growth`}
+                href={fixPlanHref(businessId)}
                 // Wraps to a second line rather than ever cutting off the
                 // check's name.
                 className="mt-1 inline-flex w-fit max-w-full items-start gap-1.5 rounded-[14px] border border-[color:color-mix(in_srgb,var(--color-brass)_50%,transparent)] bg-[color:color-mix(in_srgb,var(--color-brass)_15%,transparent)] px-3 py-1 text-[12.5px] font-semibold text-paper hover:bg-[color:color-mix(in_srgb,var(--color-brass)_25%,transparent)]"

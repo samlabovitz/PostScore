@@ -369,8 +369,20 @@ Also: emails (`emails/`), PostAI page map (`lib/postaiDock`, `lib/postaiFeatureM
 | `/campaigns?tab=all` | `/offers` (Running now) |
 | `/campaigns?tab=coupons` / `referrals` | `/offers?tab=coupons` / `referrals` |
 | `/growth?tab=coupons` / `referral(s)` | `/offers?tab=…` (today's redirects re-pointed) |
+| `/website-reviews#get-more-reviews` / `#review-link` | `/get-reviews#…` (asking moved to Growth; replies and points stay on Reviews). *Approved Nov 21 (25B step 1).* |
+| `/growth?open=howto#task-…` | `/fix-plan?open=howto#task-…` (a fix's own steps). *Approved Nov 21.* |
+| `/growth?tab=google…#google-connection` (the Google connect message) | `/google-results#google-connection`, keeping `?gbp=`. *Approved Nov 21.* |
 
 Hashes never reach the server, so hash-based moves need a small client redirect on `/growth` (and the old Google tab URL) that reads `location.hash` and replaces the URL. Saved emails and notifications already sent use the old URLs, which is why these stay for good.
+
+**Built in 25B step 1:**
+- The redirect table is `legacyRedirect` in `lib/routes.ts`, with one test per row.
+- It's off until `NEW_PAGES_LIVE`. Hash rows are handled by `components/layout/LegacyHashRedirect.tsx`.
+
+**Rule: anchor ids stay.**
+- The new pages keep today's anchor ids: `weekly-routine`, `weekly-plan`, `get-more-reviews`, `reply-to-reviews`, `google-reviews`, `reply-check`, `review-link`, `searches`, `task-…` and every `edit-…`.
+- If a page must rename one, every caller changes in the same step, and `lib/routes.test.ts` is updated with it.
+- The route helpers pass anchors through unchanged. The redirects only rename anchors for old saved links (e.g. `#weekly-routine` → `#this-week`), so the new Growth plan answers to both ids.
 
 ---
 

@@ -6,6 +6,7 @@
 // rows to fix or improve, each opening that row's editor on the tab. Not
 // connected: one short card with the Connect button. Premium only (the tab is).
 
+import { googleListingHref } from "@/lib/routes";
 import Link from "next/link";
 import { IconArrowRight } from "@tabler/icons-react";
 import { googleEditsLine, rowText } from "@/components/gbp/GoogleProfileTab";
@@ -39,7 +40,7 @@ export function GoogleListingCard({
   data: { input: ListingInput; saved: GoogleTabSaved | null; syncedAt: string | null; scan: { website: string | null; phone: string | null } } | null;
 }) {
   const locale = useLocale();
-  const tab = `/business/${businessId}/growth?tab=google`;
+  const tab = googleListingHref(businessId);
 
   if (!connected || !data) {
     return (

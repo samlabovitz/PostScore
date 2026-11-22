@@ -1,4 +1,5 @@
 import { notFound, redirect } from "next/navigation";
+import { campaignsPageHref, legacyRedirectIfLive } from "@/lib/routes";
 import { ownerPrintPhone } from "@/lib/ownerDetails.server";
 import { freeShowroom } from "@/components/plan/freeShowroom";
 import { DashboardShell } from "@/components/layout/DashboardShell";
@@ -23,7 +24,10 @@ import { ownerTypeName } from "@/lib/niches";
  * by getPlan() exactly as on Growth (Free preview / Grow basic / Premium
  * full).
  */
-export default async function CampaignsPage({ params }: { params: { id: string } }) {
+export default async function CampaignsPage({ params, searchParams = {} }: { params: { id: string }; searchParams?: { tab?: string } }) {
+  // Day 25B: the coupon and referral tabs move to Customer offers, once it's live (lib/routes.ts).
+  const moved = legacyRedirectIfLive({ pathname: campaignsPageHref(params.id), search: searchParams.tab ? `tab=${searchParams.tab}` : "" });
+  if (moved) redirect(moved);
   // Free: this tab is locked — its showroom, before any of its own data loads.
   const showroom = await freeShowroom(params.id, "campaigns");
   if (showroom) return showroom;

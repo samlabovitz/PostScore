@@ -11,6 +11,7 @@
 //     plus "Premium does this for you in one click →" where Premium does.
 //     Day 23E, Grow: the post's and the answers' drafts to copy, with the steps.
 
+import { reviewsHref } from "@/lib/routes";
 import Link from "next/link";
 import { useState } from "react";
 import { GOOGLE_LINKS, googleHelpUrl } from "@/lib/googleHelpLinks";
@@ -78,7 +79,7 @@ export function recHref(rec: Rec, businessId: string): string {
     case "photos":
       return "#edit-photos";
     case "replies":
-      return `/business/${businessId}/website-reviews#google-reviews`;
+      return reviewsHref(businessId, { hash: "google-reviews" });
     case "posts":
       return "#google-tab-this-week";
     case "holiday":

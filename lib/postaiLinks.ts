@@ -6,6 +6,7 @@
 // these routes for the current business. Pure — shared by the chat
 // renderer and its tests.
 
+import { getReviewsHref, growthPlanHref, offersHref, reviewsHref } from "@/lib/routes";
 import type { MessageKey } from "@/lib/i18n";
 
 /** Stable anchor id for a check row ("website.performance_mobile" →
@@ -19,6 +20,8 @@ export function checkAnchorId(checkId: string): string {
 export interface LinkTarget {
   /** Path after /business/{id} — "" is the Overview. May include ?query. */
   path: string;
+  /** Pages that move in Day 25B: the full link from lib/routes.ts (path is unused). */
+  to?: (businessId: string) => string;
   anchor?: string;
   label: MessageKey;
 }
@@ -55,17 +58,17 @@ export const POSTAI_LINK_TARGETS: Record<string, LinkTarget> = {
     WEBSITE_CHECKS.map((c) => [`website.${c}`, { path: "/website", anchor: `check-${c}`, label: "dashboard.assistant.link.website" }])
   ),
   "website.starter_site": { path: "/website", anchor: "starter-site", label: "dashboard.assistant.link.starterSite" },
-  reviews: { path: "/website-reviews", anchor: "get-more-reviews", label: "dashboard.assistant.link.reviews" },
+  reviews: { path: "", to: (id) => reviewsHref(id), label: "dashboard.assistant.link.reviews" },
   ...Object.fromEntries(
-    REVIEW_CHECKS.map((c) => [`reviews.${c}`, { path: "/website-reviews", anchor: "get-more-reviews", label: "dashboard.assistant.link.reviews" }])
+    REVIEW_CHECKS.map((c) => [`reviews.${c}`, { path: "", to: (id: string) => getReviewsHref(id, { hash: "get-more-reviews" }), label: "dashboard.assistant.link.reviews" }])
   ),
   // Replying is done where the unanswered reviews are, not with the review link.
-  "reviews.review_replies": { path: "/website-reviews", anchor: "reply-to-reviews", label: "dashboard.assistant.link.replies" },
+  "reviews.review_replies": { path: "", to: (id) => reviewsHref(id, { hash: "reply-to-reviews" }), label: "dashboard.assistant.link.replies" },
   "reviews.connect": { path: "/connect-gbp", label: "dashboard.assistant.link.connect" },
-  growth: { path: "/growth", label: "dashboard.assistant.link.growth" },
-  "growth.weekly_routine": { path: "/growth", anchor: "weekly-routine", label: "dashboard.assistant.link.weeklyRoutine" },
-  "growth.coupon": { path: "/campaigns?tab=coupons", label: "dashboard.assistant.link.coupon" },
-  "growth.referral": { path: "/campaigns?tab=referrals", label: "dashboard.assistant.link.referral" },
+  growth: { path: "", to: (id) => growthPlanHref(id), label: "dashboard.assistant.link.growth" },
+  "growth.weekly_routine": { path: "", to: (id) => growthPlanHref(id, { hash: "weekly-routine" }), label: "dashboard.assistant.link.weeklyRoutine" },
+  "growth.coupon": { path: "", to: (id) => offersHref(id, "coupons"), label: "dashboard.assistant.link.coupon" },
+  "growth.referral": { path: "", to: (id) => offersHref(id, "referrals"), label: "dashboard.assistant.link.referral" },
   competitors: { path: "/competitors", label: "dashboard.assistant.link.competitors" },
   pricing: { path: "/pricing", label: "dashboard.assistant.link.pricing" },
   reports: { path: "/reports", label: "dashboard.assistant.link.reports" },
@@ -94,7 +97,7 @@ export function resolveLinkTarget(
   if (id === "pricing" && options.pricingOk === false) return null;
   if (!/^[A-Za-z0-9-]+$/.test(businessId)) return null;
   const target = POSTAI_LINK_TARGETS[id];
-  return { href: `/business/${businessId}${target.path}${target.anchor ? `#${target.anchor}` : ""}`, label: target.label };
+  return { href: target.to ? target.to(businessId) : `/business/${businessId}${target.path}${target.anchor ? `#${target.anchor}` : ""}`, label: target.label };
 }
 
 export type ReplySegment = { kind: "text"; text: string } | { kind: "link"; id: string; href: string; label: MessageKey };

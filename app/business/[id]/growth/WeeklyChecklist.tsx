@@ -1,5 +1,6 @@
 "use client";
 
+import { getReviewsHref } from "@/lib/routes";
 import { useRef, useState } from "react";
 import { celebrationKey, claimCelebration, confettiBurst, prefersReducedMotion } from "@/lib/celebrate";
 import Link from "next/link";
@@ -32,7 +33,7 @@ const ITEM_ICON: Record<WeeklyChecklistItemId, typeof IconClock> = {
 
 /** Where an item is done inside PostScore, when there's a page for it. */
 function itemLink(itemId: WeeklyChecklistItemId, businessId: string): { href: string; labelKey: "dashboard.overview.growBanner.reviews.cta" } | null {
-  return itemId === "share_review_link" ? { href: `/business/${businessId}/website-reviews#get-more-reviews`, labelKey: "dashboard.overview.growBanner.reviews.cta" } : null;
+  return itemId === "share_review_link" ? { href: getReviewsHref(businessId, { hash: "get-more-reviews" }), labelKey: "dashboard.overview.growBanner.reviews.cta" } : null;
 }
 
 /** A small ring: how much of this week's routine is done. */

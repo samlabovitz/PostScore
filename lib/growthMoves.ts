@@ -6,6 +6,7 @@
 // for the one place a move's firing condition is decided, and
 // app/actions/growthMoves.ts for the real signals it's given.
 
+import { offersHref } from "@/lib/routes";
 import { DEFAULT_LOCALE, formatShortDate, t, type Locale } from "@/lib/i18n";
 import type { ScoreBreakdown } from "@/lib/scoring";
 import { GOOGLE_PHOTO_CAP } from "@/lib/googlePhotoCap";
@@ -225,7 +226,6 @@ export function withoutWebsiteGrowthMoves(moves: GrowthMove[]): GrowthMove[] {
  */
 export function buildGrowthMoves(signals: GrowthMoveSignals, locale: Locale = DEFAULT_LOCALE): GrowthMove[] {
   const moves: GrowthMove[] = [];
-  const campaignsHref = `/business/${signals.businessId}/campaigns`;
 
   if ((signals.couponsOk ?? true) && !signals.hasEverCreatedPromo) {
     moves.push({
@@ -234,7 +234,7 @@ export function buildGrowthMoves(signals: GrowthMoveSignals, locale: Locale = DE
       meta: null,
       why: t(locale, "dashboard.growth.moves.startCoupon.why"),
       howTo: t(locale, "dashboard.growth.moves.startCoupon.howTo"),
-      href: `${campaignsHref}?tab=coupons#new-offer`,
+      href: offersHref(signals.businessId, "coupons", { hash: "new-offer" }),
       signal: "no promo row has ever been created for this business",
     });
   }
@@ -246,7 +246,7 @@ export function buildGrowthMoves(signals: GrowthMoveSignals, locale: Locale = DE
       meta: null,
       why: t(locale, "dashboard.growth.moves.startReferral.why"),
       howTo: t(locale, "dashboard.growth.moves.startReferral.howTo"),
-      href: `${campaignsHref}?tab=referrals`,
+      href: offersHref(signals.businessId, "referrals"),
       signal: "no referral row has ever been created for this business",
     });
   }

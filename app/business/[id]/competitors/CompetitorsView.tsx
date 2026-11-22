@@ -1,5 +1,6 @@
 "use client";
 
+import { reviewsHref } from "@/lib/routes";
 import { shortName as displayName } from "@/lib/displayName";
 import { AddCompetitor, RemoveCompetitorButton, RemovedByOwner } from "./CompetitorOwnerControls";
 import { HeadToHead } from "@/components/competitors/HeadToHead";
@@ -683,7 +684,7 @@ function GapItem({ gap, businessId, trailing }: { gap: Gap; businessId: string; 
   const m = gap.metric;
   const c = gap.comparison;
   const page = FIX_PAGE[m.view];
-  const href = page === "reviews" ? `/business/${businessId}/website-reviews` : page === "website" ? `/business/${businessId}/website` : `/business/${businessId}`;
+  const href = page === "reviews" ? reviewsHref(businessId) : page === "website" ? `/business/${businessId}/website` : `/business/${businessId}`;
   return (
     <li className="flex flex-col gap-0.5 border-t border-paper-line py-2.5 first:border-t-0 first:pt-0">
       <span className="text-[13.5px] font-medium text-ink">{checkLabel(m.checkId, locale)}</span>

@@ -8,6 +8,7 @@
 // connected: "Connect Google so PostScore can do this for you"). Only the
 // website differs: the Website page's fix steps. Never points.
 
+import { googleListingHref } from "@/lib/routes";
 import Link from "next/link";
 import { IconWand } from "@tabler/icons-react";
 import { FixButton, FIX_BUTTON_CLASS, useFixContext } from "@/components/scoring/FixButton";
@@ -34,7 +35,7 @@ function Task({ businessId, m, owner }: { businessId: string; m: DetailsMismatch
       <p className="text-[12.5px] leading-snug text-ink-soft">{t(locale, K("why"))}</p>
       {doIt ? (
         <Link
-          href={`/business/${businessId}/growth?tab=google#${editor}`}
+          href={googleListingHref(businessId, { hash: editor })}
           data-testid="fix-button"
           data-kind="do_it"
           onClick={() => {
@@ -156,7 +157,7 @@ export function MergedFixButton({ businessId, mismatches, fromScore = false, pre
   if (fields.includes("hours")) return <FixButton businessId={businessId} fromScore={fromScore} premiumLine={premiumLine} item={{ checkId: "website.info_consistency", hoursMismatch: true }} />;
   if (fields.includes("phone") && canDoForYou(ctx)) {
     return (
-      <Link href={`/business/${businessId}/growth?tab=google#edit-phone`} data-testid="fix-button" data-kind="do_it" className={FIX_BUTTON_CLASS}>
+      <Link href={googleListingHref(businessId, { hash: "edit-phone" })} data-testid="fix-button" data-kind="do_it" className={FIX_BUTTON_CLASS}>
         <IconWand size={14} aria-hidden />
         {t(locale, "dashboard.breakdown.action.doItForYou")} →
       </Link>
@@ -193,7 +194,7 @@ export function MergedActions({ businessId, mismatches, fromScore = false, only,
     field === "hours"
       ? fixDestination({ checkId: "website.info_consistency", hoursMismatch: true }, ctx).href
       : field === "phone" && hasGoogleTab(ctx)
-        ? `/business/${businessId}/growth?tab=google#edit-phone`
+        ? googleListingHref(businessId, { hash: "edit-phone" })
         : `/business/${businessId}/website#check-info_consistency`;
   return (
     <>

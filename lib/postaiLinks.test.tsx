@@ -29,7 +29,9 @@ describe("markers → links for the current business", () => {
 
   test("other targets: reviews, pricing, coupon tab, mismatch, starter site, Overview photos row", () => {
     const href = (id: string) => resolveLinkTarget(id, BIZ)?.href;
-    expect(href("reviews")).toBe(`/business/${BIZ}/website-reviews#get-more-reviews`);
+    // The general Reviews link is Presence → Reviews; asking for reviews has its own targets.
+    expect(href("reviews")).toBe(`/business/${BIZ}/website-reviews`);
+    expect(href("reviews.review_count")).toBe(`/business/${BIZ}/website-reviews#get-more-reviews`);
     expect(href("pricing")).toBe(`/business/${BIZ}/pricing`);
     expect(href("growth.coupon")).toBe(`/business/${BIZ}/campaigns?tab=coupons`);
     expect(href("listing.mismatch")).toBe(`/business/${BIZ}/website#check-info_consistency`);

@@ -9,6 +9,7 @@
 // And the revenue estimate's "how many of these become paying visits"
 // (businesses.visit_share, supabase/day23c-google-tab.sql).
 
+import { googlePagePaths } from "@/lib/routes";
 import type { WindowTotals } from "@/lib/googleRecommendations";
 
 export type SinceResult =
@@ -60,7 +61,7 @@ export async function saveVisitShare(businessId: string, share: number | null): 
   const { data, error } = await supabase.from("businesses").update({ visit_share: share }).eq("id", businessId).select("id");
   if (error) return { status: "error", error: error.code === "PGRST204" || error.code === "42703" ? "not_ready" : "failed" };
   if (!data || data.length === 0) return { status: "error", error: "failed" };
-  revalidatePath(`/business/${businessId}/growth`);
+  for (const p of googlePagePaths(businessId)) revalidatePath(p);
   return { status: "ok", value: share };
 }
 

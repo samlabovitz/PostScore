@@ -6,6 +6,7 @@
 // until then their sections show an honest empty state, and sample
 // numbers only in practice mode. Pure — safe on the server and the client.
 
+import { offersHref, reviewsHref } from "@/lib/routes";
 import type { CheckResult } from "@/lib/scoring";
 import { actions, addMonths, monthRange, totalViews, type InsightsMonth, type Keyword } from "@/lib/gbpInsights";
 import type { BookingLink, BookingTracking } from "@/lib/bookingPartners";
@@ -274,7 +275,7 @@ export const WEBSITE_GOOD_POINTS = 27;
 export function levers(input: LeverInputs): Lever[] {
   const id = input.businessId;
   const reviews: Lever = ((): Lever => {
-    const href = `/business/${id}/website-reviews#google-reviews`;
+    const href = reviewsHref(id, { hash: "google-reviews" });
     if (!input.replies) return { id: "reviews", status: "notChecked", pill: "reply", params: {}, tone: "neutral", href };
     if (input.replies.inWindow <= 0) return { id: "reviews", status: "noRecent", pill: "done", params: {}, tone: "ok", href };
     const percent = Math.round((input.replies.replied / input.replies.inWindow) * 100);
@@ -304,8 +305,8 @@ export function levers(input: LeverInputs): Lever[] {
   })();
   const deals: Lever =
     input.couponsRunning > 0
-      ? { id: "deals", status: "running", pill: "running", params: { count: input.couponsRunning }, tone: "ok", href: `/business/${id}/campaigns?tab=coupons#new-offer` }
-      : { id: "deals", status: "none", pill: "start", params: {}, tone: "bad", href: `/business/${id}/campaigns?tab=coupons#new-offer` };
+      ? { id: "deals", status: "running", pill: "running", params: { count: input.couponsRunning }, tone: "ok", href: offersHref(id, "coupons", { hash: "new-offer" }) }
+      : { id: "deals", status: "none", pill: "start", params: {}, tone: "bad", href: offersHref(id, "coupons", { hash: "new-offer" }) };
   const website: Lever = ((): Lever => {
     // The Website page's own fix list (or the starter site when there's no website).
     const href = input.website ? `/business/${id}/website#website-checks` : `/business/${id}/website#starter-site`;
@@ -706,7 +707,7 @@ export function listingGroups(input: ListingInput): ListingGroup[] {
         photosRow(input),
         postsRow(input),
         {
-          ...row("reviews", "visibility.review_replies", input.rating !== null ? `${input.rating.toFixed(1)} ★ · ${input.reviewCount ?? 0}` : null, { kind: "link", href: `/business/${input.businessId}/website-reviews#google-reviews`, external: false }),
+          ...row("reviews", "visibility.review_replies", input.rating !== null ? `${input.rating.toFixed(1)} ★ · ${input.reviewCount ?? 0}` : null, { kind: "link", href: reviewsHref(input.businessId, { hash: "google-reviews" }), external: false }),
           note: repliesText,
         },
       ],

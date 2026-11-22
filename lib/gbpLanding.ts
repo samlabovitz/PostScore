@@ -5,6 +5,7 @@
 // never sent to the Premium pages.
 // Premium and Multi connect from the Google Profile tab or its connect
 // page. It's one connection either way.
+import { googleResultsHref, reviewsHref } from "@/lib/routes";
 import type { Plan } from "@/lib/plan";
 import { isPremiumPlan } from "@/lib/plan";
 
@@ -57,7 +58,7 @@ export function resolveGbpOrigin(plan: Plan, requested: string | null | undefine
 
 /** The Reviews-area connect for Free and Grow (their only connect spot). */
 export function gbpReplyCheckPath(businessId: string, plan: Plan): string {
-  return plan === "free" ? `/business/${businessId}#${GBP_REPLY_CHECK_ANCHOR}` : `/business/${businessId}/website-reviews#${GBP_REPLY_CHECK_ANCHOR}`;
+  return plan === "free" ? `/business/${businessId}#${GBP_REPLY_CHECK_ANCHOR}` : reviewsHref(businessId, { hash: GBP_REPLY_CHECK_ANCHOR });
 }
 
 export function gbpLandingPath(businessId: string, origin: GbpOrigin, result: GbpConnectResult): string {
@@ -67,9 +68,9 @@ export function gbpLandingPath(businessId: string, origin: GbpOrigin, result: Gb
     case "overview":
       return `/business/${businessId}?gbp=${result}#${GBP_REPLY_CHECK_ANCHOR}`;
     case "reviews":
-      return `/business/${businessId}/website-reviews?gbp=${result}#${GBP_REPLY_CHECK_ANCHOR}`;
+      return reviewsHref(businessId, { query: { gbp: result }, hash: GBP_REPLY_CHECK_ANCHOR });
     case "profile":
-      return `/business/${businessId}/growth?tab=google&gbp=${result}#${GBP_PROFILE_ANCHOR}`;
+      return googleResultsHref(businessId, { query: { gbp: result }, hash: GBP_PROFILE_ANCHOR });
     case "connect":
       return `/business/${businessId}/connect-gbp?gbp=${result}`;
   }

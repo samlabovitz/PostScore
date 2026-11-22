@@ -1,5 +1,6 @@
 "use client";
 
+import { campaignsPageHref, growthPlanHref, reviewsHref } from "@/lib/routes";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -30,9 +31,9 @@ export const NAV_ITEMS: Array<{
   path: (businessId: string) => string;
 }> = [
   { labelKey: "dashboard.nav.overview", icon: IconLayoutDashboard, path: (id) => `/business/${id}` },
-  { labelKey: "dashboard.nav.growth", icon: IconTrendingUp, path: (id) => `/business/${id}/growth` },
-  { labelKey: "dashboard.nav.campaigns", icon: IconSpeakerphone, path: (id) => `/business/${id}/campaigns` },
-  { labelKey: "dashboard.nav.reviews", icon: IconStar, path: (id) => `/business/${id}/website-reviews` },
+  { labelKey: "dashboard.nav.growth", icon: IconTrendingUp, path: (id) => growthPlanHref(id) },
+  { labelKey: "dashboard.nav.campaigns", icon: IconSpeakerphone, path: (id) => campaignsPageHref(id) },
+  { labelKey: "dashboard.nav.reviews", icon: IconStar, path: (id) => reviewsHref(id) },
   { labelKey: "dashboard.nav.website", icon: IconWorld, path: (id) => `/business/${id}/website` },
   { labelKey: "dashboard.nav.competitors", icon: IconUsers, path: (id) => `/business/${id}/competitors` },
   { labelKey: "dashboard.nav.pricing", icon: IconTag, path: (id) => `/business/${id}/pricing` },

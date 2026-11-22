@@ -8,6 +8,7 @@
 // (its wording and where it's fixed), so others can be added later — a
 // Google change approved, a new review, a score drop.
 
+import { googleListingHref } from "@/lib/routes";
 import { URGENT_ISSUES, type UrgentIssue } from "@/lib/urgency";
 import type { MessageKey } from "@/lib/i18n";
 import { gbpConnectHref } from "@/lib/gbpLanding";
@@ -86,7 +87,7 @@ const NOTIFICATION_KINDS: Record<NotificationType, (row: Pick<NotificationRow, "
         fixHref: row.resolved_at ? `/business/${row.business_id}` : gbpConnectHref(row.business_id, "overview"),
       };
     const field = fieldOfNotificationKey(row.key);
-    return field ? { message: `dashboard.notifications.google.edit.${field}` as MessageKey, fixLabel: "dashboard.notifications.google.review", fixHref: `/business/${row.business_id}/growth?tab=google#others` } : null;
+    return field ? { message: `dashboard.notifications.google.edit.${field}` as MessageKey, fixLabel: "dashboard.notifications.google.review", fixHref: googleListingHref(row.business_id, { hash: "others" }) } : null;
   },
 };
 

@@ -1,5 +1,6 @@
 "use client";
 
+import { growthPlanHref } from "@/lib/routes";
 import { PlatformLinkCard } from "@/components/gbp/PlatformLinkCard";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -307,7 +308,7 @@ export function GrowthView({
       params.set("tab", GOOGLE_TAB_PARAM);
     }
     const query = params.toString();
-    router.push(`/business/${businessId}/growth${query ? `?${query}` : ""}`, { scroll: false });
+    router.push(growthPlanHref(businessId, { query: Object.fromEntries(new URLSearchParams(query)) }), { scroll: false });
   }
 
   const { weeklyProjectedBreakdown, weeklyProjectedBreakdownHigh } = actionPlan;

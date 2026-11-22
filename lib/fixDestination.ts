@@ -12,6 +12,8 @@
 //   - Website items → the Website page, that check. Reviews → Reviews.
 // Pure.
 
+import { fixPlanHref, getReviewsHref, googleListingHref, reviewsHref } from "@/lib/routes";
+
 export interface FixContext {
   businessId: string;
   /** Premium or Multi. */
@@ -83,17 +85,17 @@ const stepId = (checkId: string) => `task-${checkId.replace(/\./g, "-")}`;
 
 export function fixDestination(item: FixItem, ctx: FixContext): FixDestination {
   const base = `/business/${ctx.businessId}`;
-  const tab = (hash: string) => `${base}/growth?tab=google#${hash}`;
+  const tab = (hash: string) => googleListingHref(ctx.businessId, { hash });
   // The step-by-step: the Growth recap step, "How to fix it" open.
-  const steps = (checkId: string) => `${base}/growth?open=howto#${stepId(checkId)}`;
+  const steps = (checkId: string) => fixPlanHref(ctx.businessId, { query: { open: "howto" }, hash: stepId(checkId) });
   const doIt = canDoForYou(ctx);
   const id = item.checkId;
 
   if (id === "visibility.review_replies" || (item.mergedCheckIds ?? []).includes("visibility.review_replies")) {
     // Premium + connected: the replies go out from PostScore's inbox.
-    return { kind: doIt ? "do_it" : "steps", key: doIt ? "doItForYou" : "replyReviews", href: `${base}/website-reviews#google-reviews` };
+    return { kind: doIt ? "do_it" : "steps", key: doIt ? "doItForYou" : "replyReviews", href: reviewsHref(ctx.businessId, { hash: "google-reviews" }) };
   }
-  if (id.startsWith("visibility.") || id.startsWith("reviews")) return { kind: "steps", key: "moreReviews", href: `${base}/website-reviews#review-link` };
+  if (id.startsWith("visibility.") || id.startsWith("reviews")) return { kind: "steps", key: "moreReviews", href: getReviewsHref(ctx.businessId, { hash: "review-link" }) };
 
   if (EDITOR_HASH[id]) {
     const key =

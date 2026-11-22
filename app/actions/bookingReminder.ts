@@ -4,6 +4,8 @@
 // lib/bookingPartners.ts): hides it for 14 days; after that, if Google
 // still counts 0 bookings, it comes back as "Still not tracked".
 
+import { googlePagePaths } from "@/lib/routes";
+
 export async function snoozeBookingReminder(businessId: string): Promise<{ ok: boolean }> {
   const { createClient } = await import("@/lib/supabase/server");
   const { createAdminClient } = await import("@/lib/supabase/admin");
@@ -13,6 +15,6 @@ export async function snoozeBookingReminder(businessId: string): Promise<{ ok: b
   const { error } = await createAdminClient().from("gbp_connections").update({ booking_reminder_snoozed_at: new Date().toISOString() }).eq("business_id", businessId);
   if (error) return { ok: false };
   const { revalidatePath } = await import("next/cache");
-  revalidatePath(`/business/${businessId}/growth`);
+  for (const p of googlePagePaths(businessId)) revalidatePath(p);
   return { ok: true };
 }

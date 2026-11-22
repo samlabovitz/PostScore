@@ -1,3 +1,4 @@
+import { growthPlanHref } from "@/lib/routes";
 import { Fragment } from "react";
 import { viewLocale } from "@/lib/viewLocale.server";
 import { notFound, redirect } from "next/navigation";
@@ -142,7 +143,7 @@ export default async function SettingsPage({ params, searchParams = {} }: { para
                         {k("businesses.overview")}
                       </Link>
                       {!b.websiteOnly && (
-                        <Link href={`/business/${b.id}/growth`} className="text-ink-soft hover:text-ink">
+                        <Link href={growthPlanHref(b.id)} className="text-ink-soft hover:text-ink">
                           {k("businesses.growth")}
                         </Link>
                       )}

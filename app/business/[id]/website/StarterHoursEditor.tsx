@@ -5,6 +5,7 @@
 // its schema.org openingHours) only; they never count toward the Google
 // listing part of PostScore (lib/ownerHours.ts).
 
+import { fixPlanHref } from "@/lib/routes";
 import { useState } from "react";
 import Link from "next/link";
 import { IconArrowRight, IconPlus, IconX } from "@tabler/icons-react";
@@ -47,7 +48,7 @@ export function HoursGoogleTip({ businessId }: { businessId: string }) {
   return (
     <p className="text-[12px] text-ink-soft">
       {t(locale, k("tip"))}{" "}
-      <Link href={`/business/${businessId}/growth#task-completeness-hours`} className="inline-flex items-center gap-0.5 font-semibold text-ink underline-offset-2 hover:underline">
+      <Link href={fixPlanHref(businessId, { hash: "task-completeness-hours" })} className="inline-flex items-center gap-0.5 font-semibold text-ink underline-offset-2 hover:underline">
         {t(locale, k("tipLink"))}
         <IconArrowRight size={12} aria-hidden />
       </Link>

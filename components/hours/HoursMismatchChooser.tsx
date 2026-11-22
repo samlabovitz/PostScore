@@ -12,6 +12,7 @@
 // The choice is remembered in this browser until a scan shows the hours
 // match (lib/hoursChooser.ts). Points never change here.
 
+import { googleListingHref } from "@/lib/routes";
 import { useEffect, useState } from "react";
 import { openHoursCompare, type OpenHoursCompareResult } from "@/app/actions/hoursChooser";
 import { builderGuideFor } from "@/lib/websiteBuilderGuides";
@@ -94,7 +95,7 @@ export function FixGoogle({ businessId, view, week, own, onTab }: { businessId: 
     return (
       <div className="flex flex-col gap-1.5" data-testid="fix-google-editor">
         <b className="text-[13px]">{t(locale, K(own ? "google.titleOwn" : "google.title"))}</b>
-        <a href={onTab ? hash : `/business/${businessId}/growth?tab=google${hash}`} onClick={go} className={cn(BTN, "border-ink bg-ink text-paper")} data-testid="open-hours-editor">
+        <a href={onTab ? hash : googleListingHref(businessId, { hash })} onClick={go} className={cn(BTN, "border-ink bg-ink text-paper")} data-testid="open-hours-editor">
           {t(locale, K(own ? "google.buttonOwn" : "google.button"))}
         </a>
         <p className="text-[12px] text-ink-mute">{t(locale, K("google.safety"))}</p>

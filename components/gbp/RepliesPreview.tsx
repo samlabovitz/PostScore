@@ -7,6 +7,7 @@
 // from Google, logged) only on the owner's click — Approve all or the
 // reply's own "Post this reply".
 
+import { reviewsHref } from "@/lib/routes";
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { draftWeekReplies, type WeekReply } from "@/app/actions/approveAll";
@@ -125,7 +126,7 @@ export function RepliesPreview({ businessId, state }: { businessId: string; stat
         ))}
       </ul>
       {state.more > 0 && (
-        <Link href={`/business/${businessId}/website-reviews#google-reviews`} className="w-fit text-[12px] font-semibold text-ink underline underline-offset-2">
+        <Link href={reviewsHref(businessId, { hash: "google-reviews" })} className="w-fit text-[12px] font-semibold text-ink underline underline-offset-2">
           {t(locale, W("replies.more"), { count: state.more })}
         </Link>
       )}

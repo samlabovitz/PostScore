@@ -5,6 +5,7 @@
 // (lib/urgency.ts), otherwise from their real points on the 0–100 total —
 // High 5+, Medium 2+ (lib/overviewTiles.ts) — and ONE button to where each is fixed.
 
+import { fixPlanHref } from "@/lib/routes";
 import Link from "next/link";
 import { IconArrowRight, IconMapPin, IconStar, IconWorld } from "@tabler/icons-react";
 import { pointsText, recRangeText, websiteRangeText, wholePointRange } from "@/lib/pointRange";
@@ -120,14 +121,14 @@ export function TopRecommendations({
     <section className="flex h-full flex-col rounded-2xl border border-paper-deep bg-white p-4 shadow-card sm:p-5">
       <div className="flex items-center justify-between gap-3">
         <h2 className="font-serif text-lg font-semibold text-ink">{t(locale, "dashboard.overview.recs.heading")}</h2>
-        <Link href={`/business/${businessId}/growth`} className="inline-flex items-center gap-1 text-[13px] font-semibold text-ink hover:text-brass">
+        <Link href={fixPlanHref(businessId)} className="inline-flex items-center gap-1 text-[13px] font-semibold text-ink hover:text-brass">
           {t(locale, "dashboard.overview.recs.viewAll")}
           <IconArrowRight size={14} />
         </Link>
       </div>
 
       <Link
-        href={`/business/${businessId}/growth#weekly-plan`}
+        href={fixPlanHref(businessId, { hash: "weekly-plan" })}
         className="mt-3 flex items-center justify-between gap-3 rounded-xl bg-ink px-4 py-3 text-paper transition-colors hover:bg-[color:color-mix(in_srgb,var(--color-ink)_90%,transparent)]"
       >
         <span className="text-[13.5px] font-semibold">

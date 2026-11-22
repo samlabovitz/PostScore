@@ -1,3 +1,4 @@
+import { googleResultsHref } from "@/lib/routes";
 import { redirect } from "next/navigation";
 
 /**
@@ -7,5 +8,5 @@ import { redirect } from "next/navigation";
  * docs/search-demand.md.
  */
 export default function SearchDemandPage({ params }: { params: { id: string } }) {
-  redirect(`/business/${params.id}/growth?tab=google#searches`);
+  redirect(googleResultsHref(params.id, { hash: "searches" }));
 }

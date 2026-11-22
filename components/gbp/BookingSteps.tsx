@@ -7,6 +7,7 @@
 // hides the reminder for 14 days. Plus the one-time task card in the Growth
 // recap. Never shown for a partner-added link (case A: already connected).
 
+import { googleListingHref } from "@/lib/routes";
 import Link from "next/link";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
@@ -67,7 +68,7 @@ export function BookingTaskCard({ businessId, provider, still }: { businessId: s
         <p className="text-[14px] font-semibold text-ink">{t(locale, K("taskTitle"), { partner: provider })}</p>
         <p className="text-[12.5px] text-ink-soft">{still ? t(locale, K("still")) : t(locale, K("taskBody"), { partner: provider })}</p>
       </div>
-      <Link href={`/business/${businessId}/growth?tab=google#edit-booking-steps`} className="inline-flex h-[30px] items-center rounded-lg border border-ink bg-ink px-3 text-[12.5px] font-semibold text-paper">
+      <Link href={googleListingHref(businessId, { hash: "edit-booking-steps" })} className="inline-flex h-[30px] items-center rounded-lg border border-ink bg-ink px-3 text-[12.5px] font-semibold text-paper">
         {t(locale, K("taskButton"))}
       </Link>
     </div>

@@ -7,6 +7,7 @@
 // (GOOGLE_WRITES_LIVE_PLACES) come from googleWriteContext: off the list the
 // real values load read-only and every change is refused ("editing_off").
 
+import { googlePagePaths } from "@/lib/routes";
 import { revalidatePath } from "next/cache";
 import type { GbpEditBlock } from "@/lib/gbpEditGate.server";
 import type { FieldUndo } from "@/lib/gbpFieldWrite.server";
@@ -32,7 +33,7 @@ async function after(c: Extract<GoogleWriteContext, { ok: true }>, businessId: s
   if (c.practice) return;
   const { forgetRealListing } = await import("@/lib/gbpRealListing.server");
   forgetRealListing(businessId);
-  revalidatePath(`/business/${businessId}/growth`);
+  for (const p of googlePagePaths(businessId)) revalidatePath(p);
 }
 
 function result(r: { status: string; verified?: boolean; error?: GbpEditErrorCode }, undo: FieldUndo | null): FieldActionResult {
