@@ -120,7 +120,7 @@ Columns: Tab · Page · Route · What's on it · Source.
 
 | Page | Route | What's on it | Comes from |
 |---|---|---|---|
-| **Growth plan** | `/business/[id]/growth` (repurposed) | 1. **Tier hero**: name, "Tier N of 5", the next step in one line (Hair Express, test account: "2 · Building + Test account", "On track for Growing on Monday, Nov 30"), Active weeks (last 8), the 5-step track. 2. **To reach [next tier]** + **After that** cards. 3. **This week's plan**, the single weekly list (§4): "Approve 3 tasks" + "12 items go to Google" on Premium; steps on Grow. 4. One link line: **"See what Google brought you last month → Google results"**. No number cards: Google numbers live only on Google results, and offer tracking only on Customer offers. 5. **More customers, whatever your score** (moved from Overview). | New tier parts; `WeeklyChecklist.tsx` (folds into This week's plan); `MoreWaysCards.tsx`; `GrowMoreCustomers.tsx`; `ThisWeekList.tsx` / `ApproveAll.tsx` |
+| **Growth plan** | `/business/[id]/growth` (repurposed) | 1. **Tier hero**: name, "Tier N of 5", the next step in one line (Hair Express, test account: "2 · Building + Test account", "On track for Growing on Monday, Nov 30"), Active weeks (last 8), the 5-step track. 2. **To reach [next tier]** + **After that** cards. 3. **This week's plan**, the single weekly list (§4): "Approve 3 tasks" + "12 items go to Google" on Premium; steps on Grow. 4. One link line: **"See what Google brought you last month → Google results"**. No number cards: Google numbers live only on Google results, and offer tracking only on Customer offers. 5. **More ways to bring people in** (kept from today's Growth page, `#more-ways`): two visible cards, **"This week's Google post"** and **"Answer your customers' common questions"** (Premium: "PostScore can do this for you"; Grow: steps + "Premium does this for you in one click →"; Free: locked). They stay even though the same items are also in This week's plan; the post card is also where past posts and extra mid-week posts live (*decided Nov 22, for step 6*). 6. **More customers, whatever your score** (moved from Overview). | New tier parts; `WeeklyChecklist.tsx` (folds into This week's plan); `MoreWaysCards.tsx` (kept as its own block); `GrowMoreCustomers.tsx`; `ThisWeekList.tsx` / `ApproveAll.tsx` |
 | **Google results** | `/business/[id]/google-results` (new) | Today's sections 1–3: Last month hero (rate + chart), KPI tiles, November so far, the "Google brought you…" estimate, What to do this week, Since you did this (decreases gray, increases green; the "other things also affect these numbers" note above the table), Searches → actions (funnel, who saw you, devices, call days, by month; "Actions per 100 viewers"), Search terms. The Growth line sits at the top, with a small "Fix your listing →" link (the page's only link to Presence; no closing listing box, no listing counts). Hero sentence: "of people who found you on Google took action (called, got directions or visited your site)". Jump: Last month · This week · Since you did this · Searches → actions · Search terms. | `GoogleProfileTab.tsx`: `LastMonthSection`, `ThisWeek`, `SinceCard`, `FunnelSection`, `SearchesSection`, `JumpMenu`, `WorthBox` |
 | **Get more reviews** | `/business/[id]/get-reviews` (new) | **Asking only:** review link, QR + PNG, the "right way" guide, counter tools, Sign Studio (also listed in Print kit). No replies here: they live in Presence → Reviews. Link back: "See what customers say and reply →" (Presence → Reviews). | `ReviewsView.tsx`: `GetMoreReviews`, `ReviewGuide`, `CounterTools`, `SignStudio` |
 | **Customer offers** | `/business/[id]/offers` (new; `?tab=running\|coupons\|referrals\|first-time\|loyalty`) | Opens on **Running now** (today's All campaigns rows for coupons and referrals: code, start, times used, +1, Share, End). Then the Coupons and Referrals designers. First-time customers and Loyalty programs are "Coming soon" until Day 25D. **Offer tracking lives here** (moved off the Growth plan): a summary card at the top of Running now, "{n} offers started since {date} · {uses} uses logged", plus per-offer uses. Test and practice offers are never listed or counted (§6.2). | `campaigns/CampaignsView.tsx` (coupon/referral rows), `CouponsSection`, `ReferralSection`, `HowToRunIt` |
@@ -319,7 +319,7 @@ The rows add up to the old +13.2, so the 100 · A projection is unchanged. A sma
 |---|---|
 | `ProjectedSummary` ("78 → 92"), `PlanBlurb`, action plan (`#weekly-plan`, `#task-…`), Bigger projects, `WebsiteBannerCard`, re-check website, `WeeklyPlanCelebration` | `app/business/[id]/fix-plan/` (Presence) |
 | `WeeklyChecklist` ("Your weekly routine") | Folded into Growth plan → This week's plan (no separate list) |
-| `MoreWaysCards` (This week's Google post, Answer common questions) | Growth plan → This week's plan items |
+| `MoreWaysCards` (This week's Google post, Answer common questions) | **Stays on Growth plan as its own block, "More ways to bring people in"** (two visible cards, `#more-ways`), as on today's Growth page. The same two items also appear in This week's plan; the post card also keeps past posts and extra mid-week posts. *(Revised Nov 22: no longer folded into This week's plan.)* |
 | `GrowthMoveCard` list ("Ways to grow") | Growth plan → More customers, whatever your score |
 | `WeeklyGoalCelebration` | Growth plan (it's about the week's activity) |
 | `FreeGrowthPlan.tsx` | Split: score-fix previews → `/fix-plan` on Free; Growth locked preview (mockup 06) → `/growth` on Free |
@@ -365,7 +365,8 @@ Also: emails (`emails/`), PostAI page map (`lib/postaiDock`, `lib/postaiFeatureM
 | `/google-profile` | `/google-results` |
 | `/search-demand` | `/google-results#searches` |
 | `/growth#weekly-plan`, `/growth#task-…`, `/growth#ways-to-grow` | `/fix-plan#…` (except `#ways-to-grow` → `/growth#more`) |
-| `/growth#weekly-routine`, `#more-ways` | `/growth#this-week` |
+| `/growth#weekly-routine` | `/growth#this-week` |
+| `/growth#more-ways` | stays `/growth#more-ways` (the block stays, Nov 22). *Step 6: drop the `more-ways` → `this-week` rename in `legacyRedirect` (`lib/routes.ts`) and its test.* |
 | `/campaigns?tab=all` | `/offers` (Running now) |
 | `/campaigns?tab=coupons` / `referrals` | `/offers?tab=coupons` / `referrals` |
 | `/growth?tab=coupons` / `referral(s)` | `/offers?tab=…` (today's redirects re-pointed) |
@@ -695,6 +696,11 @@ These notes used to sit inside the mockups as dashed yellow boxes. They're revie
 - **Moved here from Overview:** "More customers, whatever your score".
   - The Price check and Competitors cards are dropped from this block; they're one click away in Presence.
   - "Weekly routine" is now part of This week's plan (no separate list).
+- **Kept from today's Growth page: "More ways to bring people in"** (*decided Nov 22, built in step 6*).
+  - Two visible cards: "This week's Google post" and "Answer your customers' common questions", as today.
+  - Premium: "PostScore can do this for you". Grow: the steps + "Premium does this for you in one click →". Free: locked.
+  - They stay even though the same two items are also in This week's plan (same drafts, same state).
+  - The post card is also where past posts and extra mid-week posts live.
   - Google numbers live only on Google results. Offer tracking (offers started, uses logged) lives on Customer offers.
 
 **Google results (04)**

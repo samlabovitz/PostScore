@@ -5,6 +5,58 @@ import { DEFAULT_LOCALE, type Locale } from "./locale";
 // below; adding a new locale (see locale.ts) doesn't require touching the
 // key list, only a new entry in `messages`.
 export type MessageKey =
+  | "content.actionPlan.title.website.info_consistency.hours"
+  | "dashboard.rescan.nextAvailableDay"
+  | "dashboard.overview.sinceCard.today"
+  | "dashboard.overview.sinceCard.latest"
+  | "dashboard.settings.plans.value.comingSoon"
+  | "dashboard.fixPlan.title"
+  | "dashboard.fixPlan.subtitle"
+  | "dashboard.fixPlan.thisWeekLabel.one"
+  | "dashboard.fixPlan.thisWeekLabel.other"
+  | "dashboard.fixPlan.everyFix"
+  | "dashboard.fixPlan.nowThisWeek"
+  | "dashboard.fixPlan.fromLastScan"
+  | "dashboard.fixPlan.fromLastScanNoDate"
+  | "dashboard.fixPlan.doneTitle"
+  | "dashboard.fixPlan.noneThisWeek"
+  | "dashboard.fixPlan.next"
+  | "dashboard.fixPlan.scoreArrow"
+  | "dashboard.fixPlan.pts"
+  | "dashboard.fixPlan.upToPts"
+  | "dashboard.fixPlan.priority.low"
+  | "dashboard.fixPlan.fixIt"
+  | "dashboard.breakdown.action.moreReviewsInGrowth"
+  | "dashboard.fixPlan.speedTitle"
+  | "dashboard.fixPlan.speedUpTo"
+  | "dashboard.fixPlan.footnote"
+  | "dashboard.fixPlan.empty"
+  | "dashboard.fixPlan.websiteRow"
+  | "dashboard.fixPlan.websiteSummary.one"
+  | "dashboard.fixPlan.websiteSummary.other"
+  | "dashboard.fixPlan.websiteSummary.none"
+  | "dashboard.fixPlan.websiteSummary.speed"
+  | "dashboard.fixPlan.link"
+  | "content.actionPlan.reviewSplit.recent.title.one"
+  | "content.actionPlan.reviewSplit.recent.title.other"
+  | "content.actionPlan.reviewSplit.recent.why"
+  | "content.actionPlan.reviewSplit.trust.title"
+  | "content.actionPlan.reviewSplit.trust.target"
+  | "content.actionPlan.reviewSplit.trust.why"
+  | "content.actionPlan.reviewSplit.count.title"
+  | "content.actionPlan.reviewSplit.count.target"
+  | "content.actionPlan.reviewSplit.count.why"
+  | "content.actionPlan.reviewSplit.rating.title"
+  | "content.actionPlan.reviewSplit.rating.target"
+  | "dashboard.fixPlan.when.this_week"
+  | "dashboard.fixPlan.when.weeks"
+  | "dashboard.fixPlan.when.months"
+  | "dashboard.overview.someFixesTakeMonths"
+  | "dashboard.breakdown.action.replyInReviews"
+  | "dashboard.googleTab.w.approveTasks.one"
+  | "dashboard.googleTab.w.approveTasks.other"
+  | "dashboard.googleTab.w.approveItems.one"
+  | "dashboard.googleTab.w.approveItems.other"
   | "content.checks.completeness.website_link.explanation.parked"
   | "content.checks.website.has_website.explanation.listingParked"
   | "content.checks.website.has_website.advice.listingParked"
@@ -3245,7 +3297,11 @@ export type MessageKey =
   | "dashboard.growth.moves.connectGbp.why"
   | "dashboard.growth.moves.connectGbp.howTo"
   | "dashboard.growth.checklist.sectionHeading"
-  | "dashboard.growth.checklist.note"
+  | "dashboard.growth.checklist.noteAuto"
+  | "dashboard.growth.checklist.noteNotConnected"
+  | "dashboard.growth.checklist.noteSelf"
+  | "dashboard.growth.checklist.sentLabel"
+  | "dashboard.growth.checklist.seenLabel"
   | "dashboard.growth.checklist.checkedByYouLabel"
   | "dashboard.growth.checklist.saveError"
   | "dashboard.growth.checklist.streak.one"
@@ -6326,6 +6382,11 @@ export type MessageKey =
  * how a future locale with more categories, e.g. "few"/"many", would
  * still get a safe result even before every category is seeded for it). */
 export type PluralKeyBase =
+  | "dashboard.fixPlan.thisWeekLabel"
+  | "dashboard.fixPlan.websiteSummary"
+  | "content.actionPlan.reviewSplit.recent.title"
+  | "dashboard.googleTab.w.approveTasks"
+  | "dashboard.googleTab.w.approveItems"
   | "dashboard.overview.recs.points"
   | "dashboard.overview.recs.pointsAbout"
   | "dashboard.reports.v2.website.summary"
@@ -6410,6 +6471,58 @@ type LocaleMessages = Partial<Record<MessageKey, string>>;
 
 export const messages: Record<Locale, LocaleMessages> = {
   en: {
+    "content.actionPlan.title.website.info_consistency.hours": "Match your website's hours to Google",
+    "dashboard.rescan.nextAvailableDay": "Next re-scan available {date}",
+    "dashboard.overview.sinceCard.today": "Today",
+    "dashboard.overview.sinceCard.latest": "Latest scan · {date}",
+    "dashboard.settings.plans.value.comingSoon": "Coming soon",
+    "dashboard.fixPlan.title": "Fix plan",
+    "dashboard.fixPlan.subtitle": "Every fix that raises your PostScore score, most urgent first.",
+    "dashboard.fixPlan.thisWeekLabel.one": "This week · 1 fix you can finish yourself, today",
+    "dashboard.fixPlan.thisWeekLabel.other": "This week · {count} fixes you can finish yourself, today",
+    "dashboard.fixPlan.everyFix": "When every fix is done",
+    "dashboard.fixPlan.nowThisWeek": "{now} now · {week} this week",
+    "dashboard.fixPlan.fromLastScan": "From your last scan · {date} · points confirmed on your next scan",
+    "dashboard.fixPlan.fromLastScanNoDate": "From your last scan · points confirmed on your next scan",
+    "dashboard.fixPlan.doneTitle": "This week's fixes done ✓",
+    "dashboard.fixPlan.noneThisWeek": "Nothing left you can finish this week",
+    "dashboard.fixPlan.next": "Next: {fix} (+{points})",
+    "dashboard.fixPlan.scoreArrow": "Score → {score}",
+    "dashboard.fixPlan.pts": "+{points} pts",
+    "dashboard.fixPlan.upToPts": "up to +{points} pts",
+    "dashboard.fixPlan.priority.low": "Low priority",
+    "dashboard.fixPlan.fixIt": "Fix it",
+    "dashboard.breakdown.action.moreReviewsInGrowth": "Get more reviews (in Growth)",
+    "dashboard.fixPlan.speedTitle": "Website speed: not scored yet",
+    "dashboard.fixPlan.speedUpTo": "Up to {points} pts.",
+    "dashboard.fixPlan.footnote": "Running score adds each fix's points from the top. Your real score changes only after a scan confirms the fix.",
+    "dashboard.fixPlan.empty": "Nothing to fix. Your score has every point it can get right now.",
+    "dashboard.fixPlan.websiteRow": "Improve your website",
+    "dashboard.fixPlan.websiteSummary.one": "Fix this 1 and your Website goes {from} → {to} pts (score {score} → {after}).",
+    "dashboard.fixPlan.websiteSummary.other": "Fix these {count} and your Website goes {from} → {to} pts (score {score} → {after}).",
+    "dashboard.fixPlan.websiteSummary.none": "Nothing to fix here. Your Website has every point it can get right now.",
+    "dashboard.fixPlan.websiteSummary.speed": "Speed is checked on your next scan.",
+    "dashboard.fixPlan.link": "Fix plan →",
+    "content.actionPlan.reviewSplit.recent.title.one": "Get 1 new review in the next 90 days",
+    "content.actionPlan.reviewSplit.recent.title.other": "Get {count} new reviews in the next 90 days",
+    "content.actionPlan.reviewSplit.recent.why": "Reviews from the last 90 days count most: 3 or more earns full points for recent reviews, and each new one also adds to your count.",
+    "content.actionPlan.reviewSplit.trust.title": "Grow to {target} reviews",
+    "content.actionPlan.reviewSplit.trust.target": "{from} → {target} reviews: your star rating counts fully at {target}",
+    "content.actionPlan.reviewSplit.trust.why": "Google shoppers trust a rating backed by more reviews, and so does your score: your star rating counts fully once you reach {target} reviews.",
+    "content.actionPlan.reviewSplit.count.title": "Keep growing toward {target} reviews",
+    "content.actionPlan.reviewSplit.count.target": "{from} → {target} reviews: full points for review count at {target}",
+    "content.actionPlan.reviewSplit.count.why": "Review count keeps adding points as it grows, up to {target} reviews. It comes from asking every happy customer, month after month.",
+    "content.actionPlan.reviewSplit.rating.title": "Raise your star rating",
+    "content.actionPlan.reviewSplit.rating.target": "Your rating now: {rating}★. Full points come with a rating near 4.9★.",
+    "dashboard.fixPlan.when.this_week": "This week",
+    "dashboard.fixPlan.when.weeks": "Takes a few weeks",
+    "dashboard.fixPlan.when.months": "Takes months",
+    "dashboard.overview.someFixesTakeMonths": "Some fixes take months (reviews grow over time).",
+    "dashboard.breakdown.action.replyInReviews": "Reply in Reviews",
+    "dashboard.googleTab.w.approveTasks.one": "Approve 1 task",
+    "dashboard.googleTab.w.approveTasks.other": "Approve {count} tasks",
+    "dashboard.googleTab.w.approveItems.one": "1 item goes to Google",
+    "dashboard.googleTab.w.approveItems.other": "{count} items go to Google",
     "content.checks.completeness.website_link.explanation.parked": "Your Google listing's website link goes to {url}, which is now a parked “coming soon” domain — not your website. Someone else may now control that address. Change the link on Google to your real site.",
     "content.checks.website.has_website.advice.listingParked": "Your Google listing's website link goes to a parked “coming soon” domain, not your website. Change it to your real site.",
     "growth.fix.parkedListingLink.action": "Your Google listing's website link goes to a parked “coming soon” domain, not your website. Change it to your real site.",
@@ -6526,7 +6639,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.settings.plans.bullet.premium.insights": "Your Google results every month: calls, directions, website clicks and what people searched (with Google connected)",
     "dashboard.settings.plans.bullet.premium.channels": "Email, text and social campaigns (coming soon)",
     "dashboard.settings.plans.bullet.premium.designs": "Every design tool unlocked, with no PostScore branding",
-    "dashboard.settings.plans.bullet.premium.postai": "Unlimited PostAI, and PostStudio websites at a discount (PostStudio coming soon)",
+    "dashboard.settings.plans.bullet.premium.postai": "Unlimited PostAI, and PostStudio (coming soon)",
     "dashboard.settings.plans.bullet.premium.weeklyPost": "This week's Google post and answers to your customers' questions, written for you — tap Approve all (Beta)",
     "dashboard.settings.plans.bullet.premium.weeklyPostLive": "This week's Google post and answers to your customers' questions, written for you — tap Approve all",
     "dashboard.settings.plans.bullet.premium.monthlyEmail": "A monthly report by email",
@@ -6562,7 +6675,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.settings.plans.value.basic": "Basic",
     "dashboard.settings.plans.value.fullNoBranding": "Full, no branding",
     "dashboard.settings.plans.value.starterSite": "Starter site",
-    "dashboard.settings.plans.value.starterDiscount": "Starter + PostStudio discount",
+    "dashboard.settings.plans.value.starterDiscount": "Starter + PostStudio (coming soon)",
     "dashboard.settings.plans.value.starterIncluded": "Starter + PostStudio included",
     "dashboard.settings.plans.value.monthlyLimit": "Monthly limit",
     "dashboard.settings.plans.value.unlimited": "Unlimited",
@@ -6821,7 +6934,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.upgrade.chip.campaignChannels": "Email, text & social campaigns",
     "dashboard.upgrade.chip.designs": "Every template, no branding",
     "dashboard.upgrade.chip.postai": "Unlimited PostAI",
-    "dashboard.upgrade.chip.postStudio": "PostStudio at a discount",
+    "dashboard.upgrade.chip.postStudio": "PostStudio (coming soon)",
     "dashboard.upgrade.chip.pdfReports": "PDF reports for partners",
     "dashboard.upgrade.chip.fixGuides": "Step-by-step fix guides",
     "dashboard.upgrade.chip.weeklyPlan": "A weekly Growth recap",
@@ -6923,7 +7036,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.free.planList.campaignHub.h": "Email, text and social campaigns",
     "dashboard.free.planList.campaignHub.l": "Send your offers to customers from one place.",
     "dashboard.free.planList.postStudio.h": "Your full website, built and hosted",
-    "dashboard.free.planList.postStudio.l": "PostStudio: a multi-page site on your own domain — $30/mo on its own, less with a plan.",
+    "dashboard.free.planList.postStudio.l": "PostStudio: a multi-page site on your own domain. Coming soon.",
     "dashboard.free.fixPlan.seeEverything": "See everything in each plan",
     "dashboard.free.fixPlan.hideEverything": "Hide the full list ↑",
     "dashboard.free.tile.repliesPostedForYou": "AI review replies posted for you (Beta)",
@@ -7131,7 +7244,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.upgrade.unlock.projectsWebsiteOne": "1 website fix worth about {points} points. Grow shows you how.",
     "dashboard.upgrade.unlock.projects": "{count} bigger projects worth about {points} points. Grow shows you how.",
     "dashboard.upgrade.unlock.tools": "Grow gives you a referral program and price check tools.",
-    "dashboard.upgrade.unlock.postStudio": "A full website we build and host for you — $30/mo on its own, or add it to Grow or Premium. PostStudio, coming soon.",
+    "dashboard.upgrade.unlock.postStudio": "A full website we build and host for you. PostStudio, coming soon.",
     "dashboard.upgrade.card.growTitle": "Fix it yourself, step by step",
     "dashboard.upgrade.card.premiumTitle": "We do the work for you",
     "dashboard.upgrade.card.hideGrow": "Hide the Grow card for 14 days",
@@ -9428,7 +9541,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.breakdown.action.compareHours": "Compare your hours",
     "dashboard.breakdown.action.doItForYou": "PostScore can do this for you",
     "dashboard.fix.backToScore": "Back to your score",
-    "dashboard.hoursCheck.staleTitle": "Your website and Google now match — re-scan to update your score",
+    "dashboard.hoursCheck.staleTitle": "Changed since your last scan · Re-scan to update",
     "dashboard.hoursCheck.differ": "{day}: website {website} · Google {google}",
     "dashboard.hoursCheck.more": "+{count} more",
     "dashboard.hoursCheck.profileAhead": "Your Business Profile already shows your website's hours, but Google Maps hasn't published them yet. Google may still be reviewing the change.",
@@ -9774,8 +9887,8 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.website.excludedPoints.one": "{count} pt not yet verified, not counted for or against.",
     "dashboard.website.excludedPoints.other": "{count} pts not yet verified, not counted for or against.",
     "dashboard.website.allVerified": "Every website check has real, verified data.",
-    "dashboard.actionPlan.weeklyReviewTarget.one": "Get {count}+ new review this week ({before} → {after}+)",
-    "dashboard.actionPlan.weeklyReviewTarget.other": "Get {count}+ new reviews this week ({before} → {after}+)",
+    "dashboard.actionPlan.weeklyReviewTarget.one": "Get {count} new review in the next 90 days ({before} → {after})",
+    "dashboard.actionPlan.weeklyReviewTarget.other": "Get {count} new reviews in the next 90 days ({before} → {after})",
     "dashboard.reports.recapDayCount.one": "{count} day",
     "dashboard.reports.recapDayCount.other": "{count} days",
 
@@ -9836,8 +9949,12 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.growth.moves.connectGbp.howTo":
       "Go to the Connect Google page and sign in with the Google account that manages this business's listing.",
     "dashboard.growth.checklist.sectionHeading": "Your weekly routine",
-    "dashboard.growth.checklist.note":
-      "PostScore can't see your Google posts or replies yet — you check these off yourself. They don't change your score.",
+    "dashboard.growth.checklist.noteAuto":
+      "PostScore checks off what it sent or can see on Google (posts, review replies, photos). Check the rest off yourself. They don't change your score.",
+    "dashboard.growth.checklist.noteNotConnected": "Not connected: check these off yourself. They don't change your score.",
+    "dashboard.growth.checklist.noteSelf": "You check these off yourself. They don't change your score.",
+    "dashboard.growth.checklist.sentLabel": "Sent from PostScore",
+    "dashboard.growth.checklist.seenLabel": "Seen on Google",
     "dashboard.growth.checklist.checkedByYouLabel": "Checked by you",
     "dashboard.growth.checklist.saveError": "Couldn't save — please try again.",
     "dashboard.growth.checklist.streak.one": "{count} week in a row",
@@ -12192,7 +12309,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.overview.recs.startHereLabel": "Start here:",
     "dashboard.overview.recs.startHere": "your Growth recap",
     "dashboard.overview.sinceCard.heading": "Since your last scan",
-    "dashboard.overview.sinceCard.lastScan": "Last scan · {date}",
+    "dashboard.overview.sinceCard.lastScan": "Previous scan · {date}",
     "dashboard.overview.sinceCard.now": "Now",
     "dashboard.overview.sinceCard.listingHeading": "On your Google listing",
     "dashboard.overview.sinceCard.checksHeading": "Checks that went up or down",
@@ -13163,6 +13280,58 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.searchDemand.tips.empty": "Tips appear once there are real search terms to work from.",
   },
   es: {
+    "content.actionPlan.title.website.info_consistency.hours": "Haga que el horario de su sitio coincida con Google",
+    "dashboard.rescan.nextAvailableDay": "Próximo análisis disponible el {date}",
+    "dashboard.overview.sinceCard.today": "Hoy",
+    "dashboard.overview.sinceCard.latest": "Último análisis · {date}",
+    "dashboard.settings.plans.value.comingSoon": "Próximamente",
+    "dashboard.fixPlan.title": "Plan de correcciones",
+    "dashboard.fixPlan.subtitle": "Cada corrección que sube su puntuación de PostScore, la más urgente primero.",
+    "dashboard.fixPlan.thisWeekLabel.one": "Esta semana · 1 corrección que puede terminar usted mismo, hoy",
+    "dashboard.fixPlan.thisWeekLabel.other": "Esta semana · {count} correcciones que puede terminar usted mismo, hoy",
+    "dashboard.fixPlan.everyFix": "Cuando termine todas las correcciones",
+    "dashboard.fixPlan.nowThisWeek": "{now} ahora · {week} esta semana",
+    "dashboard.fixPlan.fromLastScan": "De su último análisis · {date} · los puntos se confirman en su próximo análisis",
+    "dashboard.fixPlan.fromLastScanNoDate": "De su último análisis · los puntos se confirman en su próximo análisis",
+    "dashboard.fixPlan.doneTitle": "Correcciones de esta semana hechas ✓",
+    "dashboard.fixPlan.noneThisWeek": "No queda nada que pueda terminar esta semana",
+    "dashboard.fixPlan.next": "Siguiente: {fix} (+{points})",
+    "dashboard.fixPlan.scoreArrow": "Puntuación → {score}",
+    "dashboard.fixPlan.pts": "+{points} pts",
+    "dashboard.fixPlan.upToPts": "hasta +{points} pts",
+    "dashboard.fixPlan.priority.low": "Prioridad baja",
+    "dashboard.fixPlan.fixIt": "Corregir",
+    "dashboard.breakdown.action.moreReviewsInGrowth": "Consiga más reseñas (en Crecimiento)",
+    "dashboard.fixPlan.speedTitle": "Velocidad del sitio: aún sin puntuar",
+    "dashboard.fixPlan.speedUpTo": "Hasta {points} pts.",
+    "dashboard.fixPlan.footnote": "La puntuación acumulada suma los puntos de cada corrección desde arriba. Su puntuación real solo cambia cuando un análisis confirma la corrección.",
+    "dashboard.fixPlan.empty": "Nada que corregir. Su puntuación tiene todos los puntos que puede obtener por ahora.",
+    "dashboard.fixPlan.websiteRow": "Mejore su sitio web",
+    "dashboard.fixPlan.websiteSummary.one": "Haga esta corrección y su sitio web pasa de {from} a {to} pts (puntuación {score} → {after}).",
+    "dashboard.fixPlan.websiteSummary.other": "Haga estas {count} correcciones y su sitio web pasa de {from} a {to} pts (puntuación {score} → {after}).",
+    "dashboard.fixPlan.websiteSummary.none": "Nada que corregir aquí. Su sitio web tiene todos los puntos que puede obtener por ahora.",
+    "dashboard.fixPlan.websiteSummary.speed": "La velocidad se revisa en su próximo análisis.",
+    "dashboard.fixPlan.link": "Plan de correcciones →",
+    "content.actionPlan.reviewSplit.recent.title.one": "Consiga 1 reseña nueva en los próximos 90 días",
+    "content.actionPlan.reviewSplit.recent.title.other": "Consiga {count} reseñas nuevas en los próximos 90 días",
+    "content.actionPlan.reviewSplit.recent.why": "Las reseñas de los últimos 90 días son las que más cuentan: 3 o más dan todos los puntos por reseñas recientes, y cada una nueva también suma a su total.",
+    "content.actionPlan.reviewSplit.trust.title": "Llegue a {target} reseñas",
+    "content.actionPlan.reviewSplit.trust.target": "{from} → {target} reseñas: su calificación cuenta por completo a partir de {target}",
+    "content.actionPlan.reviewSplit.trust.why": "Los clientes confían más en una calificación respaldada por más reseñas, y su puntuación también: su calificación cuenta por completo al llegar a {target} reseñas.",
+    "content.actionPlan.reviewSplit.count.title": "Siga creciendo hacia {target} reseñas",
+    "content.actionPlan.reviewSplit.count.target": "{from} → {target} reseñas: todos los puntos por cantidad de reseñas a partir de {target}",
+    "content.actionPlan.reviewSplit.count.why": "La cantidad de reseñas sigue sumando puntos a medida que crece, hasta {target} reseñas. Llega al pedírsela a cada cliente satisfecho, mes tras mes.",
+    "content.actionPlan.reviewSplit.rating.title": "Mejore su calificación de estrellas",
+    "content.actionPlan.reviewSplit.rating.target": "Su calificación ahora: {rating}★. Los puntos completos llegan con una calificación cercana a 4.9★.",
+    "dashboard.fixPlan.when.this_week": "Esta semana",
+    "dashboard.fixPlan.when.weeks": "Toma algunas semanas",
+    "dashboard.fixPlan.when.months": "Toma meses",
+    "dashboard.overview.someFixesTakeMonths": "Algunas correcciones toman meses (las reseñas crecen con el tiempo).",
+    "dashboard.breakdown.action.replyInReviews": "Responda en Reseñas",
+    "dashboard.googleTab.w.approveTasks.one": "Aprobar 1 tarea",
+    "dashboard.googleTab.w.approveTasks.other": "Aprobar {count} tareas",
+    "dashboard.googleTab.w.approveItems.one": "1 elemento se enviará a Google",
+    "dashboard.googleTab.w.approveItems.other": "{count} elementos se enviarán a Google",
     "content.checks.completeness.website_link.explanation.parked": "El enlace del sitio web de su Perfil de Empresa en Google lleva a {url}, que ahora es un dominio estacionado (“próximamente”), no su sitio web. Es posible que otra persona controle ahora esa dirección. Cambie el enlace en Google por el de su sitio real.",
     "content.checks.website.has_website.advice.listingParked": "El enlace del sitio web de su Perfil de Empresa en Google lleva a un dominio estacionado (“próximamente”), no a su sitio web. Cámbielo por el de su sitio real.",
     "growth.fix.parkedListingLink.action": "El enlace del sitio web de su Perfil de Empresa en Google lleva a un dominio estacionado (“próximamente”), no a su sitio web. Cámbielo por el de su sitio real.",
@@ -13279,7 +13448,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.settings.plans.bullet.premium.insights": "Sus resultados de Google cada mes: llamadas, indicaciones, clics a su sitio web y lo que la gente buscó (con Google conectado)",
     "dashboard.settings.plans.bullet.premium.channels": "Campañas por correo, mensaje de texto y redes sociales (próximamente)",
     "dashboard.settings.plans.bullet.premium.designs": "Todas las herramientas de diseño, sin la marca PostScore",
-    "dashboard.settings.plans.bullet.premium.postai": "PostAI ilimitado y sitios web de PostStudio con descuento (PostStudio próximamente)",
+    "dashboard.settings.plans.bullet.premium.postai": "PostAI ilimitado y PostStudio (próximamente)",
     "dashboard.settings.plans.bullet.premium.weeklyPost": "La publicación de Google de esta semana y las respuestas a las preguntas de sus clientes, redactadas para usted; toque Aprobar todo (Beta)",
     "dashboard.settings.plans.bullet.premium.weeklyPostLive": "La publicación de Google de esta semana y las respuestas a las preguntas de sus clientes, redactadas para usted; toque Aprobar todo",
     "dashboard.settings.plans.bullet.premium.monthlyEmail": "Un informe mensual por correo electrónico",
@@ -13315,7 +13484,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.settings.plans.value.basic": "Básico",
     "dashboard.settings.plans.value.fullNoBranding": "Completo, sin marca",
     "dashboard.settings.plans.value.starterSite": "Sitio inicial",
-    "dashboard.settings.plans.value.starterDiscount": "Sitio inicial + descuento en PostStudio",
+    "dashboard.settings.plans.value.starterDiscount": "Sitio inicial + PostStudio (próximamente)",
     "dashboard.settings.plans.value.starterIncluded": "Sitio inicial + PostStudio incluido",
     "dashboard.settings.plans.value.monthlyLimit": "Límite mensual",
     "dashboard.settings.plans.value.unlimited": "Ilimitado",
@@ -13574,7 +13743,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.upgrade.chip.campaignChannels": "Campañas por correo, texto y redes",
     "dashboard.upgrade.chip.designs": "Todas las plantillas, sin marca",
     "dashboard.upgrade.chip.postai": "PostAI ilimitado",
-    "dashboard.upgrade.chip.postStudio": "PostStudio con descuento",
+    "dashboard.upgrade.chip.postStudio": "PostStudio (próximamente)",
     "dashboard.upgrade.chip.pdfReports": "Informes en PDF para socios",
     "dashboard.upgrade.chip.fixGuides": "Guías de arreglos paso a paso",
     "dashboard.upgrade.chip.weeklyPlan": "Un Resumen de crecimiento semanal",
@@ -13676,7 +13845,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.free.planList.campaignHub.h": "Campañas por correo, texto y redes sociales",
     "dashboard.free.planList.campaignHub.l": "Envíe sus ofertas a sus clientes desde un solo lugar.",
     "dashboard.free.planList.postStudio.h": "Su sitio web completo, creado y alojado",
-    "dashboard.free.planList.postStudio.l": "PostStudio: un sitio de varias páginas con su propio dominio — $30/mes por sí solo, menos con un plan.",
+    "dashboard.free.planList.postStudio.l": "PostStudio: un sitio de varias páginas con su propio dominio. Próximamente.",
     "dashboard.free.fixPlan.seeEverything": "Ver todo lo que incluye cada plan",
     "dashboard.free.fixPlan.hideEverything": "Ocultar la lista completa ↑",
     "dashboard.free.tile.repliesPostedForYou": "Respuestas a reseñas con IA que publicamos por usted (Beta)",
@@ -13884,7 +14053,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.upgrade.unlock.projectsWebsiteOne": "1 arreglo del sitio web que vale unos {points} puntos. Grow le muestra cómo.",
     "dashboard.upgrade.unlock.projects": "{count} proyectos más grandes que valen unos {points} puntos. Grow le muestra cómo.",
     "dashboard.upgrade.unlock.tools": "Grow le da un programa de referidos y herramientas para revisar precios.",
-    "dashboard.upgrade.unlock.postStudio": "Un sitio web completo que construimos y alojamos por usted: $30/mes por sí solo, o agréguelo a Grow o Premium. PostStudio, próximamente.",
+    "dashboard.upgrade.unlock.postStudio": "Un sitio web completo que construimos y alojamos por usted. PostStudio, próximamente.",
     "dashboard.upgrade.card.growTitle": "Arréglelo usted mismo, paso a paso",
     "dashboard.upgrade.card.premiumTitle": "Nosotros hacemos el trabajo por usted",
     "dashboard.upgrade.card.hideGrow": "Ocultar la tarjeta de Grow por 14 días",
@@ -16072,7 +16241,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.breakdown.action.compareHours": "Comparar sus horarios",
     "dashboard.breakdown.action.doItForYou": "PostScore puede hacerlo por usted",
     "dashboard.fix.backToScore": "Volver a su puntuación",
-    "dashboard.hoursCheck.staleTitle": "Su sitio web y Google ya coinciden; vuelva a analizar para actualizar su puntuación",
+    "dashboard.hoursCheck.staleTitle": "Cambió desde su último análisis · Vuelva a analizar para actualizar",
     "dashboard.hoursCheck.differ": "{day}: sitio web {website} · Google {google}",
     "dashboard.hoursCheck.more": "+{count} más",
     "dashboard.hoursCheck.profileAhead": "Su Perfil de Empresa ya muestra el horario de su sitio web, pero Google Maps aún no lo ha publicado. Es posible que Google todavía esté revisando el cambio.",
@@ -16412,8 +16581,8 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.website.excludedPoints.one": "{count} punto aún sin verificar, no se cuenta ni a favor ni en contra.",
     "dashboard.website.excludedPoints.other": "{count} puntos aún sin verificar, no se cuentan ni a favor ni en contra.",
     "dashboard.website.allVerified": "Todas las comprobaciones del sitio web tienen datos reales y verificados.",
-    "dashboard.actionPlan.weeklyReviewTarget.one": "Consiga {count}+ reseña nueva esta semana ({before} → {after}+)",
-    "dashboard.actionPlan.weeklyReviewTarget.other": "Consiga {count}+ reseñas nuevas esta semana ({before} → {after}+)",
+    "dashboard.actionPlan.weeklyReviewTarget.one": "Consiga {count} reseña nueva en los próximos 90 días ({before} → {after})",
+    "dashboard.actionPlan.weeklyReviewTarget.other": "Consiga {count} reseñas nuevas en los próximos 90 días ({before} → {after})",
     "dashboard.reports.recapDayCount.one": "{count} día",
     "dashboard.reports.recapDayCount.other": "{count} días",
 
@@ -16473,8 +16642,12 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.growth.moves.connectGbp.howTo":
       "Vaya a la página de Conectar Google e inicie sesión con la cuenta de Google que administra la ficha de este negocio.",
     "dashboard.growth.checklist.sectionHeading": "Su rutina semanal",
-    "dashboard.growth.checklist.note":
-      "PostScore todavía no puede ver sus publicaciones ni respuestas de Google: usted mismo las marca. No cambian su puntuación.",
+    "dashboard.growth.checklist.noteAuto":
+      "PostScore marca lo que envió o puede ver en Google (publicaciones, respuestas a reseñas, fotos). Marque el resto usted mismo. No cambian su puntuación.",
+    "dashboard.growth.checklist.noteNotConnected": "Sin conexión: márquelas usted mismo. No cambian su puntuación.",
+    "dashboard.growth.checklist.noteSelf": "Usted mismo las marca. No cambian su puntuación.",
+    "dashboard.growth.checklist.sentLabel": "Enviado desde PostScore",
+    "dashboard.growth.checklist.seenLabel": "Visto en Google",
     "dashboard.growth.checklist.checkedByYouLabel": "Marcado por usted",
     "dashboard.growth.checklist.saveError": "No se pudo guardar. Inténtelo de nuevo.",
     "dashboard.growth.checklist.streak.one": "{count} semana seguida",
@@ -19048,7 +19221,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.overview.recs.startHereLabel": "Empiece aquí:",
     "dashboard.overview.recs.startHere": "su Resumen de crecimiento",
     "dashboard.overview.sinceCard.heading": "Desde su último análisis",
-    "dashboard.overview.sinceCard.lastScan": "Último análisis · {date}",
+    "dashboard.overview.sinceCard.lastScan": "Análisis anterior · {date}",
     "dashboard.overview.sinceCard.now": "Ahora",
     "dashboard.overview.sinceCard.listingHeading": "En su ficha de Google",
     "dashboard.overview.sinceCard.checksHeading": "Revisiones que subieron o bajaron",

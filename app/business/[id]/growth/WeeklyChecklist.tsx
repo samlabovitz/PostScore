@@ -9,14 +9,15 @@ import { Card } from "@/components/ui/Card";
 import { SectionHeading } from "@/components/ui/SectionHeading";
 import { LINK_PILL_CLASS } from "@/components/ui/linkPill";
 import { setWeeklyCheckItem } from "@/app/actions/weeklyChecklist";
-import { resolveToggleOutcome, type WeeklyChecklistItem, type WeeklyChecklistItemId } from "@/lib/weeklyChecklist";
+import { resolveToggleOutcome, type AutoCheckSource, type WeeklyChecklistItem, type WeeklyChecklistItemId } from "@/lib/weeklyChecklist";
 import { t, tPlural, useLocale } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import { WeekPost } from "@/components/gbp/WeekPost";
 
 /**
- * "Your weekly routine" — five real Google habits PostScore has no way
- * to verify itself, so the owner checks them off by hand. Never earns
+ * "Your weekly routine" — five real Google habits the owner checks off by
+ * hand; on connected Premium, PostScore checks the ones it sent or can see
+ * on Google itself (app/actions/weeklyChecklist.ts loadAutoChecks). Never earns
  * points, never appears in any projected score (see lib/weeklyChecklist.ts
  * and app/actions/weeklyChecklist.ts's own docs for why). Checking an
  * item optimistically updates, then reconciles with the server's real
@@ -78,7 +79,13 @@ export function WeeklyChecklist({
   initialStreakWeeks,
   weekStart,
   postFlow = null,
+  auto = {},
+  notice = "self",
 }: {
+  /** This week's items PostScore checked itself — shown checked, with who checked them, and not untickable. */
+  auto?: Partial<Record<WeeklyChecklistItemId, AutoCheckSource>>;
+  /** The note under the list: "auto" (connected Premium), "notConnected", or "self". */
+  notice?: "auto" | "notConnected" | "self";
   businessId: string;
   /** Day 23E: "Post an update or offer to Google" opens the same post flow as the Google Profile tab (Premium: publish in one click; Grow: the draft to copy). Null: Free. */
   postFlow?: { premium: boolean } | null;
@@ -98,7 +105,8 @@ export function WeeklyChecklist({
   const ringRef = useRef<HTMLDivElement>(null);
 
   async function toggle(itemId: WeeklyChecklistItemId) {
-    if (pendingId) return;
+    // PostScore already checked it (sent or seen this week): nothing to undo.
+    if (pendingId || auto[itemId]) return;
     const nextChecked = !checkedIds.has(itemId);
     const beforeCheckedItemIds = Array.from(checkedIds);
 
@@ -176,7 +184,7 @@ export function WeeklyChecklist({
                     type="checkbox"
                     checked={checked}
                     onChange={() => toggle(item.id)}
-                    disabled={pendingId === item.id}
+                    disabled={pendingId === item.id || !!auto[item.id]}
                     className="peer sr-only"
                   />
                   <span
@@ -194,7 +202,11 @@ export function WeeklyChecklist({
                   <span className="flex min-w-0 flex-col gap-0.5">
                     <span className={cn("text-[14px] font-medium text-ink", checked && "text-ink-mute line-through")}>{item.title}</span>
                     <span className="text-[12.5px] leading-snug text-ink-soft">{item.howTo}</span>
-                    {checked && <span className="text-[11.5px] text-ink-mute">{t(locale, "dashboard.growth.checklist.checkedByYouLabel")}</span>}
+                    {checked && (
+                      <span className="text-[11.5px] text-ink-mute" data-testid={auto[item.id] ? `routine-auto-${item.id}` : undefined}>
+                        {t(locale, auto[item.id] === "sent" ? "dashboard.growth.checklist.sentLabel" : auto[item.id] === "seen" ? "dashboard.growth.checklist.seenLabel" : "dashboard.growth.checklist.checkedByYouLabel")}
+                      </span>
+                    )}
                     {errorItemId === item.id && <span className="text-[12px] text-red">{t(locale, "dashboard.growth.checklist.saveError")}</span>}
                     {/* A link inside the label never toggles the checkbox. */}
                     {link && (
@@ -226,7 +238,9 @@ export function WeeklyChecklist({
             );
           })}
         </ul>
-        <p className="mt-4 border-t border-paper-line pt-3 text-[12px] text-ink-mute">{t(locale, "dashboard.growth.checklist.note")}</p>
+        <p className="mt-4 border-t border-paper-line pt-3 text-[12px] text-ink-mute" data-testid="routine-note" data-notice={notice}>
+          {t(locale, notice === "auto" ? "dashboard.growth.checklist.noteAuto" : notice === "notConnected" ? "dashboard.growth.checklist.noteNotConnected" : "dashboard.growth.checklist.noteSelf")}
+        </p>
       </Card>
     </div>
   );

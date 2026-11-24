@@ -205,3 +205,55 @@ export function resolveToggleOutcome(
   }
   return { kind: "reverted", checkedItemIds: beforeCheckedItemIds };
 }
+
+// ---------------------------------------------------------------------------
+// Checked by PostScore (Nov 22): connected Premium businesses — what
+// PostScore sent (posts, review replies, photos; practice actions never
+// count) or can see on Google (the newest post and photo), week by week.
+// Never written to weekly_checks; merged into the state on every read.
+// ---------------------------------------------------------------------------
+
+/** Who checked an item: PostScore sent it, or PostScore saw it on Google. */
+export type AutoCheckSource = "sent" | "seen";
+export interface AutoCheck {
+  week_start: string;
+  item_id: WeeklyChecklistItemId;
+  source: AutoCheckSource;
+}
+
+const SENT_ITEM: Partial<Record<string, WeeklyChecklistItemId>> = { posts: "post_update", replies: "reply_reviews", photos: "add_photo" };
+
+/** The weeks each item was done, from PostScore's own log (`events`: one
+ * per day and kind, dates in the business's time zone) and the newest post
+ * and photo read from Google. "Sent" wins over "seen" in the same week. */
+export function autoChecks(input: { events: Array<{ date: string; kind: string }>; postsLastAt: string | null; photosNewestAt: string | null; timeZone: string }): AutoCheck[] {
+  const out = new Map<string, AutoCheck>();
+  const add = (week_start: string, item_id: WeeklyChecklistItemId, source: AutoCheckSource) => {
+    const key = `${week_start}|${item_id}`;
+    if (out.get(key)?.source === "sent") return;
+    out.set(key, { week_start, item_id, source });
+  };
+  for (const e of input.events) {
+    const item = SENT_ITEM[e.kind];
+    // A calendar date: its own Monday, no time zone shift.
+    if (item && /^\d{4}-\d{2}-\d{2}$/.test(e.date)) add(weekStartFor(new Date(`${e.date}T12:00:00Z`), "UTC"), item, "sent");
+  }
+  if (input.postsLastAt) add(weekStartFor(new Date(input.postsLastAt), input.timeZone), "post_update", "seen");
+  if (input.photosNewestAt) add(weekStartFor(new Date(input.photosNewestAt), input.timeZone), "add_photo", "seen");
+  return Array.from(out.values());
+}
+
+/** The state with PostScore's own checks merged in: they count toward
+ * this week's progress and the streak like the owner's own check-offs. */
+export function buildWeeklyChecklistStateWithAuto(
+  rows: WeeklyCheckRow[],
+  auto: AutoCheck[],
+  now: Date = new Date(),
+  timezone: string = WEEKLY_CHECKLIST_TIMEZONE
+): WeeklyChecklistState & { auto: Partial<Record<WeeklyChecklistItemId, AutoCheckSource>> } {
+  const merged = [...rows, ...auto.map((a) => ({ week_start: a.week_start, item_id: a.item_id }))];
+  const state = buildWeeklyChecklistState(merged, now, timezone);
+  const mine: Partial<Record<WeeklyChecklistItemId, AutoCheckSource>> = {};
+  for (const a of auto) if (a.week_start === state.weekStart) mine[a.item_id] = a.source;
+  return { ...state, auto: mine };
+}

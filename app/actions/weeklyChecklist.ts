@@ -4,8 +4,11 @@ import { requestCache } from "@/lib/requestCache";
 import { createClient } from "@/lib/supabase/server";
 import { businessTimeZone } from "@/lib/businessTimeZone";
 import {
-  buildWeeklyChecklistState,
+  autoChecks,
+  buildWeeklyChecklistStateWithAuto,
   weekStartFor,
+  type AutoCheck,
+  type AutoCheckSource,
   type WeeklyChecklistItemId,
   type WeeklyCheckRow,
 } from "@/lib/weeklyChecklist";
@@ -17,15 +20,39 @@ export interface WeeklyChecklistStateDTO {
   weekStart: string;
   checkedItemIds: WeeklyChecklistItemId[];
   streakWeeks: number;
+  /** This week's items PostScore checked itself: sent from PostScore, or seen on Google. */
+  auto: Partial<Record<WeeklyChecklistItemId, AutoCheckSource>>;
+  /** The note under the list: PostScore checks what it can ("auto", connected
+   * Premium), Google isn't connected, or the owner checks them all ("self"). */
+  notice: "auto" | "notConnected" | "self";
 }
 
-function toDTO(rows: WeeklyCheckRow[], timeZone: string): WeeklyChecklistStateDTO {
-  const state = buildWeeklyChecklistState(rows, new Date(), timeZone);
+function toDTO(rows: WeeklyCheckRow[], timeZone: string, auto: AutoCheck[], notice: WeeklyChecklistStateDTO["notice"]): WeeklyChecklistStateDTO {
+  const state = buildWeeklyChecklistStateWithAuto(rows, auto, new Date(), timeZone);
   return {
     weekStart: state.weekStart,
     checkedItemIds: Array.from(state.checkedItemIds),
     streakWeeks: state.streakWeeks,
+    auto: state.auto,
+    notice,
   };
+}
+
+/** Connected Premium: what PostScore sent (its own log) or saw on Google
+ * (the stored post/photo summary) — database reads only, no Google calls.
+ * Anyone else: nothing, and the note says why. */
+async function loadAutoChecks(supabase: ReturnType<typeof createClient>, businessId: string, timeZone: string): Promise<{ auto: AutoCheck[]; notice: WeeklyChecklistStateDTO["notice"] }> {
+  const [{ getGbpConnectionStatus }, { getPlan, hasPremium }] = await Promise.all([import("@/app/actions/gbp"), import("@/lib/premium")]);
+  const [gbp, plan] = await Promise.all([getGbpConnectionStatus(businessId), getPlan()]);
+  const connected = gbp.status === "ok" && gbp.connected;
+  if (!connected) return { auto: [], notice: "notConnected" };
+  if (!hasPremium(plan)) return { auto: [], notice: "self" };
+  const [{ loadActionEvents }, { loadPhotosAndPosts }] = await Promise.all([import("@/lib/googleActions.server"), import("@/lib/gbpMediaPosts.server")]);
+  const [events, media] = await Promise.all([
+    loadActionEvents(supabase, businessId, { timeZone, practice: false }).catch(() => []),
+    loadPhotosAndPosts(supabase, businessId).catch(() => null),
+  ]);
+  return { auto: autoChecks({ events, postsLastAt: media?.posts?.lastAt ?? null, photosNewestAt: media?.photos?.newestAt ?? null, timeZone }), notice: "auto" };
 }
 
 export type GetWeeklyChecklistStateResult =
@@ -65,7 +92,8 @@ async function getWeeklyChecklistStateUncached(businessId: string): Promise<GetW
     return { status: "error", message: error.message };
   }
 
-  return { status: "ok", state: toDTO((data ?? []) as WeeklyCheckRow[], timeZone) };
+  const { auto, notice } = await loadAutoChecks(supabase, businessId, timeZone);
+  return { status: "ok", state: toDTO((data ?? []) as WeeklyCheckRow[], timeZone, auto, notice) };
 }
 
 export type SetWeeklyCheckItemResult =
