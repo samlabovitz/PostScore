@@ -565,7 +565,8 @@ function ListingRowView({ row, props, page = null, live, open, onToggle, prefill
           ? // The scan's photo count; the newest photo's date only comes with the connection.
             { ...base, note: t(locale, "dashboard.googlePages.listing.photosNote") }
           : page && row.id === "hours"
-            ? { ...base, value: localizeHours(base.value, locale) }
+            ? // Google matches the website now: the scan is out of date — never "differs".
+              { ...base, value: localizeHours(base.value, locale), ...(props.hoursMismatch && props.hoursMatchNow ? { note: t(locale, "dashboard.hoursCheck.staleTitle") } : {}) }
             : base;
   // Booking: the page's read already has it (meta); only an unread row waits for the live read.
   const loading = !unknown && (row.id === "description" || (row.id === "booking" && !row.meta)) && live[row.id].kind === "loading";
@@ -577,7 +578,9 @@ function ListingRowView({ row, props, page = null, live, open, onToggle, prefill
   const primaryCls = cn(actionBase, "border-ink bg-ink text-white");
   // Hours: "Compare" (the website and Google show different hours) beside "Edit".
   const [compareOpen, setCompareOpen] = useState(false);
-  const compare = row.id === "hours" && props.hoursMismatch === true && page?.mode !== "locked";
+  const compare = row.id === "hours" && props.hoursMismatch === true && props.hoursMatchNow !== true;
+  // Free: "Compare" shows both versions read-only; the steps stay locked.
+  const compareReadOnly = page?.mode === "locked";
   useEffect(() => {
     if (compareRequest > 0 && compare) setCompareOpen(true);
   }, [compareRequest, compare]);
@@ -663,7 +666,12 @@ function ListingRowView({ row, props, page = null, live, open, onToggle, prefill
       {/* "Your website and Google listing show different hours": the shared panel, from the row's "Compare". */}
       {compare && compareOpen && !open && (
         <div className="px-3 pb-2.5 sm:pl-[51px]" data-testid="listing-compare-hours">
-          <HoursComparePanel businessId={props.businessId} onTab />
+          <HoursComparePanel businessId={props.businessId} onTab readOnly={compareReadOnly} lastScanAt={props.lastScanAt} />
+          {compareReadOnly && (
+            <div className="mt-2">
+              <LockedSteps />
+            </div>
+          )}
         </div>
       )}
       {/* Day 23B: a PostScore change to this field is live — save it as the confirmed details? (asked once) */}

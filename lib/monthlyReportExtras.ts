@@ -12,6 +12,7 @@ import {
   applyGrowthWebsiteRules,
   buildWebsiteBanner,
   GOOGLE_MISMATCH_CHECK_ID,
+  REVIEW_SPLIT_IDS,
   type ActionPlanTask,
 } from "@/lib/actionPlan";
 import { headToHead, reportStanding } from "@/lib/competitorComparison";
@@ -80,7 +81,8 @@ export function reportTopTask(tasks: ActionPlanTask[], input: BusinessScoringInp
   for (const task of applyGrowthWebsiteRules(tasks, input, locale)) {
     if (task.action.trim() === fallback) continue;
     const action = task.checkId === GOOGLE_MISMATCH_CHECK_ID ? mismatchText(input, locale) ?? task.action : task.action;
-    return { checkId: task.checkId, label: task.label, action };
+    // Day 25B step 3: a review row by its own name ("Get 3 new reviews in the next 90 days"), never "Reviews".
+    return { checkId: task.checkId, label: REVIEW_SPLIT_IDS.includes(task.checkId) ? (task.title ?? task.label) : task.label, action };
   }
   return null;
 }

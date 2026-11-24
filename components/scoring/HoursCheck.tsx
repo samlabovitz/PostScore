@@ -11,7 +11,8 @@ import { FIX_BUTTON_CLASS } from "@/components/scoring/FixButton";
 import { formatTime, type DayHours } from "@/lib/gbpProfileEdits";
 import { dayName } from "@/lib/hoursEditor";
 import type { HoursCheckState } from "@/lib/hoursCheck";
-import { t, useLocale, type Locale, type MessageKey } from "@/lib/i18n";
+import { formatShortDate, t, useLocale, useTimeZone, type Locale, type MessageKey } from "@/lib/i18n";
+import { rescanAvailability } from "@/lib/rescanPolicy";
 
 const K = (key: string) => `dashboard.hoursCheck.${key}` as MessageKey;
 export const HOURS_CHECK_DAYS_SHOWN = 3;
@@ -42,9 +43,19 @@ export function HoursDiffLines({ state }: { state: Extract<HoursCheckState, { ki
   );
 }
 
-/** The re-scan: the Overview's own "Re-scan now" when it's on the page, else the Overview at that button. */
-export function RescanNowButton({ businessId }: { businessId: string }) {
+/** The re-scan: the Overview's own "Re-scan now" when it's on the page, else the Overview at that button.
+ * Day 25B step 3: before the next re-scan opens (24 hours after the last scan), "Next re-scan
+ * available Nov 24" instead — never a button that can't work yet. */
+export function RescanNowButton({ businessId, lastScanAt }: { businessId: string; lastScanAt?: string | null }) {
   const locale = useLocale();
+  const timeZone = useTimeZone();
+  const availability = lastScanAt ? rescanAvailability(lastScanAt, new Date()) : null;
+  if (availability && !availability.allowed && availability.nextAvailableAt)
+    return (
+      <span data-testid="rescan-next" className="text-[12.5px] font-medium text-ink-soft">
+        {t(locale, "dashboard.rescan.nextAvailableDay", { date: formatShortDate(availability.nextAvailableAt, locale, timeZone).replace(/,? \d{4}$/, "") })}
+      </span>
+    );
   return (
     <Link
       href={`/business/${businessId}#${RESCAN_BUTTON_ID}`}
@@ -64,3 +75,4 @@ export function RescanNowButton({ businessId }: { businessId: string }) {
     </Link>
   );
 }
+

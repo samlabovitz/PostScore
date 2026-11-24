@@ -73,6 +73,7 @@ export function BusinessScoreView({
   profileTools,
   now,
   recommendations,
+  someTakeMonths = false,
   websiteFixCount,
   websiteLookAtCount = 0,
   linkOptions,
@@ -114,6 +115,8 @@ export function BusinessScoreView({
    * the card shows the first TOP_RECOMMENDATIONS; Biggest boost reads them
    * all. Null when the plan couldn't be loaded. */
   recommendations: Recommendation[] | null;
+  /** Some fixes in the projection take months (reviews growing toward 40 or 150; they're only on Fix plan). */
+  someTakeMonths?: boolean;
   /** The Website page's own fix count (lib/websiteFixes.ts). */
   websiteFixCount: number;
   websiteLookAtCount?: number;
@@ -328,6 +331,8 @@ export function BusinessScoreView({
           // never disagree; never a decorative number.
           // Points only, from every open recommendation (not just the top 3).
           biggestBoost={biggestBoostFrom(withoutStaleHours(recommendations, hoursCheck), result.suggestions, locale)}
+          // Day 25B step 3: the projection includes review growth that takes months.
+          someTakeMonths={someTakeMonths}
           onHold={scoreOnHold(business.business_status)}
         />
         <RescanMessages state={rescan.state} />
@@ -339,7 +344,7 @@ export function BusinessScoreView({
           breakdown → "More customers" → the rest. PostAI is the "Ask
           PostAI" button on every page (components/assistant/PostAIDock.tsx). */}
       <div data-testid="overview-recs-row" className="grid grid-cols-1 gap-4 nav:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]">
-        <TopRecommendations businessId={businessId} recommendations={recommendations ?? null} limit={TOP_RECOMMENDATIONS} detailsMismatch={detailsMismatch} hoursCheck={hoursCheck} />
+        <TopRecommendations businessId={businessId} recommendations={recommendations ?? null} limit={TOP_RECOMMENDATIONS} detailsMismatch={detailsMismatch} hoursCheck={hoursCheck} lastScanAt={lastScanAt} />
         <SinceLastScanCard businessId={businessId} snapshots={recentSnapshots} liveBreakdown={breakdown} gbpConnected={gbpConnected} now={{ rating: business.rating, reviewCount: business.review_count }} />
       </div>
 

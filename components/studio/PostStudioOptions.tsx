@@ -11,7 +11,7 @@
 import { IconCheck, IconCrown, IconListDetails, IconPalette, IconWorldWww } from "@tabler/icons-react";
 import { t, useLocale, type MessageKey } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
-import { POSTSTUDIO_PRICES, postStudioOptionFor } from "@/lib/postStudio";
+import { POSTSTUDIO_ON_SALE, POSTSTUDIO_PRICES, postStudioOptionFor } from "@/lib/postStudio";
 import type { Plan } from "@/lib/plan";
 
 const K = (key: string) => `dashboard.postStudioPlans.${key}` as MessageKey;
@@ -19,6 +19,8 @@ const PAID = ["solo", "grow", "premium"] as const;
 
 export function PostStudioOptions({ plan, className }: { plan: Plan; className?: string }) {
   const locale = useLocale();
+  // Not on sale yet: no prices anywhere (lib/postStudio.ts).
+  if (!POSTSTUDIO_ON_SALE) return null;
   const current = postStudioOptionFor(plan);
   return (
     <div className={cn("flex flex-col gap-2.5", className)} data-testid="poststudio-options">

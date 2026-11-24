@@ -68,11 +68,22 @@ export async function openHoursCompare(businessId: string): Promise<OpenHoursCom
     // Not connected / not Premium: the last scan's words below.
   }
 
+  // Not connected: Google's week as read now (one read per visit, lib/ownerListing.server.ts),
+  // so both columns use the same days, "Closed"/"Cerrado" and time format;
+  // Google's own lines only when the week can't be read from it.
+  let googleLines: string[] | null = null;
+  if (!google) {
+    const live = (await (await import("@/lib/ownerListing.server")).withLiveListingFor(db, businessId, row)) as typeof row & { opening_hours_periods?: unknown };
+    const { weekFromPlacesPeriods } = await import("@/lib/hoursEditor");
+    google = weekFromPlacesPeriods((live.opening_hours_periods as import("@/lib/google/places").OpeningHoursPeriod[] | null) ?? null);
+    if (!google) googleLines = live.opening_hours ?? null;
+  }
+
   return {
     status: "ok",
     google,
-    // Not connected: Google's lines as read now (one read per visit, lib/ownerListing.server.ts).
-    googleLines: google ? null : ((await (await import("@/lib/ownerListing.server")).withLiveListingFor(db, businessId, row)).opening_hours ?? null),
+    googleLines,
+    // Google's week was read now (Business Profile or the listing), never the scan's.
     live: google !== null,
     site,
     builder: builderId ? { id: builderId, name: WEBSITE_BUILDER_NAMES[builderId] } : null,

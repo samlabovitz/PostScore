@@ -283,8 +283,9 @@ describe("buildAssistantContextText", () => {
     // integer it didn't actually earn.
     expect(text).toContain("14.4 of 34.0 points");
     expect(text).toContain("Review count: 7.0/18 pts");
-    expect(text).toContain("Uses HTTPS (+6.0 pts");
-    expect(text).toContain("Photos on listing (+6.0 pts");
+    // Day 25B step 3: a fix's points read one decimal under 10 (6.0000… → "+6").
+    expect(text).toContain("Uses HTTPS (+6 pts");
+    expect(text).toContain("Photos on listing (+6 pts");
   });
 
   test("prints a whole-number points value bare, with no trailing .0", () => {
@@ -694,11 +695,19 @@ describe("buildAssistantContextText", () => {
       },
     ]) {
       const text = buildAssistantContextText(context);
-      expect(text).toContain(
-        "PostScore cannot see whether they actually posted an update, replied to a review, or added a photo."
-      );
-      expect(text).toContain('NOT that they haven\'t really done it');
+      expect(text).toContain("These are the owner's own checkmarks, except items marked \"checked by PostScore\"");
+      expect(text).toContain("NOT that the owner hasn't really done it");
     }
+  });
+
+  test("Nov 22: items PostScore checked itself (connected Premium) say so — sent from PostScore or seen on Google, never 'you checked off'", () => {
+    const items = BASE_CONTEXT.weeklyRoutine.items.map((item) =>
+      item.id === "post_update" ? { ...item, checkedThisWeek: true, checkedBy: "sent" as const } : item.id === "add_photo" ? { ...item, checkedThisWeek: true, checkedBy: "seen" as const } : item
+    );
+    const text = buildAssistantContextText({ ...BASE_CONTEXT, weeklyRoutine: { items, streakWeeks: 0 } });
+    expect(text).toMatch(/: checked by PostScore this week \(sent from PostScore\)\./);
+    expect(text).toMatch(/: checked by PostScore this week \(seen on Google\)\./);
+    expect(ASSISTANT_SYSTEM_RULES).toContain('an item marked "checked by PostScore" — say exactly that');
   });
 
   test("states the real photo count plainly when it's below Google's 10-photo API cap", () => {
@@ -1598,7 +1607,7 @@ describe("Day 4 Step 2f — PostAI points website fixes to the Website page", ()
       websiteSummary: { kind: "improve", score: 76, earned: 23, of: 30, improvements: 5, points: 2.4 },
     });
     expect(text).toContain("WEBSITE SUMMARY: the website scores 23/30");
-    expect(text).toContain("5 improvement(s) available (up to about +2 pts");
+    expect(text).toContain("5 improvement(s) available (up to about +2.4 pts");
     expect(text).toContain("point the owner there instead of listing steps");
   });
 

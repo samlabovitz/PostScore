@@ -450,10 +450,10 @@ function buildMovementSummary(
 }
 
 /** The real, already action-plan-merged (review cards combined into
- * one "reviews" card — see mergeReviewTasks in lib/actionPlan.ts)
+ * one "reviews" card — see splitReviewTasks in lib/actionPlan.ts)
  * biggest-opportunity task, as computed by the SAME real pipeline the
  * Action Plan/Growth pages use — the caller builds this from
- * buildActionPlan + mergeReviewTasks, never a separately re-derived
+ * buildActionPlan + splitReviewTasks, never a separately re-derived
  * ranking. Only the fields buildFocus actually needs to phrase the
  * pointer; null when there are no open tasks at all. */
 export interface FocusTopActionPlanTask {
@@ -510,7 +510,7 @@ const EMPTY_FOCUS_INPUTS: MonthlyReportFocusInputs = {
 };
 
 /** The real, already-merged top action-plan task — at most ONE pointer,
- * (mergeReviewTasks already combined rating/review_count into one real
+ * (splitReviewTasks already combined rating/review_count into one real
  * card upstream; since v1.12.0 recency and replies are their own steps,
  * and this is still only ever ONE pointer). */
 function scoreGapPointer(topTask: FocusTopActionPlanTask | null, locale: Locale): FocusPointer | null {

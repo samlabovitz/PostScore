@@ -1,3 +1,4 @@
+import { displayPoints } from "@/lib/pointRange";
 import { describe, expect, test } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 import { LocaleProvider } from "@/lib/i18n";
@@ -39,13 +40,13 @@ describe("one points estimate everywhere", () => {
     // PostAI's "Biggest boost" projection.
     const facts = buildPostaiFacts(breakdown, { rating: 4.6, reviewCount: 40, hasWebsite: true, rank: null, nearbyReviewAverage: null, plan: "grow", biggestBoost: suggestions[0] });
     const boost = facts.projections.find((p) => p.where === 'Overview "Biggest boost"')!;
-    expect(boost.upTo).toBe(Math.round(suggestions[0].weightedPoints!));
+    expect(boost.upTo).toBe(displayPoints(suggestions[0].weightedPoints!));
     // The score card says the same whole number.
     const html = renderToStaticMarkup(
       <LocaleProvider locale="en">
         <ScoreBand businessId="b1" score={breakdown.total} grade={breakdown.grade} history={[]} projectedScore={projectedBreakdown.total} projectedGrade={projectedBreakdown.grade} biggestBoost={suggestions[0]} />
       </LocaleProvider>
     );
-    expect(html).toContain(`+${Math.round(suggestions[0].weightedPoints!)}`);
+    expect(html).toContain(`+${displayPoints(suggestions[0].weightedPoints!)}`);
   });
 });

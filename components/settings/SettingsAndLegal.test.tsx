@@ -70,13 +70,11 @@ describe("Settings pieces", () => {
       "With Google connected",
       "Basic",
       "Full, no branding",
-      "Starter + PostStudio discount",
+      "Starter + PostStudio (coming soon)",
       "100 a month",
       "Unlimited",
       "Weekly recap",
       "Weekly + PDF",
-      "+$15/mo",
-      "+$10/mo",
       "Coming soon",
       "Preview",
       "Not included",
@@ -96,15 +94,16 @@ describe("Settings pieces", () => {
     const channels = COMPARE_ROWS.find((r) => r.key.endsWith(".channels"))!.cells;
     expect([channels.free, channels.grow, channels.premium, channels.multi]).toEqual([{ kind: "no" }, { kind: "no" }, { kind: "soon" }, { kind: "soon" }]);
     const studio = COMPARE_ROWS.find((r) => r.key.endsWith(".postStudio"))!.cells;
+    // Not on sale yet (lib/postStudio.ts): "Coming soon" on every plan, no price.
     expect([studio.free, studio.grow, studio.premium, studio.multi]).toEqual([
-      { kind: "text", key: "dashboard.settings.plans.value.alone30" },
-      { kind: "text", key: "dashboard.settings.plans.value.plus15" },
-      { kind: "text", key: "dashboard.settings.plans.value.plus10" },
-      { kind: "text", key: "dashboard.settings.plans.value.included", check: true },
+      { kind: "text", key: "dashboard.settings.plans.value.comingSoon" },
+      { kind: "text", key: "dashboard.settings.plans.value.comingSoon" },
+      { kind: "text", key: "dashboard.settings.plans.value.comingSoon" },
+      { kind: "text", key: "dashboard.settings.plans.value.comingSoon" },
     ]);
   });
 
-  test("Compare plans: a PostStudio section under the four plan cards — what it is, the ways to get it, coming soon; the table row", () => {
+  test("Compare plans: a PostStudio section under the four plan cards — what it is, coming soon, no prices (not on sale yet); the table row", () => {
     const html = wrap(<PlanCard plan="free" />);
     const t = text(html);
     const section = html.indexOf('data-testid="plan-poststudio"');
@@ -118,22 +117,16 @@ describe("Settings pieces", () => {
       "Your own domain (yourbusiness.com)",
       "Your rating and hours update after every scan",
       "Built to pass every website check",
-      "PostStudio only $30/mo The free audit + PostStudio",
-      "Grow + PostStudio $40/mo Grow + $15/mo for PostStudio",
-      "Premium + PostStudio $50/mo Premium + $10/mo for PostStudio",
-      "Included in Multi",
       "Coming soon — nothing is charged today.",
       "PostStudio — your full website, built and hosted for you (coming soon)",
-      "$30/mo on its own",
     ])
       expect(t).toContain(s);
-    // Free's own option (PostStudio only) is highlighted; nothing to buy.
-    expect(html).toMatch(/data-option="solo" data-highlighted="true"/);
-    expect(html).not.toMatch(/data-option="(grow|premium)" data-highlighted/);
-    expect(t).not.toMatch(/Buy|Checkout|Subscribe/i);
-    expect(wrap(<PlanCard plan="premium" />)).toMatch(/data-option="premium" data-highlighted="true"/);
+    // Not on sale yet: no ways to buy, no PostStudio price anywhere on the card.
+    expect(html).not.toContain("data-option=");
+    expect(t).not.toMatch(/Buy|Checkout|Subscribe|\$30|\+\$15|\+\$10|\$40\/mo \(|\$50/i);
     const es = text(wrap(<PlanCard plan="grow" />, "es"));
-    for (const s of ["PostStudio: su sitio web completo", "Solo PostStudio", "$30/mes", "Grow + PostStudio", "$40/mes", "$50/mes", "Incluido en Multi", "Próximamente: hoy no se cobra nada.", "$30/mes por sí solo", "Su plan"]) expect(es).toContain(s);
+    for (const s of ["PostStudio: su sitio web completo", "Próximamente: hoy no se cobra nada."]) expect(es).toContain(s);
+    expect(es).not.toMatch(/\$30\/mes|\+\$15|\+\$10/);
   });
 
   test("plan card in Spanish (usted)", () => {

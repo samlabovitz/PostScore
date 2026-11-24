@@ -11,7 +11,7 @@ import { cityFromAddress } from "@/lib/starterSite";
 import { getAddons, getPlan } from "@/lib/premium";
 import { PostStudioFeatures, PostStudioOptions } from "@/components/studio/PostStudioOptions";
 import { postStudioPriceKey } from "@/lib/navPlans";
-import { hasPostStudio, leaveHref, siteChecklist } from "@/lib/postStudio";
+import { hasPostStudio, leaveHref, siteChecklist, POSTSTUDIO_ON_SALE } from "@/lib/postStudio";
 import { LocaleProvider, t, type MessageKey } from "@/lib/i18n";
 
 /**
@@ -83,7 +83,8 @@ export default async function PostStudioPage({ params, searchParams = {} }: { pa
             </Card>
           ) : (
             <Card className="flex flex-col gap-1 border-brass/40 bg-brass/5 p-4">
-              <p className="text-sm font-semibold text-ink" data-testid="studio-price">{tr(postStudioPriceKey(plan))}</p>
+              {/* No price until PostStudio is on sale (lib/postStudio.ts). */}
+              {POSTSTUDIO_ON_SALE && <p className="text-sm font-semibold text-ink" data-testid="studio-price">{tr(postStudioPriceKey(plan))}</p>}
               <p className="text-[13px] text-ink-soft">{tr("dashboard.postStudio.notOpenYet")}</p>
               <PostStudioOptions plan={plan} className="mt-3" />
             </Card>

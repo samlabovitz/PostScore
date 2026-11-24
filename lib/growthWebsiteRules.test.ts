@@ -5,7 +5,7 @@ import {
   buildWebsiteBanner,
   buildWeeklyPlan,
   GOOGLE_MISMATCH_CHECK_ID,
-  mergeReviewTasks,
+  splitReviewTasks,
   mergeWebsiteTasks,
   MERGED_WEBSITE_CHECK_ID,
   WEEKLY_PLAN_CAP,
@@ -102,7 +102,7 @@ function growthPlan(input: BusinessScoringInput, cap = WEEKLY_PLAN_CAP) {
   const { breakdown, suggestions } = getScoreWithSuggestions(input, "en");
   const raw = buildActionPlan(breakdown, suggestions, [], input, "en");
   const tasks = applyGrowthWebsiteRules(
-    mergeWebsiteTasks(mergeReviewTasks(raw, breakdown, input, "en"), breakdown, input, "en", null),
+    mergeWebsiteTasks(splitReviewTasks(raw, breakdown, input, "en"), breakdown, input, "en", null),
     input,
     "en"
   );
@@ -175,7 +175,8 @@ describe("applyGrowthWebsiteRules", () => {
     expect(link!.weightedPoints).toBeGreaterThanOrEqual(0.5);
     expect(weekly.laterTasks.some((x) => x.checkId === "completeness.website_link")).toBe(false);
     expect(sum(weekly.weeklyTasks)).toBe(weekly.weeklyPointsWithinReach);
-    expect(weekly.weeklyPointsWithinReach).toBe(weekly.weeklyProjectedBreakdown.total - breakdown.total);
+    // Day 25B step 3: the projection is today + the cards' own points, rounded.
+    expect(weekly.weeklyProjectedBreakdown.total).toBe(Math.round(breakdown.total + weekly.weeklyPointsWithinReach));
   });
 
   test("it is NOT pinned: with the cap at 0 it stays in Bigger projects", () => {
@@ -232,7 +233,7 @@ describe("buildWeeklyPlan — the Google mismatch is pinned this week", () => {
     expect(weekly.weeklyTasks.length).toBe(WEEKLY_PLAN_CAP + 1);
   });
 
-  test("cards always add up exactly to 'Points within reach' — and that equals the real projected gain when other cards exist", () => {
+  test("cards always add up exactly to 'Points within reach' — and the projection is today + that, rounded", () => {
     for (const input of [
       withConflicts(["hours"]),
       { ...withConflicts(["phone"]), photoCount: 0 },
@@ -241,18 +242,16 @@ describe("buildWeeklyPlan — the Google mismatch is pinned this week", () => {
       const { breakdown, weekly } = growthPlan(input);
       expect(sum(weekly.weeklyTasks)).toBe(weekly.weeklyPointsWithinReach);
       const others = weekly.weeklyTasks.filter((x) => x.checkId !== GOOGLE_MISMATCH_CHECK_ID);
-      if (others.length > 0 && weekly.weeklyPointsWithinReach >= 0) {
-        expect(weekly.weeklyPointsWithinReach).toBe(weekly.weeklyProjectedBreakdown.total - breakdown.total);
-      }
+      if (others.length > 0) expect(weekly.weeklyProjectedBreakdown.total).toBe(Math.min(100, Math.round(breakdown.total + weekly.weeklyPointsWithinReach)));
     }
   });
 
-  test("no pinned ids: behavior is unchanged (within reach = real projected delta)", () => {
+  test("no pinned ids: the same rule (within reach = the cards' sum; projection = today + that, rounded)", () => {
     const input = { ...BASE, photoCount: 0, phone: null };
     const { breakdown, suggestions } = getScoreWithSuggestions(input, "en");
-    const tasks = mergeReviewTasks(buildActionPlan(breakdown, suggestions, [], input, "en"), breakdown, input, "en");
+    const tasks = splitReviewTasks(buildActionPlan(breakdown, suggestions, [], input, "en"), breakdown, input, "en");
     const weekly = buildWeeklyPlan(tasks, breakdown, input, WEEKLY_PLAN_CAP, "en");
-    expect(weekly.weeklyPointsWithinReach).toBe(weekly.weeklyProjectedBreakdown.total - breakdown.total);
+    expect(weekly.weeklyProjectedBreakdown.total).toBe(Math.round(breakdown.total + weekly.weeklyPointsWithinReach));
     expect(sum(weekly.weeklyTasks)).toBe(weekly.weeklyPointsWithinReach);
   });
 });

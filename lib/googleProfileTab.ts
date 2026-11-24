@@ -6,6 +6,7 @@
 // until then their sections show an honest empty state, and sample
 // numbers only in practice mode. Pure — safe on the server and the client.
 
+import { formatTime } from "@/lib/gbpProfileEdits";
 import { offersHref, reviewsHref } from "@/lib/routes";
 import type { CheckResult } from "@/lib/scoring";
 import { actions, addMonths, monthRange, totalViews, type InsightsMonth, type Keyword } from "@/lib/gbpInsights";
@@ -677,7 +678,9 @@ export function localizeHours(value: string, locale: "en" | "es"): string {
   return value
     .replace(/\b(Mon|Tue|Wed|Thu|Fri|Sat|Sun)\b/g, (d) => ES_DAYS[d])
     .replace(/\bClosed\b/g, "Cerrado")
-    .replace(/\bOpen 24 hours\b/g, "Abierto las 24 horas");
+    .replace(/\bOpen 24 hours\b/g, "Abierto las 24 horas")
+    // The same time format as every Spanish hours list ("9:30 a. m.").
+    .replace(/\b(\d{1,2}):(\d{2})\s?([AP])M\b/g, (_, h: string, m: string, ap: string) => formatTime(((Number(h) % 12) + (ap === "P" ? 12 : 0)) * 60 + Number(m), "es"));
 }
 
 function host(url: string | null): string | null {

@@ -7,6 +7,7 @@
 // shorthand produces no CSS for this project's var()-based colors.
 
 import { fixPlanHref } from "@/lib/routes";
+import { displayPoints } from "@/lib/pointRange";
 import { useState } from "react";
 import Link from "next/link";
 import { IconArrowDown, IconArrowUp, IconChevronDown, IconSparkles } from "@tabler/icons-react";
@@ -14,7 +15,6 @@ import { AnimatedScoreRing } from "@/components/overview/AnimatedScoreRing";
 import { jumpToAnchor } from "@/components/layout/AnchorHighlight";
 import { BREAKDOWN_ANCHOR } from "@/components/overview/ScoreBreakdownPanel";
 import { SeeHowToFix } from "@/components/overview/FixPlanUpsell";
-import { formatPoints } from "@/components/scoring/CategoryCard";
 import { GRADE_THRESHOLDS, type Grade, type Suggestion } from "@/lib/scoring";
 import { scoreChangeSinceLastScan } from "@/lib/overviewTiles";
 import type { ScoreHistoryRow } from "@/app/actions/scoring";
@@ -154,10 +154,9 @@ export function SinceLastScanControl({ history }: { history: ScoreHistoryRow[] }
   );
 }
 
-/** "up to +5 pts": whole points; a fix under one point keeps its decimal
- * rather than rounding up to a promise. */
+/** "up to +4.7 pts": one decimal under 10, whole from 10 up (lib/pointRange.ts displayPoints). */
 export function boostPoints(points: number): string {
-  return points >= 1 ? String(Math.round(points)) : formatPoints(points);
+  return String(displayPoints(points));
 }
 
 /** The full-width navy band, as before: the score ring and grade, the
@@ -172,6 +171,7 @@ export function ScoreBand({
   biggestBoost,
   freeWaitingPoints,
   onHold = false,
+  someTakeMonths = false,
 }: {
   businessId: string;
   score: number;
@@ -188,6 +188,8 @@ export function ScoreBand({
   /** Google shows the business as permanently closed: no normal score or
    * grade — "On hold" until it shows open again (lib/businessStatus.ts). */
   onHold?: boolean;
+  /** Some fixes in the projection take months (reviews growing toward 40 or 150). */
+  someTakeMonths?: boolean;
 }) {
   const locale = useLocale();
   if (onHold) {
@@ -263,6 +265,11 @@ export function ScoreBand({
               <span className="font-serif text-2xl font-bold text-paper">{projectedScore}</span>
               <span className="text-sm text-[color:color-mix(in_srgb,var(--color-paper)_70%,transparent)]">{t(locale, "dashboard.overview.scoreOutOf100WithGrade", { grade: projectedGrade })}</span>
             </div>
+            {someTakeMonths && (
+              <p data-testid="projection-months" className="-mt-1 text-[12px] text-[color:color-mix(in_srgb,var(--color-paper)_70%,transparent)]">
+                {t(locale, "dashboard.overview.someFixesTakeMonths")}
+              </p>
+            )}
             <Link href={fixPlanHref(businessId)} className="w-fit text-[12.5px] font-medium text-[color:color-mix(in_srgb,var(--color-paper)_80%,transparent)] hover:text-paper hover:underline">
               {t(locale, "dashboard.overview.seeActionPlan")}
             </Link>

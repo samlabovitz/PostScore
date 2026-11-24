@@ -101,7 +101,7 @@ import {
   type ScoreBreakdown,
 } from "../lib/scoring";
 import { buildProfileSnapshot } from "../lib/profileChanges";
-import { buildActionPlan, mergeReviewTasks, type TaskRow } from "../lib/actionPlan";
+import { buildActionPlan, splitReviewTasks, type TaskRow } from "../lib/actionPlan";
 import { buildGrowthMoves, competitorPhotoCounts, median, weakWebsiteIssueLabels, type GrowthMoveSignals } from "../lib/growthMoves";
 import { MonthlyReportEmail, monthlyReportSubject, TEST_PREVIEW_UNSUBSCRIBE_URL, testReportSubject } from "../emails/MonthlyReportEmail";
 import { normalizeLocale, reportCoverageMonthIndex, reportCoverageMonthRange } from "../lib/i18n";
@@ -269,7 +269,7 @@ async function hasAnyCompetitorScan(businessId: string): Promise<boolean> {
 
 // ---------------------------------------------------------------------------
 // Closing "What to focus on" section — real data-access mirrors for the
-// SAME real pure functions (buildActionPlan, mergeReviewTasks,
+// SAME real pure functions (buildActionPlan, splitReviewTasks,
 // buildGrowthMoves) the Growth/Action-Plan pages use, exactly mirroring
 // app/api/cron/monthly-reports/route.ts's own readTaskRows/
 // computeTopActionPlanTask/computeFiringGrowthMoves/
@@ -306,7 +306,7 @@ function computeTopActionPlanTask(
 ): FocusTopActionPlanTask | null {
   const suggestions = generateSuggestions(breakdown, locale);
   const rawTasks = buildActionPlan(breakdown, suggestions, taskRows, input, locale);
-  const mergedTasks = mergeReviewTasks(rawTasks, breakdown, input, locale);
+  const mergedTasks = splitReviewTasks(rawTasks, breakdown, input, locale);
   return reportTopTask(mergedTasks, input, locale);
 }
 

@@ -153,8 +153,9 @@ const GROW_PROMPT = factsBlockText(GROW);
 
 describe("point estimates: only the app's own projections, always “up to”", () => {
   test("the facts list them: Grow's biggest boost (rounded like the Overview) and Growth cards; Free only the points waiting", () => {
-    expect(GROW_PROMPT).toContain("  - Add photos: up to +7 points (Overview \"Biggest boost\")");
-    expect(GROW_PROMPT).toContain("  - Reply to reviews: up to +3 points (Growth plan card)");
+    // Day 25B step 3: one decimal under 10, like the app.
+    expect(GROW_PROMPT).toContain("  - Add photos: up to +6.6 points (Overview \"Biggest boost\")");
+    expect(GROW_PROMPT).toContain("  - Reply to reviews: up to +3.2 points (Growth plan card)");
     expect(GROW_PROMPT).toContain("Projected score (Overview): 81/100.");
     expect(FREE.projections).toEqual([expect.objectContaining({ upTo: 100 - breakdown.total, where: "Overview score card" })]);
     expect(FREE_PROMPT).not.toContain("Projected score");
@@ -167,9 +168,9 @@ describe("point estimates: only the app's own projections, always “up to”", 
   });
 
   test("the app's own number without “up to” is flagged; with “up to” it passes (EN + ES)", () => {
-    expect(checkAnswerFacts("Adding photos would give you +7 points.", GROW, GROW_PROMPT)).toEqual(['a point gain not worded "up to": say "up to +7 points"']);
-    expect(checkAnswerFacts("Adding photos could add up to +7 points.", GROW, GROW_PROMPT)).toEqual([]);
-    expect(checkAnswerFacts("Agregar fotos podría sumar hasta +7 puntos.", GROW, GROW_PROMPT)).toEqual([]);
+    expect(checkAnswerFacts("Adding photos would give you +6.6 points.", GROW, GROW_PROMPT)).toEqual(['a point gain not worded "up to": say "up to +6.6 points"']);
+    expect(checkAnswerFacts("Adding photos could add up to +6.6 points.", GROW, GROW_PROMPT)).toEqual([]);
+    expect(checkAnswerFacts("Agregar fotos podría sumar hasta +6.6 puntos.", GROW, GROW_PROMPT)).toEqual([]);
     const waiting = 100 - breakdown.total;
     expect(checkAnswerFacts(`You have ${waiting} points waiting to be fixed.`, FREE, FREE_PROMPT)).toEqual([]);
   });

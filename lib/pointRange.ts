@@ -1,15 +1,22 @@
-// Point estimates that come as a range ("a starter site could add …")
-// are shown in whole points: "about +29–31 pts", never "~+29.2–31.4".
-// A range that rounds to a single number collapses to that number.
+// How a fix's points read, everywhere (Fix plan, Overview, the recap, PostAI,
+// reports — Day 25B step 3): one decimal under 10 ("+4.7", "+0.5"), whole
+// numbers from 10 up ("+13", "about +29–31 pts"). A range that reads as a
+// single number collapses to that number.
 
 import { t, tPlural } from "@/lib/i18n/messages";
 import type { Locale } from "@/lib/i18n/locale";
 
 export type WholePointRange = { low: number; high: number | null };
 
+/** One decimal under 10, whole from 10 up. */
+export function displayPoints(points: number): number {
+  return Math.abs(points) >= 10 ? Math.round(points) : Math.round(points * 10) / 10;
+}
+
+/** A fix's points as shown (displayPoints): never below +0.1 (a fix always adds something). */
 export function wholePointRange(low: number, high: number | null): WholePointRange {
-  const lo = Math.max(1, Math.round(low));
-  const hi = high === null ? null : Math.round(high);
+  const lo = Math.max(0.1, displayPoints(low));
+  const hi = high === null ? null : displayPoints(high);
   return { low: lo, high: hi !== null && hi > lo ? hi : null };
 }
 

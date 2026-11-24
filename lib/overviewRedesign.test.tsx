@@ -142,8 +142,10 @@ describe("score card: change since last scan, honestly", () => {
     expect(html).toContain(">100<");
     expect(html).toContain("/ 100 · A");
     expect(html).toContain("See your action plan →");
-    expect(html).toContain("Biggest boost: up to +5 pts · Photos");
-    expect(boostPoints(4.6)).toBe("5");
+    // Day 25B step 3: one decimal under 10, whole from 10 up.
+    expect(html).toContain("Biggest boost: up to +4.6 pts · Photos");
+    expect(boostPoints(4.6)).toBe("4.6");
+    expect(boostPoints(13.2)).toBe("13");
     expect(boostPoints(0.4)).toBe("0.4");
   });
 
@@ -265,11 +267,17 @@ describe("category points and review change (now in the breakdown and At a glanc
 });
 
 describe("top recommendations: the action plan, prioritized by real points", () => {
-  test("High 5+, Medium 2+, smaller items get no pill", () => {
+  test("High 5+, Medium 2+, smaller items get no pill; website-vs-Google hours always High", () => {
     expect(recommendationPriority(6.2)).toBe("high");
     expect(recommendationPriority(5)).toBe("high");
+    // "+4.7 pts" reads under 5: Medium.
+    expect(recommendationPriority(4.7)).toBe("medium");
     expect(recommendationPriority(2.4)).toBe("medium");
     expect(recommendationPriority(1.9)).toBeNull();
+    // Day 25B step 3: the hours mismatch is High whatever its points.
+    expect(recommendationPriority(0.5, false, undefined, true)).toBe("high");
+    // A fix that takes months never gets a pill on the Overview (Low on Fix plan).
+    expect(recommendationPriority(6.8, false, "months")).toBeNull();
   });
 
   test("open items first, then marked-done ones (points not yet earned), biggest first, each with PostAI's fix link", () => {
@@ -369,6 +377,20 @@ describe("since your last scan (replaces the two change sections)", () => {
   const NOW = { rating: 4.8, reviewCount: 58 };
   const card = (snapshots: ScoreSnapshot[], locale: Locale = "en") =>
     render(<SinceLastScanCard businessId="b" snapshots={snapshots} liveBreakdown={breakdown} now={NOW} />, locale);
+  test("Day 25B step 3: it says which two scans it compares — 'Previous scan · Oct 1 → Today' (or the latest scan's date)", () => {
+    const text = (html: string) => html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ");
+    const year = new Date().getFullYear();
+    const prev = snap({ id: "p", total: 80, created_at: `${year}-10-01T15:00:00Z` });
+    const today = snap({ id: "c", created_at: new Date().toISOString() });
+    const html = text(card([today, prev]));
+    expect(html).toContain("Previous scan · Oct 1");
+    expect(html).toContain("Today");
+    expect(html).not.toMatch(/Last scan ·|\bNow\b/);
+    expect(text(card([snap({ id: "c", created_at: `${year}-10-15T15:00:00Z` }), prev]))).toContain("Latest scan · Oct 15");
+    expect(text(card([today, prev], "es"))).toContain("Análisis anterior · 1 oct");
+    expect(text(card([today, prev], "es"))).toContain("Hoy");
+  });
+
   /** The newest scan, with what changed since the one before (our own records). */
   const changed = (records: ScanChangeRecord[], over: Partial<ScoreSnapshot> = {}) => snap({ listing_changes: { available: true, records }, ...over });
 
@@ -576,7 +598,7 @@ describe("Overview layout and scan history (GBP card tweaks)", () => {
     const fs = await import("node:fs");
     const view = fs.readFileSync("app/business/[id]/BusinessScoreView.tsx", "utf8");
     expect(view).toContain(`<div data-testid="overview-recs-row" className="grid grid-cols-1 gap-4 nav:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]">
-        <TopRecommendations businessId={businessId} recommendations={recommendations ?? null} limit={TOP_RECOMMENDATIONS} detailsMismatch={detailsMismatch} hoursCheck={hoursCheck} />
+        <TopRecommendations businessId={businessId} recommendations={recommendations ?? null} limit={TOP_RECOMMENDATIONS} detailsMismatch={detailsMismatch} hoursCheck={hoursCheck} lastScanAt={lastScanAt} />
         <SinceLastScanCard businessId={businessId} snapshots={recentSnapshots} liveBreakdown={breakdown} gbpConnected={gbpConnected} now={{ rating: business.rating, reviewCount: business.review_count }} />
       </div>`);
     // PostStudio keeps its own row.
@@ -593,15 +615,16 @@ describe("Overview layout and scan history (GBP card tweaks)", () => {
 });
 
 describe("whole-number point ranges and the connect page", () => {
-  test("ranges round to whole points and collapse when equal", async () => {
+  test("ranges: one decimal under 10, whole from 10 up; collapse when equal", async () => {
     const { wholePointRange, websiteRangeText, recRangeText } = await import("@/lib/pointRange");
     expect(wholePointRange(29.2, 31.4)).toEqual({ low: 29, high: 31 });
-    expect(wholePointRange(4.6, 4.9)).toEqual({ low: 5, high: null });
-    expect(wholePointRange(0.3, null)).toEqual({ low: 1, high: null });
+    expect(wholePointRange(4.6, 4.9)).toEqual({ low: 4.6, high: 4.9 });
+    expect(wholePointRange(4.62, 4.64)).toEqual({ low: 4.6, high: null });
+    expect(wholePointRange(0.3, null)).toEqual({ low: 0.3, high: null });
     expect(websiteRangeText("en", 29.2, 31.4)).toContain("about +29–31 pts");
     expect(websiteRangeText("es", 29.2, 31.4)).toContain("unos +29–31 pts");
     expect(recRangeText("en", 29.2, 31.4)).toBe("about +29–31 pts");
-    expect(recRangeText("en", 4.6, 4.9)).toBe("about +5 pts");
+    expect(recRangeText("en", 4.6, 4.9)).toBe("about +4.6–4.9 pts");
   });
 
   test("connect page: disabled button + 'coming soon' line until GBP_CONNECT_PUBLIC; otherwise exactly as before", async () => {
@@ -654,11 +677,10 @@ describe("icon squares, app-wide", () => {
     expect(css).toMatch(/\.ps-icon-tile \{[\s\S]*?color-mix\(in srgb, var\(--color-brass\) 8%, white\)/);
   });
 
-  test("the website recommendation's estimate is whole points, like its 'about +4' line", () => {
+  test("the website recommendation's estimate reads like its 'about +4.1' line (one decimal under 10)", () => {
     const recs = topRecommendations([], { kind: "improve", score: 72, earned: 25, of: 30, improvements: 3, points: 4.1 }, "b");
     const html = render(<TopRecommendations businessId="b" recommendations={recs} />);
-    expect(html).toContain("about +4 pts");
-    expect(html).not.toContain("+4.1");
+    expect(html).toContain("about +4.1 pts");
   });
 });
 
@@ -692,10 +714,11 @@ describe("small Overview fixes (link pill, empty since card, whole points)", () 
       "b"
     );
     const html = render(<TopRecommendations businessId="b" recommendations={recs} />);
+    // One decimal under 10, whole from 10 up.
     expect(html).toContain("+19 pts");
-    expect(html).toContain("+3 pts");
+    expect(html).toContain("+2.5 pts");
     expect(html).toContain("about +29–31 pts");
-    expect(html).not.toMatch(/\+\d+\.\d+ pts/);
+    expect(html).not.toMatch(/\+\d\d+\.\d+ pts/);
     expect(html.match(/flex shrink-0 flex-col items-end gap-1/g)?.length).toBe(recs.length);
   });
 });

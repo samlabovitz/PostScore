@@ -12,6 +12,7 @@ import { resolveLinkTarget, type LinkOptions } from "@/lib/postaiLinks";
 import type { CategoryResult, Suggestion } from "@/lib/scoring";
 import { t, type Locale, type MessageKey } from "@/lib/i18n";
 import { urgentIssueForCheck, type UrgentIssue } from "@/lib/urgency";
+import { isHoursCheck } from "@/lib/hoursCheck";
 
 /** A category's real contribution to the 0–100 total — its own 0–100
  * score scaled to its weight (40 / 30 / 30), so the three tiles add up
@@ -87,11 +88,63 @@ export const TOP_RECOMMENDATIONS = 3;
 
 export type Priority = "urgent" | "high" | "medium";
 
-export function recommendationPriority(points: number, urgent = false): Priority | null {
+/** A fix that takes months (reviews growing toward 40 or 150) never gets
+ * a pill here: it's Low on Fix plan, whatever its points. `high`: High
+ * whatever its points (the website and Google show different hours —
+ * customers turn up while you're closed; Day 25B step 3). */
+export function recommendationPriority(points: number, urgent = false, when?: ActionPlanTask["when"], high = false): Priority | null {
   if (urgent) return "urgent";
-  if (points >= HIGH_PRIORITY_POINTS) return "high";
+  if (when === "months") return null;
+  if (high || points >= HIGH_PRIORITY_POINTS) return "high";
   if (points >= MEDIUM_PRIORITY_POINTS) return "medium";
   return null;
+}
+
+/** High whatever its points: the website and Google show different hours. */
+export function isHighByRule(task: Pick<ActionPlanTask, "checkId" | "mismatchFields">): boolean {
+  return isHoursCheck(task);
+}
+
+/** Fix plan's levels (spec §2b): Urgent → High → Medium → Low. */
+export type FixPriority = Priority | "low";
+
+export function fixPriority(points: number, urgent = false, when?: ActionPlanTask["when"], high = false): FixPriority {
+  return recommendationPriority(points, urgent, when, high) ?? "low";
+}
+
+const LEVEL: Record<FixPriority, number> = { urgent: 0, high: 1, medium: 2, low: 3 };
+
+/**
+ * The one order for score fixes (Overview's Top recommendations and Fix
+ * plan): by level, most points first within a level. The review rows that
+ * take months ("Grow to 40", "Keep growing toward 150") stay together and
+ * in their own order — 150 comes after 40 — ranked by the larger of them.
+ * Stable for ties.
+ */
+export function rankFixes<T>(items: T[], of: (item: T) => { points: number; urgent: boolean; when?: ActionPlanTask["when"]; reviewGrowth?: boolean; checkId?: string; high?: boolean }): T[] {
+  const facts = items.map(of);
+  const growthMax = Math.max(0, ...facts.filter((f) => f.reviewGrowth).map((f) => f.points));
+  return items
+    .map((item, i) => ({ item, i, f: facts[i] }))
+    .sort((a, b) => {
+      const la = LEVEL[fixPriority(a.f.points, a.f.urgent, a.f.when, a.f.high)];
+      const lb = LEVEL[fixPriority(b.f.points, b.f.urgent, b.f.when, b.f.high)];
+      const pa = a.f.reviewGrowth ? growthMax : a.f.points;
+      const pb = b.f.reviewGrowth ? growthMax : b.f.points;
+      return la - lb || pb - pa || growthStep(a.f) - growthStep(b.f) || a.i - b.i;
+    })
+    .map(({ item }) => item);
+}
+
+/** 40 reviews, then 150, then the star rating's own row. */
+const GROWTH_ORDER = ["visibility.reviews_trust", "visibility.reviews_count", "visibility.reviews_rating"];
+function growthStep(f: { reviewGrowth?: boolean; checkId?: string }): number {
+  return f.reviewGrowth && f.checkId ? GROWTH_ORDER.indexOf(f.checkId) : 0;
+}
+
+/** The months-long review rows (lib/actionPlan.ts splitReviewTasks). */
+export function isReviewGrowthRow(task: Pick<ActionPlanTask, "checkId" | "when">): boolean {
+  return task.when === "months" && task.checkId.startsWith("visibility.");
 }
 
 /** The scoring check id → PostAI's link-target id (lib/postaiLinks.ts). */
@@ -157,7 +210,8 @@ export function topRecommendations(
   const items: Recommendation[] = tasks
     // "Marked done" items stay until a scan confirms them: their points
     // aren't earned yet (they're still in the projected score).
-    .filter((task) => (task.status === "open" || task.status === "pending_verification") && task.effort !== "setup" && task.weightedPoints > 0)
+    // Day 25B step 3: the rows that take months live only on Fix plan.
+    .filter((task) => (task.status === "open" || task.status === "pending_verification") && task.effort !== "setup" && task.weightedPoints > 0 && task.when !== "months")
     .map((task) => {
       const link = linkForCheck(task.checkId, businessId, options);
       const urgent = task.urgent === true;
@@ -166,7 +220,7 @@ export function topRecommendations(
         source: { kind: "task" as const, task },
         points: task.weightedPoints,
         pointsHigh: task.weightedPointsHigh,
-        priority: recommendationPriority(task.weightedPoints, urgent),
+        priority: recommendationPriority(task.weightedPoints, urgent, task.when, isHighByRule(task)),
         href: link.href,
         linkLabel: link.label,
         pending: task.status === "pending_verification",
@@ -195,7 +249,12 @@ export function topRecommendations(
   // Open items first — urgent ones first, then biggest first — then
   // marked-done ones, so items waiting for a scan never push out what the
   // owner still has to do.
-  return items.sort((a, b) => Number(a.pending) - Number(b.pending) || Number(b.urgent) - Number(a.urgent) || b.points - a.points).slice(0, limit);
+  // Within each: urgent first, then what can be finished this week, then
+  // what takes a few weeks — each in the Fix plan order (rankFixes).
+  const ranked = rankFixes(items, (r) => ({ points: r.points, urgent: r.urgent, when: r.source.kind === "task" ? r.source.task.when : undefined, checkId: r.key, high: r.source.kind === "task" && isHighByRule(r.source.task) }));
+  const whenOf = (r: Recommendation) => (r.urgent ? 0 : r.source.kind === "task" && r.source.task.when === "this_week" ? 1 : 2);
+  const byWhen = ranked.map((r, i) => ({ r, i })).sort((a, b) => whenOf(a.r) - whenOf(b.r) || a.i - b.i).map(({ r }) => r);
+  return [...byWhen.filter((r) => !r.pending), ...byWhen.filter((r) => r.pending)].slice(0, limit);
 }
 
 /** The monthly report's next steps: open items only — never something the
@@ -216,7 +275,11 @@ export function biggestBoostFrom(
   suggestions: Suggestion[],
   locale: Locale
 ): { label: string; promisedPoints: number; weightedPoints: number } | null {
-  const open = (recommendations ?? []).filter((r) => !r.pending);
+  // A row that takes months ("Keep growing toward 150 reviews", up to +6.8)
+  // is never the "Biggest boost" while anything else is open.
+  const allOpen = (recommendations ?? []).filter((r) => !r.pending);
+  const soon = allOpen.filter((r) => !(r.source.kind === "task" && r.source.task.when === "months"));
+  const open = soon.length > 0 ? soon : allOpen;
   // Most points first; ties keep the list's order.
   const top = open.reduce<Recommendation | undefined>((best, r) => (!best || r.points > best.points ? r : best), undefined) ?? recommendations?.[0];
   if (top) {

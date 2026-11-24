@@ -13,7 +13,7 @@ import { RATING_CONFIDENCE_FULL_AT_REVIEWS, REVIEW_COUNT_SATURATION, type ScoreB
 import { t, type Locale } from "@/lib/i18n";
 import { wholeCategoryPoints } from "@/lib/overviewTiles";
 import { freeWaitingPoints } from "@/lib/freeUpsell";
-import { wholePointRange } from "@/lib/pointRange";
+import { displayPoints, wholePointRange } from "@/lib/pointRange";
 import type { Plan } from "@/lib/plan";
 import { REPLY_CHECK_MIN_REVIEWS, TEMPLATED_WARN_SHARE, type GbpReplyCounts } from "@/lib/gbpReviewReplies";
 import { ownerProvidedLines, type OwnerProvided } from "@/lib/businessOffer";
@@ -176,7 +176,7 @@ function closureLines(status: string | null | undefined): string[] {
 
 /** The Overview's "Biggest boost" number (components/overview/ScoreBand.tsx boostPoints). */
 function boostNumber(points: number): number {
-  return points >= 1 ? Math.round(points) : Math.round(points * 10) / 10;
+  return displayPoints(points);
 }
 
 const pts = (n: number | null) => (n === null ? "—" : Number.isInteger(n) ? String(n) : n.toFixed(1));

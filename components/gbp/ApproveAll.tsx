@@ -14,7 +14,7 @@
 
 import { useState } from "react";
 import { approveListingAll } from "@/app/actions/approveAll";
-import { t, type MessageKey, useLocale, useTimeZone } from "@/lib/i18n";
+import { t, tPlural, type MessageKey, useLocale, useTimeZone } from "@/lib/i18n";
 import type { AnswersState } from "@/components/gbp/AnswersPreview";
 import type { PostDraftState } from "@/components/gbp/PostPreview";
 import { W_BUTTON, failedText } from "@/components/gbp/PostPreview";
@@ -47,6 +47,12 @@ export function approveCount(parts: { replies?: WeekRepliesState | null; post?: 
   return i.replies + (i.post ? 1 : 0) + (i.answers ? 1 : 0);
 }
 
+/** The button's "Approve {n} tasks": the replies (one task, however many), the post, the answers. */
+export function approveTaskCount(parts: { replies?: WeekRepliesState | null; post?: PostDraftState | null; answers?: AnswersState | null; failures?: ItemFailures }): number {
+  const i = approveItems(parts);
+  return (i.replies > 0 ? 1 : 0) + (i.post ? 1 : 0) + (i.answers ? 1 : 0);
+}
+
 export function ApproveAll({
   businessId,
   replies = null,
@@ -75,6 +81,7 @@ export function ApproveAll({
   const [progress, setProgress] = useState<{ done: number; of: number } | null>(null);
   const [summary, setSummary] = useState<{ sent: number; failed: number } | null>(null);
   const count = approveCount({ replies, post, answers, failures });
+  const tasks = approveTaskCount({ replies, post, answers, failures });
   const items = approveItems({ replies, post, answers, failures });
   const what = [
     items.replies ? t(locale, W(items.replies === 1 ? "approveAll.what.replyOne" : "approveAll.what.replies"), { count: items.replies }) : null,
@@ -153,26 +160,32 @@ export function ApproveAll({
   };
 
   return (
-    <div className="flex flex-col gap-1.5 lg:gap-0.5" data-testid="approve-all">
-      <div className="flex flex-wrap items-center justify-between gap-3">
+    <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2.5" data-testid="approve-all">
+      {/* Title, what goes and the note on the left; the button with its item count on the right (no gap under the title). */}
+      <div className="flex min-w-0 grow basis-full flex-col gap-1.5 sm:basis-0 lg:gap-0.5">
         <div className="min-w-0">{title}</div>
-        <div className="flex flex-wrap items-center gap-2.5">
-          {/* While drafts load: disabled, "Approve all (getting ready…)" — the final count once ready, never a misleading "(0)". */}
-          <button type="button" onClick={run} disabled={!canEdit || loading || count === 0 || progress !== null} className={W_BUTTON} data-testid="approve-all-button" data-count={count} data-loading={loading ? "1" : "0"}>
-            {progress ? t(locale, W("approveAll.sending"), { done: progress.done, count: progress.of }) : loading ? t(locale, W("approveAll.gettingReady")) : t(locale, W("approveAll"), { count })}
-          </button>
-        </div>
+        {what.length > 0 && !progress && (
+          <p className="text-[13px] font-semibold text-ink-soft" data-testid="approve-all-what">
+            {t(locale, W("approveAll.what"), { list: what.join(" · ") })}
+          </p>
+        )}
+        <p className="text-[13px] text-ink-mute">{t(locale, W("approveAll.note"))}</p>
       </div>
-      {what.length > 0 && !progress && (
-        <p className="text-[13px] font-semibold text-ink-soft" data-testid="approve-all-what">
-          {t(locale, W("approveAll.what"), { list: what.join(" · ") })}
-        </p>
-      )}
-      <p className="text-[13px] text-ink-mute">{t(locale, W("approveAll.note"))}</p>
-      {practice && <p className="text-[13px] font-semibold text-brass" data-testid="approve-all-practice">{t(locale, W("practice"))}</p>}
-      {!canEdit && <p className="text-[13px] text-ink-mute" data-testid="approve-all-off">{t(locale, W("readOnly"))}</p>}
+      <div className="flex flex-col items-start gap-1 sm:items-end">
+        {/* While drafts load: disabled, "Approve all (getting ready…)" — the final count once ready, never a misleading "(0)". */}
+        <button type="button" onClick={run} disabled={!canEdit || loading || count === 0 || progress !== null} className={W_BUTTON} data-testid="approve-all-button" data-count={count} data-tasks={tasks} data-loading={loading ? "1" : "0"}>
+          {progress ? t(locale, W("approveAll.sending"), { done: progress.done, count: progress.of }) : loading ? t(locale, W("approveAll.gettingReady")) : tPlural(locale, "dashboard.googleTab.w.approveTasks", tasks, { count: tasks })}
+        </button>
+        {!loading && !progress && count > 0 && (
+          <p className="text-[12px] text-ink-mute" data-testid="approve-all-items">
+            {tPlural(locale, "dashboard.googleTab.w.approveItems", count, { count })}
+          </p>
+        )}
+      </div>
+      {practice && <p className="w-full text-[13px] font-semibold text-brass" data-testid="approve-all-practice">{t(locale, W("practice"))}</p>}
+      {!canEdit && <p className="w-full text-[13px] text-ink-mute" data-testid="approve-all-off">{t(locale, W("readOnly"))}</p>}
       {summary && (
-        <p className="text-[13px]" data-testid="approve-all-summary">
+        <p className="w-full text-[13px]" data-testid="approve-all-summary">
           <b className="text-green">{t(locale, W("approveAll.sent"), { count: summary.sent })}</b>
           {summary.failed > 0 && <span className="text-red"> · {t(locale, W("approveAll.failedRows"), { count: summary.failed })}</span>}
         </p>

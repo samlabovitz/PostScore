@@ -276,7 +276,8 @@ describe("Google listing (Presence)", () => {
     const free = listing("free");
     expect(free).toContain('data-mode="locked"');
     expect(text(free)).toContain("+2 pts");
-    expect(free).not.toContain("listing-action-compare");
+    // Day 25B step 3: Free sees the hours side by side (read-only), the steps stay locked.
+    expect(free).toContain("listing-action-compare");
   });
 
   test("not connected: the Connect card over the rows from the last scan; nothing read from Google, no ideas or protection", () => {
@@ -400,8 +401,10 @@ describe("Grow gets Google results and the listing alerts — when the pages go 
   });
 });
 
-test("Spanish: the hours row's days and 'Closed' in Spanish (times as Google wrote them); English unchanged", () => {
-  expect(localizeHours("Mon Closed · Tue–Wed 9:30 AM – 5:00 PM · Sun Open 24 hours", "es")).toBe("lun Cerrado · mar–mié 9:30 AM – 5:00 PM · dom Abierto las 24 horas");
+test("Spanish: the hours row's days, 'Closed' and times in Spanish (the same time format as the compare columns); English unchanged", async () => {
+  const { formatTime } = await import("@/lib/gbpProfileEdits");
+  expect(localizeHours("Mon Closed · Tue–Wed 9:30 AM – 5:00 PM · Sun Open 24 hours", "es")).toBe(`lun Cerrado · mar–mié ${formatTime(570, "es")} – ${formatTime(1020, "es")} · dom Abierto las 24 horas`);
+  expect(localizeHours("Sat 12:00 PM – 12:30 AM", "es")).toBe(`sáb ${formatTime(720, "es")} – ${formatTime(30, "es")}`);
   expect(localizeHours("Mon Closed", "en")).toBe("Mon Closed");
   expect(text(listing("premium", {}, "es"))).toContain("lun Cerrado");
 });

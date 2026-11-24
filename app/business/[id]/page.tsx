@@ -236,6 +236,7 @@ export default async function BusinessPage({ params, searchParams = {} }: { para
         profileTools={{ referralOk: profile.referralOk, couponsOk: profile.couponsOk, pricingOk: profile.pricingOk }}
         now={new Date().toISOString()}
         recommendations={free ? null : recommendations}
+        someTakeMonths={actionPlan.status === "ok" && actionPlan.tasks.some((task) => task.when === "months")}
         websiteFixCount={websiteFixCount}
         websiteLookAtCount={websiteLookAtCount}
         linkOptions={linkOptions}

@@ -205,10 +205,14 @@ export async function loadGoogleListing(businessId: string, gbpParam?: string): 
   const mismatchCheck = scored.result.breakdown.checks.find((c) => c.id === "website.info_consistency");
   // The mismatch fix's points belong to the Hours row only when hours are the only mismatch.
   const hoursMismatchPoints = hoursMismatch && mismatchedFields(input).length === 1 && mismatchCheck && mismatchCheck.earnedPoints !== null ? Math.max(0, mismatchCheck.maxPoints - mismatchCheck.earnedPoints) : null;
+  // Google shows the website's hours now (the same check as the Overview's): "Changed since your last scan".
+  const hoursMatchNow = hoursMismatch
+    ? (await (await import("@/lib/hoursCheck.server")).loadHoursCheck(businessId, scored.scoringBusiness ?? scored.business, [{ checkId: "website.info_consistency", mismatchFields: ["hours"] }]).catch(() => null))?.kind === "stale"
+    : false;
   const listingPoints = listingCategoryPoints(scored.result.breakdown);
   const score = scored.result.breakdown.total;
   if (!(gbpConnected || practice)) {
-    return { status: "ok", business: base.business, plan, websiteSuggested: base.websiteSuggested, props: { ...common, plan, listingPoints, score, hoursMismatch, hoursMismatchPoints, websiteHours: await websiteHoursFor(row) } };
+    return { status: "ok", business: base.business, plan, websiteSuggested: base.websiteSuggested, props: { ...common, plan, listingPoints, score, hoursMismatch, hoursMismatchPoints, hoursMatchNow, websiteHours: await websiteHoursFor(row) } };
   }
   const db = createClient();
   // A real change stuck on "Google reviewing" for 3+ days: read again (read only).
@@ -241,6 +245,7 @@ export async function loadGoogleListing(businessId: string, gbpParam?: string): 
       score,
       hoursMismatch,
       hoursMismatchPoints,
+      hoursMatchNow,
       saved,
       // Only for "Show up for more" (search terms behind the service ideas); no numbers are shown.
       insights: months,

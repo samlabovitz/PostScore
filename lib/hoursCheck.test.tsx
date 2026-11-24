@@ -15,6 +15,8 @@ import { weekFromPlacesPeriods } from "@/lib/hoursEditor";
 import { TopRecommendations } from "@/components/overview/TopRecommendations";
 import { TaskListCard } from "@/app/business/[id]/ActionPlanSection";
 import { biggestBoostFrom, topRecommendations } from "@/lib/overviewTiles";
+import { HoursComparePanel } from "@/components/hours/HoursMismatchChooser";
+import { readFileSync } from "fs";
 
 const text = (html: string) => html.replace(/<[^>]+>/g, " ").replace(/&#x27;/g, "'").replace(/&amp;/g, "&").replace(/\s+/g, " ");
 const wrap = (node: ReactNode, locale: Locale = "en", edit = { premium: true, connected: true, undo: null, canEdit: true }) =>
@@ -54,15 +56,15 @@ describe("the rule", () => {
 
 describe("Overview", () => {
   const recs = topRecommendations([CHECK, REVIEWS], null, "b1", {}, Infinity);
-  test("stale: “Your website and Google now match — re-scan to update your score”, the Re-scan button, no points, no “show different hours”; out of Biggest boost (EN + ES)", () => {
+  test("stale: “Changed since your last scan · Re-scan to update”, the Re-scan button, no points, no “show different hours”; out of Biggest boost (EN + ES)", () => {
     const html = wrap(<TopRecommendations businessId="b1" recommendations={recs} limit={3} hoursCheck={{ kind: "stale" }} />);
     const item = html.split("<li").slice(1).find((li) => li.includes("hours-stale"))!;
-    expect(text(item)).toContain("Your website and Google now match — re-scan to update your score");
+    expect(text(item)).toContain("Changed since your last scan · Re-scan to update");
     expect(item).toContain('data-kind="rescan"');
     expect(text(item)).not.toMatch(/\+\d+ pts?\b|show different hours/);
     expect(biggestBoostFrom(withoutStaleHours(recs, { kind: "stale" }), [], "en")?.label).not.toBe("Matches your Google listing");
     expect(biggestBoostFrom(withoutStaleHours(recs, null), [], "en")?.label).toBe("Matches your Google listing");
-    expect(text(wrap(<TopRecommendations businessId="b1" recommendations={recs} limit={3} hoursCheck={{ kind: "stale" }} />, "es"))).toContain("Su sitio web y Google ya coinciden; vuelva a analizar para actualizar su puntuación");
+    expect(text(wrap(<TopRecommendations businessId="b1" recommendations={recs} limit={3} hoursCheck={{ kind: "stale" }} />, "es"))).toContain("Cambió desde su último análisis · Vuelva a analizar para actualizar");
   });
   test("a real difference: the exact days, website vs Google, and that Google Maps hasn't published the Business Profile's hours yet (EN + ES)", () => {
     const state = hoursCheckState(SITE, MAPS, PROFILE)!;
@@ -81,7 +83,7 @@ describe("Overview", () => {
 describe("Growth recap", () => {
   test("stale: the re-scan title and button, no points, no “I did this”; a difference: the days in place of the scan's sentence", () => {
     const stale = wrap(<TaskListCard tasks={[CHECK]} businessId="b1" context="weekly" emptyMessage="" hoursCheck={{ kind: "stale" }} />).split("<li").slice(1)[0];
-    expect(text(stale)).toContain("Your website and Google now match — re-scan to update your score");
+    expect(text(stale)).toContain("Changed since your last scan · Re-scan to update");
     expect(stale).toContain('data-kind="rescan"');
     expect(text(stale)).not.toMatch(/Up to|I did this|show different hours/);
     const differs = wrap(<TaskListCard tasks={[CHECK]} businessId="b1" context="weekly" emptyMessage="" hoursCheck={hoursCheckState(SITE, MAPS, PROFILE)} />).split("<li").slice(1)[0];
@@ -89,6 +91,69 @@ describe("Growth recap", () => {
     expect(text(differs)).not.toContain("show different hours");
     // Never the scan's sentence next to the days (it read Google's side from the Business Profile: "Google says Thursday 9:30 AM–6:00 PM").
     expect(text(differs)).not.toMatch(/Google says/);
-    expect(text(differs)).toContain("Up to +1 pt");
+    // Day 25B step 3: one decimal under 10 (the saved check's own points).
+    expect(text(differs)).toContain("Up to +0.6 pts");
+  });
+});
+
+// Day 25B step 3: when Google now shows the website's hours, every hours row
+// says "Changed since your last scan · Re-scan to update" — never "differs".
+describe("Google matches the website again", () => {
+  const view = (google: unknown) => ({ status: "ok", google, googleLines: null, live: true, site: SITE, builder: null, siteUrl: null, canEdit: false, tab: false }) as never;
+
+  test("the compare panel: the changed line and Re-scan, no 'different hours' question or choices (EN + ES)", () => {
+    const html = wrap(<HoursComparePanel businessId="b1" initialView={view(PROFILE)} />);
+    expect(html).toContain('data-matches-now="true"');
+    expect(text(html)).toContain("Changed since your last scan · Re-scan to update");
+    expect(text(html)).not.toContain("show different hours");
+    expect(html).not.toContain("choice-google");
+    expect(text(wrap(<HoursComparePanel businessId="b1" initialView={view(PROFILE)} />, "es"))).toContain("Cambió desde su último análisis · Vuelva a analizar para actualizar");
+    // Still different: the two versions and the choice, as before.
+    expect(wrap(<HoursComparePanel businessId="b1" initialView={view(MAPS)} />)).toContain("choice-google");
+  });
+
+  test("Spanish: Google's column uses the same days, 'Cerrado' and time format as the website's", () => {
+    const es = text(wrap(<HoursComparePanel businessId="b1" initialView={view(MAPS)} readOnly />, "es"));
+    expect(es).toContain("Lunes Cerrado");
+    expect(es).not.toMatch(/Closed|\d AM|\d PM/);
+    // The server reads Google's week (not its English lines) whenever it can.
+    expect(readFileSync("app/actions/hoursChooser.ts", "utf8")).toContain("google = weekFromPlacesPeriods(");
+  });
+
+
+  test("the Google listing's Hours row: the changed note, no Compare", () => {
+    const src = readFileSync("components/gbp/GoogleListingPage.tsx", "utf8");
+    expect(src).toContain('const compare = row.id === "hours" && props.hoursMismatch === true && props.hoursMatchNow !== true;');
+    expect(src).toContain('props.hoursMismatch && props.hoursMatchNow ? { note: t(locale, "dashboard.hoursCheck.staleTitle") }');
+  });
+});
+
+// Day 25B step 3 (after a real re-scan, Nov 23): a check that matches now keeps
+// its real title, never first, no pill; and never "Re-scan now" before it's open.
+describe("an hours check that matches now, right after a scan", () => {
+  const recs = topRecommendations([CHECK, { ...(REVIEWS as object), status: "open", when: "weeks" } as never], null, "b1", {}, 3);
+  const justScanned = new Date(Date.now() - 2 * 3_600_000).toISOString();
+
+  test("Overview: the fix's real title with the note under it, no priority pill, after every other item (EN + ES)", () => {
+    const html = wrap(<TopRecommendations businessId="b1" recommendations={recs} limit={3} hoursCheck={{ kind: "stale" }} lastScanAt={justScanned} />);
+    const items = html.split("<li").slice(1);
+    expect(text(items[0])).not.toContain("Changed since your last scan");
+    const hours = items[items.length - 1];
+    expect(text(hours)).toContain("Match your website's hours to Google");
+    expect(text(hours)).toContain("Changed since your last scan · Re-scan to update");
+    expect(hours).not.toContain("data-priority");
+    expect(text(wrap(<TopRecommendations businessId="b1" recommendations={recs} limit={3} hoursCheck={{ kind: "stale" }} lastScanAt={justScanned} />, "es"))).toContain("Haga que el horario de su sitio coincida con Google");
+  });
+
+  test("no 'Re-scan now' while the next re-scan isn't open: 'Next re-scan available …' instead; the button once it is", () => {
+    const soon = wrap(<TopRecommendations businessId="b1" recommendations={recs} limit={3} hoursCheck={{ kind: "stale" }} lastScanAt={justScanned} />);
+    expect(soon).not.toContain('data-kind="rescan"');
+    expect(text(soon)).toMatch(/Next re-scan available [A-Z][a-z]{2} \d{1,2}/);
+    const open = wrap(<TopRecommendations businessId="b1" recommendations={recs} limit={3} hoursCheck={{ kind: "stale" }} lastScanAt={new Date(Date.now() - 30 * 3_600_000).toISOString()} />);
+    expect(open).toContain('data-kind="rescan"');
+    const card = wrap(<TaskListCard tasks={[CHECK]} businessId="b1" context="weekly" emptyMessage="" hoursCheck={{ kind: "stale" }} lastScanAt={justScanned} />);
+    expect(text(card)).toContain("Match your website's hours to Google");
+    expect(card).not.toContain('data-kind="rescan"');
+    expect(text(wrap(<TaskListCard tasks={[CHECK]} businessId="b1" context="weekly" emptyMessage="" hoursCheck={{ kind: "stale" }} lastScanAt={justScanned} />, "es"))).toContain("Próximo análisis disponible el");
   });
 });

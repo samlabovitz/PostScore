@@ -31,7 +31,8 @@ import type { ProfileChange } from "@/lib/profileChanges";
 import { describeScanChanges, type NowValues } from "@/lib/scanChangeText";
 import { diffBreakdowns, resolveChangeDisplay, type CheckChange } from "@/lib/scoreChanges";
 import type { ScoreBreakdown } from "@/lib/scoring";
-import { formatShortDate, t, tPlural, useLocale, useTimeZone } from "@/lib/i18n";
+import { formatShortDate, t, tPlural, useLocale, useTimeZone, type Locale } from "@/lib/i18n";
+import { calendarDaysAgo } from "@/lib/i18n/format";
 import { isScoringUpdate } from "@/lib/websiteRecheckPolicy";
 import { cn } from "@/lib/utils";
 
@@ -154,6 +155,12 @@ function scoringUpdateBetween(previous: ScoreSnapshot, current: ScoreSnapshot): 
   return isScoringUpdate(previous.scoring_version, current.scoring_version, (current.breakdown_json as { scanKind?: string } | null)?.scanKind);
 }
 
+/** "Nov 20" this year, "Nov 20, 2025" before it. */
+function shortDay(at: string, locale: Locale, timeZone: string): string {
+  const full = formatShortDate(at, locale, timeZone);
+  return new Date(at).getFullYear() === new Date().getFullYear() ? full.replace(/,? \d{4}$/, "") : full;
+}
+
 function ScoreBeforeAfter({ current, previous, timeZone }: { current: ScoreSnapshot; previous: ScoreSnapshot; timeZone: string }) {
   const locale = useLocale();
   const sameVersion = !scoringUpdateBetween(previous, current);
@@ -164,13 +171,16 @@ function ScoreBeforeAfter({ current, previous, timeZone }: { current: ScoreSnaps
       <div className="flex flex-wrap items-end gap-x-4 gap-y-2">
         <div className="flex flex-col">
           <span className="text-[11.5px] text-ink-soft">
-            {t(locale, "dashboard.overview.sinceCard.lastScan", { date: formatShortDate(previous.created_at, locale, timeZone) })}
+            {t(locale, "dashboard.overview.sinceCard.lastScan", { date: shortDay(previous.created_at, locale, timeZone) })}
           </span>
           <span className="font-serif text-[28px] font-semibold leading-none tabular-nums text-ink-soft">{previous.total}</span>
         </div>
         <IconArrowRight size={20} className="mb-1 text-brass" aria-hidden />
         <div className="flex flex-col">
-          <span className="text-[11.5px] text-ink-soft">{t(locale, "dashboard.overview.sinceCard.now")}</span>
+          {/* The two latest scans: "Previous scan · Nov 20 → Today" (or "Latest scan · Nov 23"). */}
+          <span className="text-[11.5px] text-ink-soft">
+            {calendarDaysAgo(current.created_at, new Date(), timeZone) === 0 ? t(locale, "dashboard.overview.sinceCard.today") : t(locale, "dashboard.overview.sinceCard.latest", { date: shortDay(current.created_at, locale, timeZone) })}
+          </span>
           <span className="font-serif text-[28px] font-bold leading-none tabular-nums text-ink">{current.total}</span>
         </div>
         {!sameVersion && (

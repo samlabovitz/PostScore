@@ -59,10 +59,11 @@ describe("the Growth step card on Premium (Day 23B: one button, lib/fixDestinati
   test("an editor, Google writes on: ONE “PostScore can do this for you”, never “Coming soon” (EN + ES)", () => {
     const html = render(<TaskCard task={replies} businessId="b1" context="weekly" premium />, LIVE);
     expect(buttons(html)).toBe(1);
-    expect(html).toMatch(/data-kind="do_it"[^>]*href="\/business\/b1\/website-reviews#google-reviews"/);
-    expect(html).toContain("PostScore can do this for you");
+    // Day 25B step 3: replies are done in Reviews — "Reply in Reviews →" (one click there on Premium).
+    expect(html).toMatch(/data-kind="do_it"[^>]*href="\/business\/b1\/website-reviews#reply-to-reviews"/);
+    expect(html).toContain("Reply in Reviews →");
     expect(html).not.toContain("step-coming-soon");
-    expect(render(<TaskCard task={replies} businessId="b1" context="weekly" premium />, LIVE, "es")).toContain("PostScore puede hacerlo por usted");
+    expect(render(<TaskCard task={replies} businessId="b1" context="weekly" premium />, LIVE, "es")).toContain("Responda en Reseñas →");
     for (const checkId of ["completeness.hours", "completeness.phone", "completeness.website_link", "completeness.photos", "completeness.customer_details"]) {
       const h = render(<TaskCard task={task(checkId, { automatable: true })} businessId="b1" context="weekly" premium />, LIVE);
       expect([checkId, buttons(h), h.includes('data-kind="do_it"'), h.includes("step-coming-soon")]).toEqual([checkId, 1, true, false]);

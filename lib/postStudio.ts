@@ -75,6 +75,11 @@ export function hasPostStudio(plan: Plan, addons: readonly Addon[] = []): boolea
 // The ways to get PostStudio (coming soon — nothing can be bought yet).
 // ---------------------------------------------------------------------------
 
+/** PostStudio can't be bought yet (Nov 22): no price and no "Add PostStudio"
+ * anywhere — the Website card, the PostStudio box and page, Settings →
+ * Compare plans and every promo — only "Coming soon". Turn on at launch. */
+export const POSTSTUDIO_ON_SALE = false;
+
 /** "solo" = PostStudio only (the free audit + PostStudio). */
 export type PostStudioOption = "solo" | "grow" | "premium" | "multi";
 export const POSTSTUDIO_OPTIONS: PostStudioOption[] = ["solo", "grow", "premium", "multi"];

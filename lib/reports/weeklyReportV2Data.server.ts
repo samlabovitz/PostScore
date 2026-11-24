@@ -17,6 +17,7 @@ import { isGeneralNiche, nicheById } from "@/lib/niches";
 import { nicheGroupNoun, townStateFromAddress } from "@/lib/competitorQuery";
 import { businessRowToScoringInput, checkLabelKey, type CheckResult, type ScoreBreakdown } from "@/lib/scoring";
 import { pointsText, recRangeText, wholePointRange } from "@/lib/pointRange";
+import { REVIEW_SPLIT_IDS } from "@/lib/actionPlan";
 import { headToHeadScores } from "@/lib/competitorHeadToHead";
 import { readListingPage } from "@/lib/websiteAnalysis";
 import { t, tPlural, type Locale } from "@/lib/i18n";
@@ -47,7 +48,8 @@ const K = (key: string) => `dashboard.reports.v2.${key}` as Parameters<typeof t>
 
 /** Appointment and class businesses: no hours can mean "by appointment". */
 const APPOINTMENT_PROFILES = new Set([...BOOKING_PROFILE_IDS, "tutor_education", "photographer", "childcare"]);
-const REVIEW_CHECKS = new Set(["visibility.review_count", "visibility.reviews_merged", "visibility.review_recency"]);
+// Day 25B step 3: every review row (lib/actionPlan.ts splitReviewTasks).
+const REVIEW_CHECKS = new Set(["visibility.review_count", "visibility.review_recency", ...REVIEW_SPLIT_IDS]);
 
 const labelOf = (locale: Locale) => (check: CheckResult) => {
   const key = checkLabelKey(check.id);

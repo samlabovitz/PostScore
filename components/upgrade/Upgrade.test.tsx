@@ -91,7 +91,8 @@ describe("locked-feature triggers", () => {
     expect(free).not.toContain("promo-box");
     expect(free).not.toContain("unlock-grow-button");
     expect(text(render(ctx("free", null), <UpgradeTrigger feature="reviewSign" />)).trim()).toBe("Grow See plans");
-    expect(text(render(ctx("free", null), <UpgradeTrigger feature="postStudio" />)).trim()).toBe("Add-on See plans");
+    // PostStudio isn't on sale yet: no lock, no "See plans", no way to buy.
+    expect(text(render(ctx("free", null), <UpgradeTrigger feature="postStudio" />)).trim()).toBe("");
     // A block that already names its plan drops the chip.
     expect(text(render(ctx("free", null), <UpgradeTrigger feature="designs" plain />)).trim()).toBe("See plans");
     expect(text(render(ctx("free", null), <UpgradeTrigger feature="designs" />, "es")).trim()).toBe("Premium Ver planes");
@@ -133,7 +134,7 @@ describe("the PostStudio box (its own, not Grow vs Premium)", () => {
     return render(value, <PostStudioBody up={value} businessId="b1" onClose={() => {}} />, locale);
   };
 
-  test("three compact tiles — Website, Menu & catalog, Logo Studio (each coming soon) — then the ways to get it; no page outlines", () => {
+  test("three compact tiles — Website, Menu & catalog, Logo Studio (each coming soon); no ways to buy until it's on sale; no page outlines", () => {
     const html = body("free");
     const t = text(html);
     expect(html.match(/<li [^>]*data-feature="(\w+)"/g)!.map((m) => m.match(/data-feature="(\w+)"/)![1])).toEqual(["website", "menu", "logo"]);
@@ -141,24 +142,10 @@ describe("the PostStudio box (its own, not Grow vs Premium)", () => {
     expect(t).toContain("Menu & catalog Coming soon Your menu or product list, always up to date, with a QR code that never changes.");
     expect(t).toContain("Logo Studio Coming soon Upload your logo or make a simple one, used across your site and printouts.");
     expect(html).not.toMatch(/outline|The 4 pages/i);
-    expect(html.indexOf('data-testid="poststudio-features"')).toBeLessThan(html.indexOf('data-testid="poststudio-options"'));
-    expect(t).toContain("PostStudio only $30/mo");
-    expect(t).toContain("Grow + PostStudio $40/mo");
-    expect(t).toContain("Premium + PostStudio $50/mo");
-    expect(t).toContain("Best value");
-    expect(t).toContain("Included in Multi");
+    expect(html).not.toContain('data-testid="poststudio-options"');
+    expect(t).not.toMatch(/\$\d/);
     expect(html).not.toContain('data-testid="promo-plan"');
-    expect(html.indexOf('data-option="solo"')).toBeLessThan(html.indexOf('data-option="grow"'));
-    expect(html.indexOf('data-option="grow"')).toBeLessThan(html.indexOf('data-option="premium"'));
-    expect(html.indexOf('data-option="premium"')).toBeLessThan(html.indexOf('data-option="multi"'));
-  });
-
-  test("the plan they're on is highlighted (Free → PostStudio only)", () => {
-    const on = (plan: Plan) => body(plan).match(/data-option="(\w+)" data-highlighted="true"/g);
-    expect(on("free")).toEqual(['data-option="solo" data-highlighted="true"']);
-    expect(on("grow")).toEqual(['data-option="grow" data-highlighted="true"']);
-    expect(on("premium")).toEqual(['data-option="premium" data-highlighted="true"']);
-    expect(text(body("grow"))).toContain("Your plan");
+    for (const plan of ["free", "grow", "premium"] as const) expect(body(plan)).not.toContain("data-option=");
   });
 
   test("the box: PostStudio's own title, Coming soon, its footer; every PostStudio lock opens it", () => {
@@ -170,7 +157,8 @@ describe("the PostStudio box (its own, not Grow vs Premium)", () => {
     const tr = (k: string, l: "en" | "es" = "en") => text(render(null, <>{t(l, k as MessageKey)}</>, l)).trim();
     expect(tr("dashboard.postStudioPlans.footer")).toBe("Coming soon — nothing is charged today.");
     expect(tr("dashboard.postStudioPlans.box.title")).toBe("PostStudio: your website, menu and logo");
-    expect(readFileSync("app/business/[id]/website/PostStudioShowcase.tsx", "utf8")).toContain('<UpgradeButton feature="postStudio" testId="poststudio-add"');
+    // "Add PostStudio" only once it's on sale.
+    expect(readFileSync("app/business/[id]/website/PostStudioShowcase.tsx", "utf8")).toContain('{POSTSTUDIO_ON_SALE && (\n            <UpgradeButton feature="postStudio" testId="poststudio-add"');
     // Free Overview: PostStudio is listed (badge "Add-on", Coming soon) in the
     // combined card's "See everything in each plan" — no button of its own.
     expect(readFileSync("lib/planFeatures.ts", "utf8")).toContain('extra("postStudio", "dashboard.overview.postStudio.title", "addOn", true)');
@@ -178,7 +166,8 @@ describe("the PostStudio box (its own, not Grow vs Premium)", () => {
 
   test("Spanish (usted)", () => {
     const t = text(body("premium", "es"));
-    for (const s of ["Sitio web", "Menú y catálogo", "Logo Studio", "un código QR que nunca cambia", "Suba su logo", "Solo PostStudio", "$30/mes", "Grow + PostStudio", "$40/mes", "Premium + PostStudio", "$50/mes", "Mejor valor", "Incluido en Multi", "Su plan", "Próximamente"]) expect(t).toContain(s);
+    for (const s of ["Sitio web", "Menú y catálogo", "Logo Studio", "un código QR que nunca cambia", "Suba su logo", "Próximamente"]) expect(t).toContain(s);
+    expect(t).not.toMatch(/\$\d/);
   });
 });
 

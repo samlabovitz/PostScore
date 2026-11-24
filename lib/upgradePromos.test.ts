@@ -68,8 +68,13 @@ describe("who sees which promo card", () => {
 
   test("anything not built is marked soon", () => {
     const all = SHOWCASE_PAGES.flatMap((p) => cardChips("premium", p));
-    for (const id of ["campaignChannels", "postStudio"])
-      expect(all.filter((c) => c.key.endsWith(`.${id}`)).every((c) => c.soon), id).toBe(true);
+    expect(all.filter((c) => c.key.endsWith(".campaignChannels")).every((c) => c.soon)).toBe(true);
+    // PostStudio says "(coming soon)" in its own words (no second pill) and never "discount" (Nov 22).
+    expect(all.filter((c) => c.key.endsWith(".postStudio")).every((c) => !c.soon)).toBe(true);
+    expect(t("en", "dashboard.upgrade.chip.postStudio")).toBe("PostStudio (coming soon)");
+    expect(t("es", "dashboard.upgrade.chip.postStudio")).toBe("PostStudio (próximamente)");
+    for (const key of ["dashboard.settings.plans.bullet.premium.postai", "dashboard.settings.plans.value.starterDiscount", "dashboard.upgrade.chip.postStudio"] as const)
+      for (const l of ["en", "es"] as const) expect(t(l, key)).not.toMatch(/discount|descuento/i);
     // Google results are live since Day 22B: never "soon", named as on Compare plans.
     const results = all.filter((c) => c.key.endsWith(".searchInsights"));
     expect(results.length).toBeGreaterThan(0);
@@ -98,9 +103,10 @@ describe("the promo box", () => {
     const features: PromoFeature[] = ["designs", "print", "reviewSign", "googleProfile", "campaignHub", "postStudio", "recheck", "premium", "grow"];
     for (const f of features) {
       expect(promosFor("multi", f)).toBe(false);
-      expect(promosFor("premium", f)).toBe(f === "postStudio");
-      expect(promosFor("free", f)).toBe(true);
-      expect(promosFor("grow", f)).toBe(featurePlan(f) === "premium");
+      // PostStudio isn't on sale yet (lib/postStudio.ts): no promo for it on any plan.
+      expect(promosFor("premium", f)).toBe(false);
+      expect(promosFor("free", f)).toBe(f !== "postStudio");
+      expect(promosFor("grow", f)).toBe(featurePlan(f) === "premium" && f !== "postStudio");
     }
   });
 

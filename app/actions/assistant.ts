@@ -6,6 +6,7 @@ import { isBusinessArchived } from "@/lib/businessArchive.server";
 import { getBusinessSummary } from "@/app/actions/businesses";
 import { scoreBusinessById, getScoreHistory } from "@/app/actions/scoring";
 import { getActionPlan } from "@/app/actions/actionPlan";
+import { planTaskName } from "@/lib/actionPlan";
 import { biggestBoostFrom, topRecommendations } from "@/lib/overviewTiles";
 import { getLatestCompetitorSnapshot, getLocalBenchmark } from "@/app/actions/competitors";
 import { headToHead, nearbyReviewAverage, ownerStanding, rankBy, reviewGoal } from "@/lib/competitorComparison";
@@ -194,7 +195,8 @@ async function loadContext(businessId: string): Promise<LoadContextResult> {
   const topTasks: AssistantActionPlanTask[] =
     actionPlanResult.status === "ok"
       ? actionPlanResult.tasks.slice(0, MAX_ACTION_PLAN_TASKS_IN_CONTEXT).map((t) => ({
-          label: t.label,
+          // Day 25B step 3: each review row by name and timing, never one "Reviews" lump.
+          label: planTaskName(t, locale),
           category: t.category,
           // The real effect on the total — the same number Top recommendations and Growth show.
           promisedPoints: t.weightedPoints,
@@ -267,6 +269,7 @@ async function loadContext(businessId: string): Promise<LoadContextResult> {
       title: item.title,
       checkedThisWeek:
         checklistStateResult.status === "ok" && checklistStateResult.state.checkedItemIds.includes(item.id),
+      ...(checklistStateResult.status === "ok" && checklistStateResult.state.auto[item.id] ? { checkedBy: checklistStateResult.state.auto[item.id] } : {}),
     })),
     streakWeeks: checklistStateResult.status === "ok" ? checklistStateResult.state.streakWeeks : 0,
   };
@@ -399,7 +402,7 @@ async function loadContext(businessId: string): Promise<LoadContextResult> {
         locale
       ),
       projectedScore: scored.result.projectedBreakdown.total,
-      tasks: actionPlanResult.status === "ok" ? actionPlanResult.tasks.slice(0, MAX_ACTION_PLAN_TASKS_IN_CONTEXT) : [],
+      tasks: actionPlanResult.status === "ok" ? actionPlanResult.tasks.slice(0, MAX_ACTION_PLAN_TASKS_IN_CONTEXT).map((t) => ({ ...t, label: planTaskName(t, locale) })) : [],
       websiteBanner: actionPlanResult.status === "ok" ? actionPlanResult.websiteBanner : null,
       // The Overview's "How you rank nearby" card, exactly (same call, same scope).
       rankCard:

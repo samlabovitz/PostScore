@@ -246,17 +246,18 @@ describe("PostStudio on the Website page: one card, no publishing steps on Free"
       for (const page of ["Home", "About", "Services", "Contact"]) expect(t).toContain(page);
       expect(t).toContain("Page outlines — not a real site yet");
       for (const row of ["Pages", "Hosting", "Auto-updates", "Website checks", "Built to pass every check"]) expect(t).toContain(row);
-      expect(t).toContain("$30/mo on its own · +$15 on Grow · +$10 on Premium · included in Multi");
+      // Not on sale yet (Nov 22): "Coming soon" only — no price, no "Add PostStudio".
+      expect(t).not.toMatch(/\$\d/);
+      expect(html).toContain('data-testid="poststudio-coming-soon"');
       expect(t).toContain("Coming soon");
-      // "Add PostStudio" opens the PostStudio box (a button, not a checkout).
-      expect(html).toMatch(/<button[^>]*data-testid="poststudio-add"[^>]*>Add PostStudio<\/button>/);
+      expect(html).not.toContain('data-testid="poststudio-add"');
       expect(html.match(/<a /g)).toHaveLength(1);
       expect(html).toContain('href="/business/b1/studio?from=%2Fbusiness%2Fb1%2Fwebsite"');
       expect(t).toContain("See PostStudio");
     }
     expect(text(card("free", "es"))).toContain("¿Quiere un sitio web completo? Créelo con PostStudio.");
-    expect(text(card("free", "es"))).toContain("Agregar PostStudio");
-    expect(text(card("free", "es"))).toContain("$30/mes por sí solo");
+    expect(text(card("free", "es"))).toContain("Próximamente");
+    expect(text(card("free", "es"))).not.toMatch(/\$\d|Agregar PostStudio/);
   });
 
   test("with PostStudio (Multi): 'Continue in PostStudio →', no upsell", () => {
@@ -282,7 +283,7 @@ describe("PostStudio on the Website page: one card, no publishing steps on Free"
     expect(html).not.toContain("build-in-poststudio");
   });
 
-  test("Grow/Premium: A (working tools, the real FAQ draft) then B (generator COLLAPSED, the PostStudio card with the add-on price); Multi: Continue in PostStudio", () => {
+  test("Grow/Premium: A (working tools, the real FAQ draft) then B (generator COLLAPSED, the PostStudio card, Coming soon, no price); Multi: Continue in PostStudio", () => {
     for (const plan of ["grow", "premium"] as const) {
       const html = section({ plan, realSite: true });
       const t = text(html);
@@ -292,7 +293,7 @@ describe("PostStudio on the Website page: one card, no publishing steps on Free"
       expect(fresh, plan).toContain("Build a one-page starter site →");
       expect(fresh, plan).not.toContain('data-testid="starter-preview-column"');
       expect(fresh, plan).toContain('data-mode="showcase"');
-      expect(text(fresh), plan).toContain("+$15 on Grow · +$10 on Premium");
+      expect(text(fresh), plan).not.toMatch(/\$\d/);
       expect(fresh, plan).not.toContain('data-testid="poststudio-line"');
     }
     expect(section({ plan: "multi", realSite: true })).toContain('data-mode="continue"');

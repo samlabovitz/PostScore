@@ -99,12 +99,13 @@ describe("Growth → Action plan makeover", () => {
     expect(html).toContain("ps-icon-tile");
   });
 
-  test("this week's plan: numbered task cards, status pill, whole-number points chip, How to fix collapsed, action + I did this on one row", () => {
+  test("this week's plan: numbered task cards, status pill, points chip (one decimal under 10), How to fix collapsed, action + I did this on one row", () => {
     const html = render();
     expect(html).toMatch(/aria-hidden="true" class="[^"]*rounded-full[^"]*">1<\/span>/);
     expect(html).toMatch(/>2<\/span>/);
     expect(html).toContain("To do");
-    expect(html).not.toMatch(/\+\d+\.\d+ pts/);
+    // Day 25B step 3: one decimal under 10, whole from 10 up.
+    expect(html).not.toMatch(/\+\d\d+\.\d+ pts/);
     expect(html).toContain('aria-expanded="false"');
     expect(html).not.toContain("Open your Google listing and add photos."); // the fix text stays collapsed
     expect(html).toContain("I did this");
@@ -136,16 +137,17 @@ describe("Growth → Action plan makeover", () => {
     expect(html).toContain('href="/business/b1/campaigns?tab=coupons"');
   });
 
-  test("confirmed wins in whole points; Spanish renders", () => {
-    expect(render()).toContain("+2 pts confirmed");
+  test("confirmed wins read like every fix (one decimal under 10); Spanish renders", () => {
+    expect(render()).toContain("+1.6 pts confirmed");
     const es = render({ locale: "es" });
     expect(es).toContain("a su alcance esta semana");
     expect(es).toContain("se reinicia el lunes");
   });
 
-  test("points labels are always whole numbers", () => {
-    expect(taskPointsLabel(task({ weightedPoints: 1.5 }), "weekly", "en")).toBe("Up to +2 pts");
-    expect(taskPointsLabel(task({ weightedPoints: 1.4, effort: "quick_win_action" }), "weekly", "en")).toBe("About +1 pt this week");
+  test("points labels: one decimal under 10, whole from 10 up", () => {
+    expect(taskPointsLabel(task({ weightedPoints: 1.5 }), "weekly", "en")).toBe("Up to +1.5 pts");
+    expect(taskPointsLabel(task({ weightedPoints: 1, effort: "quick_win_action" }), "weekly", "en")).toBe("About +1 pt this week");
+    expect(taskPointsLabel(task({ weightedPoints: 13.2 }), "weekly", "en")).toBe("Up to +13 pts");
     expect(taskPointsLabel(task({ weightedPoints: 29.2, weightedPointsHigh: 31.4 }), "weekly", "en")).toContain("+29–31");
   });
 

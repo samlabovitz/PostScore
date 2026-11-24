@@ -8,22 +8,24 @@ import { HoursDiffLines, RescanNowButton } from "@/components/scoring/HoursCheck
 import { useEffect, useState, createContext, useContext } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { IconChevronDown, IconBrandGoogle, IconCircleCheck, IconPhoto, IconTag, IconTicket, IconTrendingUp, IconUsers, IconWorld } from "@tabler/icons-react";
+import { IconChevronDown, IconLock, IconBrandGoogle, IconCircleCheck, IconPhoto, IconTag, IconTicket, IconTrendingUp, IconUsers, IconWorld } from "@tabler/icons-react";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { LINK_PILL_CLASS } from "@/components/ui/linkPill";
 import type { LinkOptions } from "@/lib/postaiLinks";
 import { cn } from "@/lib/utils";
-import { wholePointRange } from "@/lib/pointRange";
+import { displayPoints, pointsText, wholePointRange } from "@/lib/pointRange";
 import { markTaskDone } from "@/app/actions/actionPlan";
 import { WebsiteRecheck } from "@/components/scoring/WebsiteRecheck";
 import {
   MERGED_REVIEW_CHECK_ID,
+  REVIEW_SPLIT_IDS,
   GOOGLE_MISMATCH_CHECK_ID,
   pendingCheckStatus,
   timeEstimateText,
   weeklyMetricProgress,
   type ActionPlanTask,
+  type FixWhen,
   type CompletedTask,
   type PendingCheckStatus,
   type WeeklyMetricProgress,
@@ -34,7 +36,9 @@ import { useGbpEdit } from "@/components/gbp/CustomerDetailsGoogleEdit";
 import { FixButton, FIX_BUTTON_CLASS, useFixContext } from "@/components/scoring/FixButton";
 import { fixDestination, hasGoogleTab } from "@/lib/fixDestination";
 import { GOOGLE_BUSINESS_URL } from "@/lib/googleProfileTab";
-import { formatMonthDayTime, t, useLocale, useTimeZone, type Locale } from "@/lib/i18n";
+import { formatMonthDayTime, t, useLocale, useTimeZone, type Locale, type MessageKey } from "@/lib/i18n";
+import type { FixPriority } from "@/lib/overviewTiles";
+import { UpgradeTrigger } from "@/components/upgrade/UpgradeTrigger";
 
 /** What a website task needs for "Re-check my website". */
 export interface WebsiteRecheckProps {
@@ -216,7 +220,7 @@ function CurrentStatus({
  * provided by the Growth page; empty elsewhere. */
 export const ReviewGoalLinesContext = createContext<string[]>([]);
 
-const isReviewTask = (task: ActionPlanTask) => task.checkId === "reviews.merged" || task.checkId === "visibility.review_count";
+const isReviewTask = (task: ActionPlanTask) => task.checkId === MERGED_REVIEW_CHECK_ID || task.checkId === "visibility.review_count";
 
 /** The check's own explanation — one line per check on the merged reviews
  * card (review count and rating each have their own "full credit at …") —
@@ -275,10 +279,58 @@ function taskPointsText(task: ActionPlanTask, context: TaskCardContext, locale: 
       ? t(locale, "dashboard.overview.actionPlan.pointsRangeOnceLive", { low: range.low, high: range.high })
       : t(locale, "dashboard.overview.actionPlan.pointsOnceLive", { points: range.low });
   }
-  // The reviews card is one combined estimate — "up to", like the Overview.
+  // Day 25B step 3: only a ceiling says "up to" ("Keep growing toward 150
+  // reviews"); the other review rows are what they really earn ("+5 pts").
+  if (task.upTo) return t(locale, "dashboard.overview.actionPlan.pointsUpTo", { points: wholePoints(task.weightedPoints) });
+  if (REVIEW_SPLIT_IDS.includes(task.checkId) || task.when === "months") return pointsText(locale, wholePoints(task.weightedPoints));
   return context === "weekly" && task.effort !== "quick_win" && task.checkId !== MERGED_REVIEW_CHECK_ID
     ? t(locale, "dashboard.overview.actionPlan.pointsThisWeek", { points: wholePoints(task.weightedPoints) })
     : t(locale, "dashboard.overview.actionPlan.pointsUpTo", { points: wholePoints(task.weightedPoints) });
+}
+
+/** Fix plan: one decimal under 10, whole from 10 up ("+0.5 pts", "up to +6.8 pts", "+13 pts"). */
+export function fixPlanPoints(task: Pick<ActionPlanTask, "weightedPoints" | "upTo">, locale: Locale): string {
+  const points = String(displayPoints(task.weightedPoints));
+  return t(locale, task.upTo ? "dashboard.fixPlan.upToPts" : "dashboard.fixPlan.pts", { points });
+}
+
+const PRIORITY_KEY: Record<FixPriority, MessageKey> = {
+  urgent: "dashboard.overview.recs.urgent",
+  high: "dashboard.overview.recs.high",
+  medium: "dashboard.overview.recs.medium",
+  low: "dashboard.fixPlan.priority.low",
+};
+
+export function FixPriorityTag({ priority }: { priority: FixPriority }) {
+  const locale = useLocale();
+  return (
+    <span
+      data-testid="fix-priority"
+      data-priority={priority}
+      className={cn(
+        "inline-flex items-center whitespace-nowrap rounded-full px-2 py-0.5 text-[11px] font-semibold",
+        priority === "urgent" ? "bg-red text-white" : priority === "high" ? "bg-ink text-paper" : priority === "medium" ? "border border-ink/40 text-ink" : "border border-paper-deep text-ink-soft"
+      )}
+    >
+      {t(locale, PRIORITY_KEY[priority])}
+    </span>
+  );
+}
+
+export function FixWhenTag({ when }: { when: FixWhen }) {
+  const locale = useLocale();
+  return (
+    <span
+      data-testid="fix-when"
+      data-when={when}
+      className={cn(
+        "inline-flex items-center whitespace-nowrap rounded-full border px-2 py-0.5 text-[11px] font-semibold",
+        when === "this_week" ? "border-[color:color-mix(in_srgb,var(--color-green)_35%,white)] bg-[color:color-mix(in_srgb,var(--color-green)_10%,white)] text-green" : "border-paper-deep text-ink-soft"
+      )}
+    >
+      {t(locale, `dashboard.fixPlan.when.${when}` as MessageKey)}
+    </span>
+  );
 }
 
 const POINTS_CHIP =
@@ -294,9 +346,13 @@ export function TaskCard({
   premium = false,
   merged = [],
   hoursCheck = null,
+  fixPlan = null,
 }: {
   task: ActionPlanTask;
   businessId: string;
+  /** Day 25B step 3, Fix plan: its priority, the running score after it, and
+   * Free's lock (the steps are a locked preview; no "I did this"). */
+  fixPlan?: { priority: FixPriority; running: number; locked: boolean } | null;
   /** Day 23B: the details mismatches this task shows with every version (one task per field). */
   merged?: DetailsMismatch[];
   /** Day 23B: this hours check as it is now — matching (re-scan) or the exact days that differ. */
@@ -343,7 +399,7 @@ export function TaskCard({
   async function handleMarkDone() {
     setState({ kind: "saving" });
     // The merged reviews card stands in for 2-3 real checks (see
-    // mergeReviewTasks in lib/actionPlan.ts) — "I did this" marks every
+    // splitReviewTasks in lib/actionPlan.ts) — "I did this" marks every
     // one of their real underlying tasks rows, never the synthetic
     // checkId itself (which names no real task row).
     const checkIds = task.mergedCheckIds ?? [task.checkId];
@@ -379,7 +435,10 @@ export function TaskCard({
   // Merged with the confirmed details: "Your hours don't match everywhere".
   const hours = merged.length === 0 ? hoursCheck : null;
   const stale = hours?.kind === "stale";
-  const title = merged.length > 0 ? mergedTitle(merged, locale) : stale ? t(locale, "dashboard.hoursCheck.staleTitle") : (task.title ?? task.label);
+  // A hours check that matches now keeps its real title; "Changed since your last scan" is a note under it.
+  const plainTitle = merged.length > 0 ? mergedTitle(merged, locale) : stale ? t(locale, "content.actionPlan.title.website.info_consistency.hours") : (task.title ?? task.label);
+  // "Get 3 new reviews in the next 90 days (30 → 33)": the target already says the title — one line.
+  const title = headline.startsWith(plainTitle) && merged.length === 0 && !stale ? headline : plainTitle;
   // Google and the website agree now: only the confirmed details differ — the
   // scan's "show different hours" line and its points are out of date.
   const ownerOnly = merged.length > 0 && mergedKind(merged) === "owner_only";
@@ -401,20 +460,56 @@ export function TaskCard({
                 </span>
               )}
               <h3 className="text-[14.5px] font-semibold text-ink">{title}</h3>
-              {!isSetup && <span className="text-[11.5px] text-ink-mute">{effortBadge(task, context, locale)}</span>}
-              {task.minutes ? <span className="text-[11.5px] text-ink-mute">· {timeEstimateText(task.minutes, locale)}</span> : null}
-              {title !== task.label && !task.mergedLabels && (
+              {fixPlan ? (
+                <>
+                  {!task.urgent && !stale && <FixPriorityTag priority={fixPlan.priority} />}
+                  <FixWhenTag when={task.when ?? "weeks"} />
+                  {/* Phones: the status under the tags, so the title keeps its width. */}
+                  {isPending && (
+                    <StatusPill variant={status.variant} className="sm:hidden">
+                      {status.label}
+                    </StatusPill>
+                  )}
+                </>
+              ) : (
+                <>
+                  {/* Day 25B step 3: the same tag as Fix plan (This week / Takes a few weeks / Takes months). */}
+                  {!isSetup && (task.when ? <FixWhenTag when={task.when} /> : <span className="text-[11.5px] text-ink-mute">{effortBadge(task, context, locale)}</span>)}
+                  {task.minutes ? <span className="text-[11.5px] text-ink-mute">· {timeEstimateText(task.minutes, locale)}</span> : null}
+                </>
+              )}
+              {!fixPlan && title !== task.label && !task.mergedLabels && (
                 <span data-testid="task-check-label" className="w-full text-[11.5px] text-ink-mute">
                   {task.label}
                 </span>
               )}
             </div>
-            {!isSetup && (
-              <StatusPill variant={status.variant} className="shrink-0">
-                {status.label}
-              </StatusPill>
+            {fixPlan ? (
+              <div className="flex shrink-0 flex-col items-end gap-1.5" data-testid="fix-plan-points">
+                <span className={POINTS_CHIP}>{fixPlanPoints(task, locale)}</span>
+                <span className="whitespace-nowrap text-[13px] text-ink-soft">
+                  {t(locale, "dashboard.fixPlan.scoreArrow", { score: "" }).trim()} <b className="font-serif text-[18px] text-ink">{fixPlan.running}</b>
+                </span>
+                {isPending && (
+                  <StatusPill variant={status.variant} className="hidden shrink-0 sm:inline-flex">
+                    {status.label}
+                  </StatusPill>
+                )}
+              </div>
+            ) : (
+              !isSetup && (
+                <StatusPill variant={status.variant} className="shrink-0">
+                  {status.label}
+                </StatusPill>
+              )
             )}
           </div>
+
+          {stale && (
+            <p data-testid="hours-stale" className="-mt-1 text-[12.5px] text-ink-soft">
+              {t(locale, "dashboard.hoursCheck.staleTitle")}
+            </p>
+          )}
 
           {premium && task.automatable && !hasEditor && (
             <p data-testid="step-coming-soon" className="w-fit rounded-full border border-paper-deep bg-paper px-2.5 py-0.5 text-[11.5px] font-medium text-ink-soft">
@@ -426,7 +521,7 @@ export function TaskCard({
             <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1.5">
               {/* Never the title twice ("Reply to your recent reviews"); the hours check names the days that differ. */}
               {hours?.kind === "differs" ? <HoursDiffLines state={hours} /> : headline !== title && <p className="text-[13.5px] font-medium text-ink">{headline}</p>}
-              <span className={POINTS_CHIP}>{taskPointsLabel(task, context, locale)}</span>
+              {!fixPlan && <span className={POINTS_CHIP}>{taskPointsLabel(task, context, locale)}</span>}
             </div>
           )}
 
@@ -455,7 +550,14 @@ export function TaskCard({
               {expanded ? t(locale, "dashboard.overview.actionPlan.hideHowToFix") : t(locale, "dashboard.overview.actionPlan.howToFixIt")}
               <IconChevronDown size={14} className={cn("transition-transform", expanded && "rotate-180")} aria-hidden />
             </button>
-            {expanded && (
+            {expanded && fixPlan?.locked && (
+              <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 rounded-xl border border-paper-line bg-paper p-3.5 text-[13px] text-ink-soft" data-testid="fix-plan-steps-locked">
+                <IconLock size={14} className="text-brass" aria-hidden />
+                <span>{t(locale, "dashboard.googlePages.listing.locked")}</span>
+                <UpgradeTrigger feature="grow" />
+              </div>
+            )}
+            {expanded && !fixPlan?.locked && (
               <div className="mt-2 rounded-xl border border-paper-line bg-paper p-3.5 text-[13px] leading-relaxed text-ink-soft">
                 {canUpdateOnGoogle && (
                   <p data-testid="how-to-update-intro" className="mb-1.5 font-medium text-ink">
@@ -537,7 +639,12 @@ export function TaskCard({
               )}
               {/* Day 23B: the one dark button — on this page the step-by-step opens right here. */}
               {stale ? (
-                <RescanNowButton businessId={businessId} />
+                <RescanNowButton businessId={businessId} lastScanAt={lastScanAt} />
+              ) : fixPlan?.locked ? (
+                // Free: "Fix it" opens the steps as a locked preview.
+                <button type="button" onClick={() => setExpanded(true)} data-testid="fix-button" data-kind="locked" className={FIX_BUTTON_CLASS}>
+                  {t(locale, "dashboard.fixPlan.fixIt")} →
+                </button>
               ) : merged.length > 0 ? (
                 <MergedActions businessId={businessId} mismatches={merged} only="button" premiumLine={false} />
               ) : (
@@ -545,13 +652,15 @@ export function TaskCard({
                   businessId={businessId}
                   item={fixItem}
                   premiumLine={false}
+                  fixPlan={!!fixPlan}
                   onSteps={() => {
                     setExpanded(true);
                     requestAnimationFrame(() => document.getElementById(cardId)?.scrollIntoView({ behavior: "smooth", block: "start" }));
                   }}
                 />
               )}
-              {(!isPending || canMarkAgain) && !stale && (
+              {/* A row that grows over time ("Grow to 40 reviews") has no "I did this": its one action is row 1's. */}
+              {(!isPending || canMarkAgain) && !stale && task.markable !== false && !fixPlan?.locked && (
                 <Button variant="default" size="sm" onClick={handleMarkDone} disabled={state.kind === "saving"}>
                   {state.kind === "saving"
                     ? t(locale, "dashboard.overview.actionPlan.saving")

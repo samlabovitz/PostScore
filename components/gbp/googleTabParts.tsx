@@ -79,6 +79,8 @@ export interface GoogleProfileTabProps {
   websiteHours?: { week: WeeklyHours | null; builder: { id: WebsiteBuilderId; name: string } | null; siteUrl: string | null; managedEmail: string | null; hasPhoneLink?: boolean | null } | null;
   /** The last scan found the website's hours differ from Google's (undefined: no website compared). */
   hoursMismatch?: boolean;
+  /** Day 25B step 3: the website and Google show the same hours now (the saved scan said they differ). */
+  hoursMatchNow?: boolean;
   /** The business type (businesses.niche_id), for section 5's search-term → service maps. */
   nicheId?: string | null;
   /** Writes from PostScore allowed (practice, or GOOGLE_WRITES_LIVE_PLACES). */

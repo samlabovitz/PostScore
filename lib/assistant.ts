@@ -11,7 +11,7 @@
 // from the server action that calls the API.
 
 import type { CategoryId, Confidence, Grade, HttpsCheckStatus } from "@/lib/scoring";
-import { wholePointRange } from "@/lib/pointRange";
+import { displayPoints, wholePointRange } from "@/lib/pointRange";
 import { factsBlockText, type PostaiFacts } from "@/lib/postaiFacts";
 import { ownerProvidedLines } from "@/lib/businessOffer";
 import { CATEGORY_LABELS } from "@/lib/scoring";
@@ -309,6 +309,9 @@ export interface AssistantGrowthMove {
 }
 
 export interface AssistantWeeklyRoutineItem {
+  /** Nov 22: PostScore checked it itself this week (connected Premium) —
+   * "sent" from PostScore, or "seen" on Google. Absent: the owner's own checkmark (or not checked). */
+  checkedBy?: "sent" | "seen";
   /** The real, stable item id (see WEEKLY_CHECKLIST_ITEM_IDS in
    * lib/weeklyChecklist.ts) — used by buildAssistantContextText to
    * state exactly where each habit is actually done (see
@@ -480,7 +483,7 @@ HOW TO ANSWER:
    - Getting more/fresh reviews (review link + QR sign): [[link:reviews]]. Connecting Google Business Profile: [[link:reviews.connect]].
    - Growth recap / bigger projects: [[link:growth]]. Weekly routine: [[link:growth.weekly_routine]]. This week's Google post: [[link:google.posts]]. Answers to customers' common questions: [[link:google.answers]]. Coupon builder: [[link:growth.coupon]]. Referral card: [[link:growth.referral]]. Never use either when REAL DATA CONTEXT says that tab isn't offered for this business type.
    - Competitor comparison: [[link:competitors]]. Prices: [[link:pricing]] (never when REAL DATA CONTEXT says the price check isn't offered). Monthly reports: [[link:reports]]. Business type or report settings: [[link:settings]].
-8. WEEKLY ROUTINE: EXACTLY WHAT YOU CAN SEE. The weekly-routine items in REAL DATA CONTEXT are the owner's own checkmarks, not something PostScore can verify — describe each one only as "you've checked off X this week" or "you haven't checked off X this week." Never say or imply the owner actually posted an update, replied to a review, or added a photo — or that they didn't — you only ever know whether they logged it, never whether they really did it. NEVER use phrasing that asserts an ongoing habit or claims credit for action beyond this week's checkbox — forbidden phrasings include "you're already replying," "you've been posting," "you're staying on top of," or any similar continuous/habitual claim.
+8. WEEKLY ROUTINE: EXACTLY WHAT YOU CAN SEE. The weekly-routine items in REAL DATA CONTEXT are the owner's own checkmarks, not something PostScore can verify — describe each one only as "you've checked off X this week" or "you haven't checked off X this week." The one exception: an item marked "checked by PostScore" — say exactly that ("PostScore sent this week's Google post", "PostScore can see a new photo on Google this week"), never that the owner checked it off. Never say or imply the owner actually posted an update, replied to a review, or added a photo — or that they didn't — you only ever know whether they logged it, never whether they really did it. NEVER use phrasing that asserts an ongoing habit or claims credit for action beyond this week's checkbox — forbidden phrasings include "you're already replying," "you've been posting," "you're staying on top of," or any similar continuous/habitual claim.
 9. GROWTH MOVES: CHECK EACH ONE'S OWN "SCORE IMPACT" LINE — NEVER GENERALIZE. Every growth move in REAL DATA CONTEXT now carries its own real, precomputed "Score impact" line: YES (it currently also costs real points — overlaps a real losing check or action-plan task) or NO (customers only, no effect on PostScore either way). NEVER state a blanket claim like "none of these change your score" or "these don't affect your score" covering multiple growth moves at once — check EVERY move you mention individually against its own real "Score impact" line; if even one of them says YES, that blanket claim is false for the whole list. When a move's line says YES, quote the real points from its matching losing-check/action-plan entry — never deny or omit them just because the same fix is also framed as a growth move. The coupon/referral facts there describe PostScore specifically (e.g. "no coupon created in PostScore yet") — never say the owner "doesn't run promotions" or "has no referral program": they may run either outside PostScore, which you have no way to see.
 10. VARIETY, WITHIN THIS CONVERSATION ONLY. You only ever see this one conversation, never any other — don't imply you remember a past chat, and never say anything like "last time we talked." Within THIS conversation, don't repeat a recommendation you've already given — if asked again, build on what you already said or offer a different real option from REAL DATA CONTEXT instead of restating the same one. When the owner asks broadly how to grow or get more customers, draw from the growth moves and weekly routine as well as the action plan, not reviews by default — include at most one review-related suggestion unless they specifically asked about reviews. If REAL DATA CONTEXT genuinely has no different real option left to offer, say so honestly — e.g. "that's everything real I've got for you right now" — rather than inventing a new one or just repeating what you already said.
 11. QUOTE EXACTLY, NEVER CALCULATE OR EMBELLISH. Every point value, count, date, and data label in REAL DATA CONTEXT is already exact and already computed — use those numbers and words VERBATIM, never recompute or round them yourself, and never rephrase a neutral label into a stronger or weaker claim (REAL DATA CONTEXT's "average" must stay "average" — never "slower than average," "below average," or "poor" unless REAL DATA CONTEXT itself says so). Every losing check already states how many points it's missing ("losing N pts") — never subtract earned from max yourself, and never state a total that doesn't match the real numbers given. When listing items (weekly routine items, action-plan tasks, growth moves), count and list exactly what REAL DATA CONTEXT gives — never more, never fewer, never merged or skipped. The weekly routine specifically has exactly five possible items (posting an update, replying to reviews, sharing the review link, adding a photo, checking hours) — a coupon, a referral, a price check, or any other growth move is NEVER part of the weekly routine, even when you'd recommend doing it the same week; never say or imply anything else is "on," "part of," or "included in" the weekly routine.
@@ -814,7 +817,7 @@ export function buildAssistantContextText(context: AssistantBusinessContext, loc
   if (context.profile.fixedItems.length > 0) {
     lines.push("Confirmed fixed (a later re-scan actually verified these, newest first):");
     for (const f of context.profile.fixedItems) {
-      lines.push(`- ${f.label} (+${formatPoints(f.pointsGained)} pts, confirmed ${f.verifiedAt ?? "on an earlier date"})`);
+      lines.push(`- ${f.label} (+${displayPoints(f.pointsGained)} pts, confirmed ${f.verifiedAt ?? "on an earlier date"})`);
     }
   } else {
     lines.push("Confirmed fixed: nothing confirmed fixed yet.");
@@ -859,7 +862,7 @@ export function buildAssistantContextText(context: AssistantBusinessContext, loc
     for (const t of context.actionPlan.topTasks) {
       // With FACTS, the points are its "POINT GAINS THE APP SHOWS" line (the Growth card's chip).
       const urgent = t.urgent ? "URGENT — customers are hitting this right now. " : "";
-      lines.push(context.facts ? `- ${urgent}${t.label} (${formatEffort(t.effort)}): ${t.action}` : `- ${urgent}${t.label} (+${formatPoints(t.promisedPoints)} pts, ${formatEffort(t.effort)}): ${t.action}`);
+      lines.push(context.facts ? `- ${urgent}${t.label} (${formatEffort(t.effort)}): ${t.action}` : `- ${urgent}${t.label} (+${displayPoints(t.promisedPoints)} pts, ${formatEffort(t.effort)}): ${t.action}`);
     }
     if (context.actionPlan.topTasks.some((t) => t.urgent)) {
       lines.push("When the owner asks what to do first, start with the URGENT items, in this order, before anything worth more points — and say plainly that customers are running into them now. Urgent changes the order only, never the points.");
@@ -927,11 +930,11 @@ export function buildAssistantContextText(context: AssistantBusinessContext, loc
     `WEEKLY ROUTINE (owner self-reported, resets Mondays — exactly ${context.weeklyRoutine.items.length} items, logged on the Growth page under "Your weekly routine" — this is a DIFFERENT section from the "Growth recap," which is the score-based action plan above):`
   );
   lines.push(
-    "These are the owner's own checkmarks only — PostScore cannot see whether they actually posted an update, replied to a review, or added a photo. An item marked \"not checked off\" means the owner hasn't logged it yet this week, NOT that they haven't really done it — never say or imply the owner failed to do something just because it isn't checked off."
+    "These are the owner's own checkmarks, except items marked \"checked by PostScore\": on connected Premium listings PostScore checks off a Google post, review replies or photos it sent this week (\"sent from PostScore\") or can see on Google (\"seen on Google\"). An item marked \"not checked off\" means it isn't logged yet this week, NOT that the owner hasn't really done it — never say or imply the owner failed to do something just because it isn't checked off."
   );
   for (const item of context.weeklyRoutine.items) {
     lines.push(
-      `- ${item.title}: ${item.checkedThisWeek ? "checked off this week" : "not checked off this week"}. ${weeklyRoutineDoneOn(item.id)}`
+      `- ${item.title}: ${item.checkedBy === "sent" ? "checked by PostScore this week (sent from PostScore)" : item.checkedBy === "seen" ? "checked by PostScore this week (seen on Google)" : item.checkedThisWeek ? "checked off this week" : "not checked off this week"}. ${weeklyRoutineDoneOn(item.id)}`
     );
   }
   lines.push(

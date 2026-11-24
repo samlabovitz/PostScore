@@ -15,7 +15,7 @@ import {
   needsAllowBotStep,
   buildMarkOpenStep,
   buildWeeklyPlan,
-  mergeReviewTasks,
+  splitReviewTasks,
   orderWeeklySteps,
   V112_STEP_CHECK_IDS,
   withStepLinks,
@@ -118,8 +118,8 @@ export async function getActionPlan(
   // deterministically-coupled website checks (has_website/website_link)
   // into one card whenever there's no website, before anything
   // downstream (the weekly plan, the UI) ever sees the list — see
-  // mergeReviewTasks's and mergeWebsiteTasks's own docs for why.
-  const reviewMerged = mergeReviewTasks(rawTasks, breakdown, input, locale);
+  // splitReviewTasks's and mergeWebsiteTasks's own docs for why.
+  const reviewMerged = splitReviewTasks(rawTasks, breakdown, input, locale);
 
   // Only for a business with no website at all — never one whose real
   // site was verified elsewhere (the real Bánh Mì Boy case).

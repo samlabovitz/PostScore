@@ -20,6 +20,7 @@ import { WEEK_ORDER, closedWeek, timeInput, parseTimeInput, type WeeklyHours } f
 import { choiceKey, choiceState, dayName, fixesFor, hoursLines, ownHoursKey, parseStoredChoice, type HoursChoice, type StoredChoice } from "@/lib/hoursChooser";
 import { versionsOfHours } from "@/lib/compareVersions";
 import { CompareVersions } from "@/components/gbp/CompareVersions";
+import { RescanNowButton } from "@/components/scoring/HoursCheck";
 import { t, useLocale, type Locale, type MessageKey } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import { PremiumOneClickLine } from "@/components/scoring/PremiumOneClickLine";
@@ -190,7 +191,7 @@ function OwnHours({ value, onChange }: { value: WeeklyHours; onChange: (w: Weekl
   );
 }
 
-export function HoursComparePanel({ businessId, onTab = false, initialView = null }: { businessId: string; onTab?: boolean; initialView?: OpenHoursCompareResult | null }) {
+export function HoursComparePanel({ businessId, onTab = false, initialView = null, readOnly = false, lastScanAt }: { businessId: string; onTab?: boolean; initialView?: OpenHoursCompareResult | null; /** Free: the two versions side by side only — no choice, no steps, nothing written. */ readOnly?: boolean; /** The latest scan: "Re-scan now" only once the next re-scan is open. */ lastScanAt?: string | null }) {
   const locale = useLocale();
   const [view, setView] = useState<OpenHoursCompareResult | null>(initialView);
   const [failed, setFailed] = useState(false);
@@ -205,6 +206,15 @@ export function HoursComparePanel({ businessId, onTab = false, initialView = nul
   if (failed) return <p className="text-[13px] text-red">{t(locale, K("loadFailed"))}</p>;
   if (!view) return <p className="text-[13px] text-ink-soft">{t(locale, K("loading"))}</p>;
   if (view.status !== "ok") return <p className="text-[13px] text-red">{t(locale, K("loadFailed"))}</p>;
+  // Google shows the website's hours now: the scan is out of date, not the hours (CLAUDE.md "Scores").
+  const versions = versionsOfHours(view.google, view.site, locale, view.googleLines);
+  if (view.google && view.site && versions.kind === "days" && versions.days.every((d) => !d.differs))
+    return (
+      <div className="flex flex-col gap-2 rounded-xl border border-paper-deep bg-paper/40 p-3.5" data-testid="hours-compare" data-matches-now="true">
+        <p className="text-[13.5px] font-semibold text-ink">{t(locale, "dashboard.hoursCheck.staleTitle")}</p>
+        <RescanNowButton businessId={businessId} lastScanAt={lastScanAt} />
+      </div>
+    );
   const choice = stored?.choice ?? null;
   const pick = (c: HoursChoice) => {
     const at = new Date().toISOString();
@@ -219,6 +229,13 @@ export function HoursComparePanel({ businessId, onTab = false, initialView = nul
     setStored(null);
     forgetChoice(businessId);
   };
+  if (readOnly)
+    return (
+      <div className="flex flex-col gap-3 rounded-xl border border-paper-deep bg-paper/40 p-3.5" data-testid="hours-compare" data-readonly="true">
+        <CompareVersions testId="hours-versions" question={t(locale, K("question"))} versions={versionsOfHours(view.google, view.site, locale, view.googleLines)} mineLabel={t(locale, "dashboard.compareVersions.website")} mineIcon="globe" />
+        <p className="text-[11.5px] text-ink-mute">{t(locale, K(view.live ? "sourceLive" : "sourceScan"))}</p>
+      </div>
+    );
   const fixes = fixesFor(choice === "own" && !ownDone ? null : choice);
   const googleTarget = choice === "own" ? own : view.site;
   const websiteTarget = choice === "own" ? own : view.google;

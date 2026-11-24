@@ -5,7 +5,7 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, test } from "vitest";
 import { biggestBoostFrom, reportNextSteps, topRecommendations } from "./overviewTiles";
-import { buildActionPlan, MERGED_REVIEW_CHECK_ID, mergeReviewTasks, type ActionPlanTask } from "./actionPlan";
+import { buildActionPlan, MERGED_REVIEW_CHECK_ID, splitReviewTasks, type ActionPlanTask } from "./actionPlan";
 import { getScoreWithSuggestions, type BusinessScoringInput } from "./scoring";
 import { scoringInput } from "@/emails/sampleMonthlyReportContent";
 
@@ -105,7 +105,7 @@ describe("M15: a merged card is marked done only when every part is", () => {
   const merged = (doneIds: string[]) => {
     const { breakdown, suggestions } = getScoreWithSuggestions(input, "en");
     const rows = doneIds.map((id, i) => ({ id: `t${i}`, check_id: id, status: "pending_verification", promised_points: 1, marked_done_at: "2026-11-01T00:00:00Z", verified_at: null, marked_metric_value: null }));
-    const tasks = mergeReviewTasks(buildActionPlan(breakdown, suggestions, rows as never, input, "en"), breakdown, input, "en");
+    const tasks = splitReviewTasks(buildActionPlan(breakdown, suggestions, rows as never, input, "en"), breakdown, input, "en");
     return tasks.find((x) => x.checkId === MERGED_REVIEW_CHECK_ID)!;
   };
 

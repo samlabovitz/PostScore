@@ -10,7 +10,7 @@ import {
   buildConnectGbpWeeklyTask,
   buildWeeklyPlan,
   connectGoogleHref,
-  mergeReviewTasks,
+  splitReviewTasks,
   stepLinks,
   V112_STEP_CHECK_IDS,
   withStepLinks,
@@ -42,20 +42,21 @@ const ROW = {
 
 function growthPlan(input: BusinessScoringInput, locale: Locale = "en") {
   const { breakdown, suggestions } = getScoreWithSuggestions(input, locale);
-  const tasks = withStepLinks(mergeReviewTasks(buildActionPlan(breakdown, suggestions, [], input, locale), breakdown, input, locale), "b1", locale);
+  const tasks = withStepLinks(splitReviewTasks(buildActionPlan(breakdown, suggestions, [], input, locale), breakdown, input, locale), "b1", locale);
   return buildWeeklyPlan(tasks, breakdown, input, WEEKLY_PLAN_CAP, locale, V112_STEP_CHECK_IDS);
 }
 
 describe("this week's plan: the v1.12.0 steps while they lose points", () => {
   const input = businessRowToScoringInput(ROW);
   const weekly = growthPlan(input).weeklyTasks;
-  const step = (id: string) => weekly.find((t) => t.checkId === id)!;
+  // Day 25B step 3: recency is always the first review row ("Get 3 new reviews in the next 90 days").
+  const step = (id: string) => weekly.find((t) => t.checkId === (id === "visibility.review_recency" ? MERGED_REVIEW_CHECK_ID : id))!;
 
   test("each shows with a how-to, a time estimate and links; recency rides on the one reviews card", () => {
     expect(step("visibility.review_replies")).toMatchObject({ title: "Reply to your recent reviews", minutes: 15, automatable: true });
     expect(step("completeness.customer_details")).toMatchObject({ title: "Add your customer details", minutes: 5 });
-    // 4.8★ with 200 reviews: only recency loses points among the three → its own card.
-    expect(step("visibility.review_recency")).toMatchObject({ title: "Get fresh reviews this month", minutes: 10 });
+    // 5.0★ with 200 reviews: only recency loses points among the three → "Get 3 new reviews in the next 90 days".
+    expect(step("visibility.review_recency")).toMatchObject({ title: "Get 3 new reviews in the next 90 days", mergedCheckIds: ["visibility.review_recency"] });
     for (const id of V112_STEP_CHECK_IDS) {
       expect(step(id).fix.length).toBeGreaterThan(40);
       expect(step(id).links!.length).toBeGreaterThan(0);
@@ -68,7 +69,7 @@ describe("this week's plan: the v1.12.0 steps while they lose points", () => {
 
   test("they never push other tasks out (pinned, outside the cap)", () => {
     const { breakdown, suggestions } = getScoreWithSuggestions(input);
-    const tasks = mergeReviewTasks(buildActionPlan(breakdown, suggestions, [], input), breakdown, input);
+    const tasks = splitReviewTasks(buildActionPlan(breakdown, suggestions, [], input), breakdown, input);
     const unpinned = buildWeeklyPlan(tasks, breakdown, input).weeklyTasks.filter((t) => !V112_STEP_CHECK_IDS.includes(t.checkId)).map((t) => t.checkId);
     const pinned = weekly.filter((t) => !V112_STEP_CHECK_IDS.includes(t.checkId)).map((t) => t.checkId);
     expect(pinned).toEqual(unpinned.filter((id) => !V112_STEP_CHECK_IDS.includes(id)).slice(0, pinned.length));
@@ -87,13 +88,13 @@ describe("this week's plan: the v1.12.0 steps while they lose points", () => {
     expect(ids).not.toContain("visibility.review_replies");
     expect(ids).not.toContain("visibility.review_recency");
     // Connected with 1 recent review: a real gap, its own step.
-    expect(growthPlan(businessRowToScoringInput({ ...ROW, gbp_recent_reviews: 1 })).weeklyTasks.map((t) => t.checkId)).toContain("visibility.review_recency");
+    expect(growthPlan(businessRowToScoringInput({ ...ROW, gbp_recent_reviews: 1 })).weeklyTasks.find((t) => t.checkId === MERGED_REVIEW_CHECK_ID)?.mergedCheckIds).toEqual(["visibility.review_recency"]);
   });
 
   test("Spanish (usted)", () => {
     const es = growthPlan(input, "es").weeklyTasks;
     expect(es.find((t) => t.checkId === "visibility.review_replies")!.action).toBe("Responda a sus reseñas recientes");
-    expect(es.find((t) => t.checkId === "visibility.review_recency")!.action).toBe("Consiga reseñas nuevas este mes");
+    expect(es.find((t) => t.checkId === MERGED_REVIEW_CHECK_ID)!.title).toBe("Consiga 3 reseñas nuevas en los próximos 90 días");
     expect(es.find((t) => t.checkId === "completeness.customer_details")!.fix).toContain("Perfil de Empresa en Google → Editar perfil → accesibilidad / pagos / estacionamiento");
   });
 });
@@ -150,7 +151,7 @@ describe("the step card", () => {
     expect(html).toContain("About 15 min");
     // Day 23B: one dark button to where it's fixed; the links are no longer a second row of buttons.
     expect(html.match(/data-testid="fix-button"/g)).toHaveLength(1);
-    expect(html).toContain('href="/business/b1/website-reviews#google-reviews"');
+    expect(html).toContain('href="/business/b1/website-reviews#reply-to-reviews"');
     expect(html).not.toContain(`href="${GOOGLE_LINKS.businessProfileReviews}"`);
     expect(replies.links?.some((l) => l.href === GOOGLE_LINKS.businessProfileReviews && l.external)).toBe(true);
     const src = readFileSync("app/business/[id]/ActionPlanSection.tsx", "utf8");
@@ -253,36 +254,37 @@ describe("every Needs work row: its own How to fix it", () => {
   });
 });
 
-describe("one \"Get fresh reviews\" card for review count, star rating and recency", () => {
+describe("the first review row covers review count, star rating and recency (Day 25B step 3)", () => {
   const input = businessRowToScoringInput(GREGG);
   const weekly = growthPlan(input).weeklyTasks;
   const card = weekly.find((t) => t.checkId === MERGED_REVIEW_CHECK_ID)!;
 
   test("Helps with all three — recency too while it can't be confirmed — and never a separate recency card", () => {
-    expect(card.title).toBe("Get fresh reviews");
+    expect(card.title).toBe("Get 3 new reviews in the next 90 days");
     expect(card.mergedLabels).toEqual(["Review count", "Star rating", "Review recency"]);
     expect(card.mergedCheckIds).toEqual(["visibility.review_count", "visibility.rating"]);
     expect(card.fixAlsoCovers).toEqual(["visibility.review_recency"]);
     expect(weekly.some((t) => t.checkId === "visibility.review_recency")).toBe(false);
   });
 
-  test("one combined estimate from the same projection, shown \"Up to +N pts\"", () => {
+  test("one estimate from the same projection, shown as what it earns (\"+N pts\", never \"up to\")", () => {
     const { breakdown } = getScoreWithSuggestions(input);
-    const without = buildWeeklyPlan([{ ...card, fixAlsoCovers: [] }], breakdown, input).weeklyTasks[0].weightedPoints;
+    // Day 25B step 3: the weekly card shows the row's own points (splitReviewTasks) — the same as Fix plan and the Overview.
     const alone = buildWeeklyPlan([card], breakdown, input);
-    expect(alone.weeklyTasks[0].weightedPoints).toBeGreaterThan(without);
+    expect(alone.weeklyTasks[0].weightedPoints).toBe(card.weightedPoints);
     expect(alone.weeklyTasks[0].weightedPoints).toBe(alone.weeklyPointsWithinReach);
     const html = render(<TaskCard task={card} businessId="b1" context="weekly" step={1} />);
-    expect(html).toMatch(/Up to \+\d+ pts/);
+    expect(html).toMatch(/>\+\d+(\.\d)? pts</);
+    expect(html).not.toMatch(/Up to \+\d+ pts/);
     expect(html).toContain("Review count, Star rating, Review recency");
-    expect(render(<TaskCard task={growthPlan(input, "es").weeklyTasks.find((t) => t.checkId === MERGED_REVIEW_CHECK_ID)!} businessId="b1" context="weekly" />, "es")).toContain("Consiga reseñas nuevas");
+    expect(render(<TaskCard task={growthPlan(input, "es").weeklyTasks.find((t) => t.checkId === MERGED_REVIEW_CHECK_ID)!} businessId="b1" context="weekly" />, "es")).toContain("Consiga 3 reseñas nuevas en los próximos 90 días");
   });
 
-  test("only one losing points: its own card", () => {
+  test("only recency losing points: the same first row, for recency alone", () => {
     const onlyRecency = businessRowToScoringInput({ ...ROW, gbp_recent_reviews: 1 });
-    const ids = growthPlan(onlyRecency).weeklyTasks.map((t) => t.checkId);
-    expect(ids).toContain("visibility.review_recency");
-    expect(ids).not.toContain(MERGED_REVIEW_CHECK_ID);
+    const weeklyTasks = growthPlan(onlyRecency).weeklyTasks;
+    expect(weeklyTasks.map((t) => t.checkId)).not.toContain("visibility.review_recency");
+    expect(weeklyTasks.find((t) => t.checkId === MERGED_REVIEW_CHECK_ID)!.mergedCheckIds).toEqual(["visibility.review_recency"]);
   });
 });
 

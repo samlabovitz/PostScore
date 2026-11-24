@@ -31,7 +31,7 @@ import type { Rec } from "@/lib/googleRecommendations";
 import type { IdeaType } from "@/lib/listingIdeas";
 import type { SearchDemandView } from "@/components/gbp/SearchDemandSection";
 import { growthMoveOverlapsActionPlan } from "@/lib/growthMoveOverlap";
-import type { WeeklyChecklistItem, WeeklyChecklistItemId } from "@/lib/weeklyChecklist";
+import type { AutoCheckSource, WeeklyChecklistItem, WeeklyChecklistItemId } from "@/lib/weeklyChecklist";
 import { generateSuggestions, type ScoreBreakdown } from "@/lib/scoring";
 import type { BizProfile } from "@/config/bizProfiles";
 import { t, tPlural, useLocale, type Locale } from "@/lib/i18n";
@@ -282,6 +282,10 @@ export function GrowthView({
     streakWeeks: number;
     /** This routine week's Monday (business time zone). */
     weekStart: string;
+    /** This week's items PostScore checked itself (connected Premium): sent from PostScore or seen on Google. */
+    auto?: Partial<Record<WeeklyChecklistItemId, AutoCheckSource>>;
+    /** The note under the list (app/actions/weeklyChecklist.ts). */
+    notice?: "auto" | "notConnected" | "self";
   };
   /** The shared review goal in words (lib/reviewGoal.ts) for the review task. */
   reviewGoalLines?: string[];
@@ -452,6 +456,8 @@ export function GrowthView({
                     initialCheckedItemIds={weeklyChecklist.checkedItemIds}
                     initialStreakWeeks={weeklyChecklist.streakWeeks}
                     weekStart={weeklyChecklist.weekStart}
+                    auto={weeklyChecklist.auto}
+                    notice={weeklyChecklist.notice}
                     postFlow={{ premium: isPremiumPlan(plan) }}
                   />
                 </div>

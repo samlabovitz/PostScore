@@ -202,7 +202,9 @@ describe("last tweaks: 'Since' layout, the replies' detail line, Approve all whi
     expect(html).toMatch(/<button[^>]*disabled=""[^>]*data-loading="1"[^>]*>Approve all \(getting ready…\)<\/button>/);
     expect(wrap(<ApproveAll businessId="b1" post={loadingPost} canEdit practice={false} />, "es")).toContain(">Aprobar todo (preparando…)<");
     const ready = wrap(<ApproveAll businessId="b1" post={post({})} canEdit practice={false} />);
-    expect(ready).toMatch(/data-loading="0"[^>]*>Approve all \(1\)<\/button>/);
+    // Day 25B step 3: "Approve {n} tasks", with "{m} items go to Google" under it.
+    expect(ready).toMatch(/data-loading="0"[^>]*>Approve 1 task<\/button>/);
+    expect(ready).toContain(">1 item goes to Google<");
   });
 });
 

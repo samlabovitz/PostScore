@@ -36,3 +36,4 @@ export function withoutStaleHours<T extends { source: { kind: string; task?: { c
   if (!recs || state?.kind !== "stale") return recs;
   return recs.filter((r) => !(r.source.kind === "task" && r.source.task && isHoursCheck(r.source.task)));
 }
+

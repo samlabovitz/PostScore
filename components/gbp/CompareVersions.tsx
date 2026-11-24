@@ -33,7 +33,7 @@ export interface Chosen {
   onChange?: () => void;
 }
 
-function Card({ side, label, versions, button, icon, footer }: { side: "google" | "mine"; label: string; versions: Versions; button: VersionButton; icon?: "globe"; footer?: ReactNode }) {
+function Card({ side, label, versions, button, icon, footer }: { side: "google" | "mine"; label: string; versions: Versions; button?: VersionButton; icon?: "globe"; footer?: ReactNode }) {
   const locale = useLocale();
   const none = t(locale, K("none"));
   return (
@@ -60,6 +60,8 @@ function Card({ side, label, versions, button, icon, footer }: { side: "google" 
         </ul>
       )}
       {footer}
+      {/* No button: read-only (Free sees the difference, the steps are locked). */}
+      {button && (
       <div className="mt-auto flex flex-col gap-1 pt-1">
         <button
           type="button"
@@ -72,6 +74,7 @@ function Card({ side, label, versions, button, icon, footer }: { side: "google" 
         </button>
         <p className="text-[11.5px] leading-snug text-ink-mute">{button.note}</p>
       </div>
+      )}
     </div>
   );
 }
@@ -98,8 +101,9 @@ export function CompareVersions({
   mineIcon?: "globe";
   /** A small line under the right card's value ("You entered on Google: …"). */
   mineFooter?: ReactNode;
-  googleButton: VersionButton;
-  mineButton: VersionButton;
+  /** Left out: read-only, no choice. */
+  googleButton?: VersionButton;
+  mineButton?: VersionButton;
   chosen?: Chosen | null;
   /** A small link under both cards ("Neither is right? …"). */
   extra?: ReactNode;

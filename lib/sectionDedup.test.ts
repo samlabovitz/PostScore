@@ -11,7 +11,7 @@ import { describe, expect, test } from "vitest";
 import {
   buildActionPlan,
   buildWeeklyPlan,
-  mergeReviewTasks,
+  splitReviewTasks,
   mergeWebsiteTasks,
   MERGED_WEBSITE_CHECK_ID,
 } from "./actionPlan";
@@ -30,7 +30,7 @@ function realCheckIds(task: { checkId: string; mergedCheckIds: string[] | null }
 function buildAllSections(input: BusinessScoringInput, growthSignals: Omit<GrowthMoveSignals, "businessId">) {
   const { breakdown, suggestions } = getScoreWithSuggestions(input);
   const rawTasks = buildActionPlan(breakdown, suggestions, [], input);
-  const merged = mergeWebsiteTasks(mergeReviewTasks(rawTasks, breakdown, input), breakdown, input);
+  const merged = mergeWebsiteTasks(splitReviewTasks(rawTasks, breakdown, input), breakdown, input);
   const weekly = buildWeeklyPlan(merged, breakdown, input);
   const growthMoves = buildGrowthMoves({ businessId: "biz-1", ...growthSignals });
 

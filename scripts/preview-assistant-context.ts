@@ -6,7 +6,7 @@
 // buildAssistantContextText() (lib/assistant.ts) would send to the model,
 // built from the exact same real, pure business-logic functions
 // loadContext() (app/actions/assistant.ts) uses: scoreBusinessWithClient,
-// buildActionPlan/mergeReviewTasks/mergeWebsiteTasks, buildCompletedTasks,
+// buildActionPlan/splitReviewTasks/mergeWebsiteTasks, buildCompletedTasks,
 // buildGrowthMoves, buildWeeklyChecklistItems/buildWeeklyChecklistState,
 // resolveBizProfile/bizProfile.
 //
@@ -66,7 +66,7 @@ import { priceLevelToSymbol } from "../lib/priceLevel";
 import {
   buildActionPlan,
   buildCompletedTasks,
-  mergeReviewTasks,
+  splitReviewTasks,
   mergeWebsiteTasks,
   applyGrowthWebsiteRules,
   buildWebsiteBanner,
@@ -322,7 +322,7 @@ async function main() {
 
   const taskRows = await readTaskRows(businessId);
   const rawTasks = buildActionPlan(breakdown, suggestions, taskRows, input, locale);
-  const reviewMerged = mergeReviewTasks(rawTasks, breakdown, input, locale);
+  const reviewMerged = splitReviewTasks(rawTasks, breakdown, input, locale);
   // starterSiteRange is always null here, matching loadContext's own
   // getActionPlan call — it never passes a starterSiteContext either,
   // since the assistant's context has no UI card to render a real range

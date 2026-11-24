@@ -87,6 +87,8 @@ function RecText({ rec }: { rec: Recommendation }) {
 function recPointsText(locale: Locale, rec: Recommendation): string {
   if (rec.pointsHigh !== null) return recRangeText(locale, rec.points, rec.pointsHigh);
   const points = wholePointRange(rec.points, null).low;
+  // "Keep growing toward 150 reviews": a ceiling.
+  if (rec.source.kind === "task" && rec.source.task.upTo) return t(locale, "dashboard.overview.actionPlan.pointsUpTo", { points });
   return pointsText(locale, points, rec.source.kind === "website");
 }
 
@@ -96,6 +98,7 @@ export function TopRecommendations({
   detailsMismatch = null,
   hoursCheck = null,
   limit = Infinity,
+  lastScanAt = null,
 }: {
   businessId: string;
   recommendations: Recommendation[] | null;
@@ -103,6 +106,8 @@ export function TopRecommendations({
   limit?: number;
   /** Day 23B: the scored hours check as it is now (lib/hoursCheck.ts). */
   hoursCheck?: HoursCheckState | null;
+  /** The latest scan: "Re-scan now" only once the next re-scan is open. */
+  lastScanAt?: string | null;
   /** Day 23B: confirmed details that differ from Google or the website — tasks first, no points. */
   detailsMismatch?: { mismatches: DetailsMismatch[]; owner: OwnerDetails | null } | null;
 }) {
@@ -111,10 +116,16 @@ export function TopRecommendations({
   // check about the same field are ONE task — first, Urgent for hours/phone.
   const mismatches = detailsMismatch?.mismatches ?? [];
   const covered = (rec: Recommendation) => (rec.source.kind === "task" ? mismatchesCoveredBy(rec.source.task, mismatches) : []);
+  // Day 25B step 3: an hours check that matches now (a re-scan away) is never first — after every other item.
+  const staleHours = (r: Recommendation) => hoursCheck?.kind === "stale" && covered(r).length === 0 && r.source.kind === "task" && isHoursCheck(r.source.task);
   const recommendations =
     allRecommendations === null
       ? null
-      : [...allRecommendations.filter((r) => covered(r).length > 0), ...allRecommendations.filter((r) => covered(r).length === 0)].slice(0, limit);
+      : [
+          ...allRecommendations.filter((r) => covered(r).length > 0),
+          ...allRecommendations.filter((r) => covered(r).length === 0 && !staleHours(r)),
+          ...allRecommendations.filter(staleHours),
+        ].slice(0, limit);
   const coveredFields = new Set((recommendations ?? []).flatMap((r) => covered(r).map((m) => m.field)));
   const standalone = mismatches.filter((m) => !coveredFields.has(m.field));
   return (
@@ -167,7 +178,11 @@ export function TopRecommendations({
                       {merged.length > 0 ? (
                         <span className="text-sm font-semibold text-ink">{mergedTitle(merged, locale)}</span>
                       ) : stale ? (
-                        <span data-testid="hours-stale" className="text-sm font-semibold text-ink">{t(locale, "dashboard.hoursCheck.staleTitle")}</span>
+                        // The fix's real title; "Changed since your last scan · Re-scan to update" is only a note under it.
+                        <>
+                          <span className="text-sm font-semibold text-ink">{t(locale, "content.actionPlan.title.website.info_consistency.hours")}</span>
+                          <span data-testid="hours-stale" className="text-[12.5px] leading-snug text-ink-soft">{t(locale, "dashboard.hoursCheck.staleTitle")}</span>
+                        </>
                       ) : hours?.kind === "differs" && rec.source.kind === "task" ? (
                         <>
                           <span className="text-sm font-semibold text-ink">{rec.source.task.label}</span>
@@ -179,14 +194,14 @@ export function TopRecommendations({
                       {rec.pending && <span className="text-[12px] font-medium text-ink-soft">{t(locale, "dashboard.overview.recs.pending")}</span>}
                     </div>
                     <div className="flex shrink-0 flex-col items-end gap-1">
-                      {priority && <PriorityTag priority={priority} />}
+                      {priority && !stale && <PriorityTag priority={priority} />}
                       {!ownerOnly && !stale && <span className="whitespace-nowrap text-[12px] font-semibold tabular-nums text-ink">{recPointsText(locale, rec)}</span>}
                     </div>
                   </div>
                   {merged.length > 0 && <DetailsVersions mismatches={merged} />}
                   {/* Day 23B: ONE button, straight to where it's fixed (lib/fixDestination.ts). */}
                   {stale ? (
-                    <RescanNowButton businessId={businessId} />
+                    <RescanNowButton businessId={businessId} lastScanAt={lastScanAt} />
                   ) : merged.length > 0 ? (
                     <MergedActions businessId={businessId} mismatches={merged} fromScore />
                   ) : rec.source.kind === "task" ? (

@@ -41,6 +41,7 @@ export function FixButton({
   onSteps,
   className,
   premiumLine = true,
+  fixPlan = false,
 }: {
   businessId: string;
   item: FixItem;
@@ -51,12 +52,20 @@ export function FixButton({
   className?: string;
   /** Grow/Free: "Premium does this for you in one click →" under it (off: the caller places it). */
   premiumLine?: boolean;
+  /** Fix plan (Day 25B step 3): "Fix it →", or "Get more reviews (in Growth) →" for asking. */
+  fixPlan?: boolean;
 }) {
   const locale = useLocale();
   const ctx = useFixContext(businessId);
   const dest = fixDestination(item, ctx);
   if (!dest) return null;
-  const label = fixLabel(dest, locale);
+  const label = fixPlan
+    ? dest.key === "moreReviews"
+      ? t(locale, "dashboard.breakdown.action.moreReviewsInGrowth")
+      : dest.key === "replyInReviews"
+        ? fixLabel(dest, locale)
+        : t(locale, "dashboard.fixPlan.fixIt")
+    : fixLabel(dest, locale);
   const icon = dest.kind === "do_it" ? <IconWand size={14} aria-hidden /> : null;
   const ownSteps = onSteps && dest.kind === "steps" && isFixPlanStepsHref(dest.href);
   const line = premiumLine ? <PremiumOneClickLine businessId={businessId} item={item} className="w-full" /> : null;

@@ -12,7 +12,7 @@ vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 
 import { scoringInput } from "@/emails/sampleMonthlyReportContent";
 import { scoreBusiness, generateSuggestions, type BusinessScoringInput, type WebsiteTrustAnalysis } from "@/lib/scoring";
-import { applyGrowthWebsiteRules, buildActionPlan, mergeReviewTasks, orderWeeklySteps } from "@/lib/actionPlan";
+import { applyGrowthWebsiteRules, buildActionPlan, splitReviewTasks, orderWeeklySteps } from "@/lib/actionPlan";
 import { biggestBoostFrom, recommendationPriority, reportNextSteps, topRecommendations } from "@/lib/overviewTiles";
 import { isUrgentTask, orderByUrgency, urgentCheckIds, urgentIssueForCheck, urgentIssues } from "@/lib/urgency";
 import { TopRecommendations } from "@/components/overview/TopRecommendations";
@@ -60,7 +60,7 @@ const CYN = withTrust(
 
 function planFor(input: BusinessScoringInput) {
   const breakdown = scoreBusiness(input);
-  const tasks = applyGrowthWebsiteRules(mergeReviewTasks(buildActionPlan(breakdown, generateSuggestions(breakdown), [], input), breakdown, input), input);
+  const tasks = applyGrowthWebsiteRules(splitReviewTasks(buildActionPlan(breakdown, generateSuggestions(breakdown), [], input), breakdown, input), input);
   const issues = urgentIssues(input, breakdown);
   return { breakdown, issues, tasks: orderByUrgency(tasks, issues) };
 }
@@ -124,18 +124,18 @@ describe("order, not points", () => {
     // Scores are untouched: urgency is computed from the breakdown, never fed back.
     expect(scoreBusiness(CYN).total).toBe(breakdown.total);
     // Each urgent card keeps its real points.
-    const unordered = applyGrowthWebsiteRules(mergeReviewTasks(buildActionPlan(breakdown, generateSuggestions(breakdown), [], CYN), breakdown, CYN), CYN);
+    const unordered = applyGrowthWebsiteRules(splitReviewTasks(buildActionPlan(breakdown, generateSuggestions(breakdown), [], CYN), breakdown, CYN), CYN);
     for (const r of recs) expect(r.points).toBe(unordered.find((x) => x.checkId === r.key)!.weightedPoints);
   });
 
   test("Biggest boost stays points-only: the open item worth the most, never picked by urgency", () => {
     const { tasks, issues } = planFor(CYN);
     const all = topRecommendations(tasks, null, "cyn", {}, Infinity, issues);
-    // The list starts with the urgent website link; Biggest boost is the reviews card.
+    // The list starts with the urgent website link; Biggest boost is the open item with the most points.
     expect(all[0].urgent).toBe(true);
     const boost = biggestBoostFrom(all, [], "en")!;
-    const most = all.filter((r) => !r.pending).reduce((a, r) => (r.points > a.points ? r : a));
-    expect(most.urgent).toBe(false);
+    // Day 25B step 3: never a row that takes months ("Keep growing toward 150 reviews").
+    const most = all.filter((r) => !r.pending && !(r.source.kind === "task" && r.source.task.when === "months")).reduce((a, r) => (r.points > a.points ? r : a));
     expect(boost.label).toBe(most.source.kind === "task" ? most.source.task.label : "");
     expect(boost.weightedPoints).toBe(most.pointsHigh ?? most.points);
   });
@@ -145,7 +145,7 @@ describe("order, not points", () => {
     const issues = ["phone_mismatch", "no_hours"] as const;
     const all = topRecommendations(orderByUrgency(tasks, [...issues]), null, "b", {}, Infinity, [...issues]);
     const top3 = all.slice(0, 3);
-    const most = all.filter((r) => !r.pending).reduce((a, r) => (r.points > a.points ? r : a));
+    const most = all.filter((r) => !r.pending && !(r.source.kind === "task" && r.source.task.when === "months")).reduce((a, r) => (r.points > a.points ? r : a));
     expect(biggestBoostFrom(all, [], "en")!.weightedPoints).toBe(most.pointsHigh ?? most.points);
     expect(biggestBoostFrom(top3, [], "en")!.weightedPoints).toBeLessThanOrEqual(biggestBoostFrom(all, [], "en")!.weightedPoints);
   });

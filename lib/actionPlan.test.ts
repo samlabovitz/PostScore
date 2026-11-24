@@ -2,11 +2,15 @@ import { describe, expect, test } from "vitest";
 import {
   buildActionPlan,
   buildWeeklyPlan,
-  mergeReviewTasks,
+  splitReviewTasks,
   mergeWebsiteTasks,
   rawWeightedTotal,
   MERGED_REVIEW_CHECK_ID,
   MERGED_WEBSITE_CHECK_ID,
+  REVIEW_SPLIT_IDS,
+  REVIEWS_COUNT_CHECK_ID,
+  REVIEWS_RATING_CHECK_ID,
+  REVIEWS_TRUST_CHECK_ID,
   WEEKLY_PLAN_CAP,
 } from "./actionPlan";
 import { generateSuggestions, getScoreWithSuggestions, scoreBusiness, type BusinessScoringInput } from "./scoring";
@@ -101,7 +105,7 @@ function plan(input: BusinessScoringInput) {
 function planWithMerge(input: BusinessScoringInput) {
   const { breakdown, suggestions } = getScoreWithSuggestions(input);
   const rawTasks = buildActionPlan(breakdown, suggestions, [], input);
-  const tasks = mergeWebsiteTasks(mergeReviewTasks(rawTasks, breakdown, input), breakdown, input);
+  const tasks = mergeWebsiteTasks(splitReviewTasks(rawTasks, breakdown, input), breakdown, input);
   return { breakdown, tasks, weekly: buildWeeklyPlan(tasks, breakdown, input) };
 }
 
@@ -157,8 +161,9 @@ describe("buildWeeklyPlan", () => {
     expect(weekly.weeklyProjectedBreakdown.total).toBeLessThanOrEqual(100);
 
     // Fully represented by its weekly card alone — no separate "Bigger
-    // projects" duplicate for either merged card.
-    expect(weekly.laterTasks).toHaveLength(0);
+    // projects" duplicate for either card. Only the review rows that take
+    // months (Day 25B step 3) are later.
+    expect(weekly.laterTasks.every((t) => t.when === "months")).toBe(true);
   });
 
   test("website.has_website carries the honest timing note once it's a real task", () => {
@@ -288,70 +293,75 @@ describe("buildWeeklyPlan", () => {
   });
 });
 
-describe("mergeReviewTasks", () => {
-  test("combines review count, star rating and recency into ONE \"Get fresh reviews\" card", () => {
-    // v1.12.0: recency is a confirmed gap only when connected Google says
-    // there's no recent review.
-    const { tasks } = plan({ ...ROUGH_INPUT, gbpReplies: { reviewsInWindow: 0, replied: 0, hasRecentReview: false } });
-    const reviewCheckIds = tasks
-      .map((t) => t.checkId)
-      .filter((id) => id.startsWith("visibility."));
-    expect(reviewCheckIds.sort()).toEqual(
-      ["visibility.rating", "visibility.review_count", "visibility.review_recency"].sort()
-    );
+describe("splitReviewTasks (Day 25B step 3: honest review points, spec §2b)", () => {
+  // Hair Express's review numbers (scan of Nov 20): 5.0★, 30 reviews, 1 in the last 90 days (connected).
+  const HAIR: BusinessScoringInput = { ...ROUGH_INPUT, rating: 5, reviewCount: 30, gbpReplies: { reviewsInWindow: 20, replied: 20, hasRecentReview: true, recentReviews: 1 } };
+  const rows = (input: BusinessScoringInput, locale: "en" | "es" = "en") => {
+    const { breakdown, suggestions } = getScoreWithSuggestions(input);
+    const tasks = buildActionPlan(breakdown, suggestions, [], input, locale);
+    return { breakdown, tasks, split: splitReviewTasks(tasks, breakdown, input, locale) };
+  };
 
-    const { breakdown } = plan(ROUGH_INPUT);
-    const merged = mergeReviewTasks(tasks, breakdown, ROUGH_INPUT);
-    const mergedCard = merged.find((t) => t.checkId === MERGED_REVIEW_CHECK_ID);
-    expect(mergedCard).toBeDefined();
-    expect(mergedCard!.mergedCheckIds).toEqual(["visibility.review_count", "visibility.rating", "visibility.review_recency"]);
-    expect(mergedCard!.mergedLabels).toEqual(["Review count", "Star rating", "Review recency"]);
-    expect(mergedCard!.title).toBe("Get fresh reviews");
-
-    // Exactly one merged card replaces all three individual review
-    // tasks — no leftover individual visibility.* task remains (the
-    // merged card's own synthetic id also starts with "visibility." so
-    // it's excluded here on purpose).
-    expect(
-      merged.filter((t) => t.checkId.startsWith("visibility.") && t.checkId !== MERGED_REVIEW_CHECK_ID)
-    ).toHaveLength(0);
-    expect(merged).toHaveLength(tasks.length - 2);
+  test("three rows that add up to the old single card: 3 new reviews in 90 days, grow to 40, keep growing toward 150", () => {
+    const { split } = rows(HAIR);
+    const review = split.filter((t) => REVIEW_SPLIT_IDS.includes(t.checkId));
+    expect(review.map((t) => t.checkId)).toEqual([MERGED_REVIEW_CHECK_ID, REVIEWS_TRUST_CHECK_ID, REVIEWS_COUNT_CHECK_ID]);
+    expect(review.map((t) => t.title)).toEqual(["Get 3 new reviews in the next 90 days", "Grow to 40 reviews", "Keep growing toward 150 reviews"]);
+    // Recency 2 → 6 (+4), rating +0.4, count +0.3; then rating counts fully at 40; then count to 150.
+    expect(review.map((t) => t.weightedPoints)).toEqual([4.7, 1.7, 6.8]);
+    expect(review.map((t) => t.when)).toEqual(["weeks", "months", "months"]);
+    expect(review.map((t) => !!t.upTo)).toEqual([false, false, true]);
+    expect(review[0].weeklyTarget).toBe("Get 3 new reviews in the next 90 days (30 → 33)");
+    expect(review[1].weeklyTarget).toBe("33 → 40 reviews: your star rating counts fully at 40");
+    // Never "this week" for reviews any more.
+    expect(review.map((t) => `${t.title} ${t.weeklyTarget}`).join(" ")).not.toMatch(/this week/i);
   });
 
-  test("does not merge when only one review check is an open gap", () => {
-    // Only review_recency is a real gap; rating and review_count are
-    // already effectively closed by a strong rating/review base.
-    const almostThere: BusinessScoringInput = {
-      ...STRONG_INPUT,
-      mostRecentReviewDaysAgo: 200,
-    };
-    const { breakdown, suggestions } = getScoreWithSuggestions(almostThere);
-    const tasks = buildActionPlan(breakdown, suggestions, [], almostThere);
-    const reviewTasks = tasks.filter((t) => t.checkId.startsWith("visibility."));
+  test("the rows sum to the full review gap, so the 'every fix done' projection is unchanged", () => {
+    const { breakdown, split } = rows(HAIR);
+    const sum = split.filter((t) => REVIEW_SPLIT_IDS.includes(t.checkId)).reduce((a, t) => a + t.weightedPoints, 0);
+    const full = rawWeightedTotal(scoreBusiness({ ...HAIR, rating: 4.9, reviewCount: 150, gbpReplies: { ...HAIR.gbpReplies!, recentReviews: 3 } })) - rawWeightedTotal(breakdown);
+    expect(sum).toBeCloseTo(full, 1);
+  });
 
-    if (reviewTasks.length <= 1) {
-      const merged = mergeReviewTasks(tasks, breakdown, almostThere);
-      expect(merged).toEqual(tasks);
-      expect(merged.some((t) => t.checkId === MERGED_REVIEW_CHECK_ID)).toBe(false);
+  test("row 1 keeps 'I did this' for the real checks; the months rows have none", () => {
+    const { split } = rows(HAIR);
+    const first = split.find((t) => t.checkId === MERGED_REVIEW_CHECK_ID)!;
+    expect(first.mergedCheckIds).toEqual(["visibility.review_count", "visibility.rating", "visibility.review_recency"]);
+    expect(first.markable).toBe(true);
+    expect(first.effort).toBe("quick_win_action");
+    for (const id of [REVIEWS_TRUST_CHECK_ID, REVIEWS_COUNT_CHECK_ID]) {
+      const row = split.find((t) => t.checkId === id)!;
+      expect(row.markable).toBe(false);
+      expect(row.effort).toBe("longer_term");
+      expect(row.mergedCheckIds).toBeNull();
     }
+    // No individual rating/count/recency task is left.
+    expect(split.some((t) => ["visibility.rating", "visibility.review_count", "visibility.review_recency"].includes(t.checkId))).toBe(false);
   });
 
-  test("leaves the underlying tasks list untouched when there's nothing to merge", () => {
+  test("40+ reviews: no 'Grow to 40' row; a low star rating keeps its own row with what's left", () => {
+    const { split } = rows({ ...HAIR, reviewCount: 60, rating: 4.1 });
+    const ids = split.filter((t) => REVIEW_SPLIT_IDS.includes(t.checkId)).map((t) => t.checkId);
+    expect(ids).not.toContain(REVIEWS_TRUST_CHECK_ID);
+    expect(ids).toContain(REVIEWS_RATING_CHECK_ID);
+    expect(split.find((t) => t.checkId === REVIEWS_COUNT_CHECK_ID)!.title).toBe("Keep growing toward 150 reviews");
+  });
+
+  test("Spanish (usted)", () => {
+    const { split } = rows(HAIR, "es");
+    expect(split.filter((t) => REVIEW_SPLIT_IDS.includes(t.checkId)).map((t) => t.title)).toEqual([
+      "Consiga 3 reseñas nuevas en los próximos 90 días",
+      "Llegue a 40 reseñas",
+      "Siga creciendo hacia 150 reseñas",
+    ]);
+  });
+
+  test("leaves the list untouched when no review check is losing points", () => {
     const { tasks, breakdown } = plan(STRONG_INPUT);
-    expect(mergeReviewTasks(tasks, breakdown, STRONG_INPUT)).toEqual(tasks);
-  });
-
-  test("the merged card's combined raw-gap total is a real, non-inflated sum", () => {
-    const { breakdown, tasks } = plan(ROUGH_INPUT);
-    const merged = mergeReviewTasks(tasks, breakdown, ROUGH_INPUT);
-    const mergedCard = merged.find((t) => t.checkId === MERGED_REVIEW_CHECK_ID)!;
-    const individualSum = tasks
-      .filter((t) => t.checkId.startsWith("visibility."))
-      .reduce((sum, t) => sum + t.promisedPoints, 0);
-    // The merged card's full-gap total matches the sum of the three
-    // real gaps it stands in for — never invented, never double-counted.
-    expect(mergedCard.promisedPoints).toBeCloseTo(individualSum, 5);
-    expect(mergedCard.promisedPoints).toBeLessThanOrEqual(breakdown.checks.reduce((s, c) => s + c.maxPoints, 0));
+    if (!tasks.some((t) => ["visibility.rating", "visibility.review_count", "visibility.review_recency"].includes(t.checkId))) {
+      expect(splitReviewTasks(tasks, breakdown, STRONG_INPUT)).toEqual(tasks);
+    }
   });
 });
 
@@ -412,17 +422,13 @@ describe("buildWeeklyPlan: starter-site points range end to end", () => {
     // the HIGH end passes through unadjusted (see buildWeeklyPlan's own
     // doc) — it's an honest range, not a sum-matching figure.
     //
-    // With a single task in the weekly plan, apportionToTotal rounds its
-    // displayed weightedPoints to match the real, WHOLE-NUMBER total
-    // delta (scoreBusiness().total is itself Math.round()-ed) — not an
-    // independent round-to-1-decimal of the raw delta. Those two usually
-    // agree, but not always: here the raw delta (44.0678) rounds to 44.1
-    // at 1 decimal while the real whole-number total only moves by 44.
+    // Day 25B step 3: the card shows its own real value (one decimal),
+    // never stretched to a rounded total.
     const realLowDelta = Math.max(
       0,
       rawWeightedTotal(scoreBusiness({ ...STRUGGLING_SALON_INPUT, ...range.lowOverlay })) - rawWeightedTotal(breakdown)
     );
-    expect(weekly.weeklyTasks[0].weightedPoints).toBe(Math.round(realLowDelta));
+    expect(weekly.weeklyTasks[0].weightedPoints).toBe(round1(realLowDelta));
     expect(weekly.weeklyTasks[0].weightedPointsHigh).toBe(30);
     expect(weekly.weeklyProjectedBreakdownHigh).not.toBeNull();
     // The HIGH projection (real HTTPS applied) scores at least as high
@@ -441,12 +447,12 @@ describe("buildWeeklyPlan: starter-site points range end to end", () => {
 });
 
 describe("buildWeeklyPlan: real weighted points, and cards that sum to the projection", () => {
-  test("every weekly task's weightedPoints sums EXACTLY to the projected total's own real delta", () => {
+  test("Day 25B step 3: cards show their own points; within reach is their sum; the projection is today + that sum, rounded", () => {
     for (const input of [ROUGH_INPUT, STRUGGLING_SALON_INPUT, COMPLETENESS_ONLY_INPUT]) {
       const { breakdown, weekly } = planWithMerge(input);
       const displayedSum = round1(weekly.weeklyTasks.reduce((sum, t) => sum + t.weightedPoints, 0));
-      const target = weekly.weeklyProjectedBreakdown.total - breakdown.total;
-      expect(displayedSum).toBeCloseTo(target, 5);
+      expect(weekly.weeklyPointsWithinReach).toBeCloseTo(displayedSum, 5);
+      expect(weekly.weeklyProjectedBreakdown.total).toBe(Math.min(100, Math.round(breakdown.total + displayedSum)));
     }
   });
 
@@ -460,7 +466,7 @@ describe("buildWeeklyPlan: real weighted points, and cards that sum to the proje
     // to "later" instead by capping at 0 weekly slots, to check the
     // laterTasks list specifically.
     const { breakdown, tasks } = plan(STRUGGLING_SALON_INPUT);
-    const merged = mergeWebsiteTasks(mergeReviewTasks(tasks, breakdown, STRUGGLING_SALON_INPUT), breakdown, STRUGGLING_SALON_INPUT);
+    const merged = mergeWebsiteTasks(splitReviewTasks(tasks, breakdown, STRUGGLING_SALON_INPUT), breakdown, STRUGGLING_SALON_INPUT);
     const websiteTask = merged.find((t) => t.checkId === MERGED_WEBSITE_CHECK_ID)!;
     expect(websiteTask.weightedPoints).toBeGreaterThan(websiteTask.promisedPoints);
   });
@@ -479,8 +485,10 @@ describe("buildWeeklyPlan: real weighted points, and cards that sum to the proje
     // Isolating just the website task's own projection still matches
     // its own displayed weightedPoints exactly.
     const onlyWebsitePlan = buildWeeklyPlan([websiteTask!], breakdown, STRUGGLING_SALON_INPUT);
-    const realGain = onlyWebsitePlan.weeklyProjectedBreakdown.total - breakdown.total;
-    expect(realGain).toBeCloseTo(onlyWebsitePlan.weeklyTasks[0].weightedPoints, 5);
+    const realGain = rawWeightedTotal(scoreBusiness({ ...STRUGGLING_SALON_INPUT, website: "https://example.com" })) - rawWeightedTotal(breakdown);
+    expect(onlyWebsitePlan.weeklyTasks[0].weightedPoints).toBeGreaterThan(8);
+    expect(onlyWebsitePlan.weeklyPointsWithinReach).toBe(onlyWebsitePlan.weeklyTasks[0].weightedPoints);
+    expect(realGain).toBeGreaterThan(0);
   });
 
   test("regression: a check that isn't one of the displayed weekly items never moves in the projection", () => {

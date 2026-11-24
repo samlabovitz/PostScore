@@ -78,7 +78,7 @@ import {
 } from "@/lib/scoring";
 import { buildProfileSnapshot } from "@/lib/profileChanges";
 import { scanChangesBetweenScores } from "@/lib/scanChanges.server";
-import { buildActionPlan, mergeReviewTasks, type TaskRow } from "@/lib/actionPlan";
+import { buildActionPlan, splitReviewTasks, type TaskRow } from "@/lib/actionPlan";
 import { orderByUrgency, urgentIssues } from "@/lib/urgency";
 import { resolveBizProfile } from "@/config/bizProfiles";
 import { buildGrowthMoves, competitorPhotoCounts, median, weakWebsiteIssueLabels, type GrowthMoveSignals } from "@/lib/growthMoves";
@@ -403,7 +403,7 @@ export async function readTaskRows(supabase: ReturnType<typeof createAdminClient
 /**
  * The real, already action-plan-merged (review cards combined into one)
  * biggest-opportunity task for the closing focus section — built from
- * the SAME real pure functions (buildActionPlan, mergeReviewTasks) the
+ * the SAME real pure functions (buildActionPlan, splitReviewTasks) the
  * Action Plan/Growth pages use, never a separately re-derived ranking.
  * null when there are no open tasks at all.
  */
@@ -415,7 +415,7 @@ export function computeTopActionPlanTask(
 ): FocusTopActionPlanTask | null {
   const suggestions = generateSuggestions(breakdown, locale);
   const rawTasks = buildActionPlan(breakdown, suggestions, taskRows, input, locale);
-  const mergedTasks = mergeReviewTasks(rawTasks, breakdown, input, locale);
+  const mergedTasks = splitReviewTasks(rawTasks, breakdown, input, locale);
   // Urgent first, the same rule as the Overview and Growth (lib/urgency.ts).
   return reportTopTask(orderByUrgency(mergedTasks, urgentIssues(input, breakdown)), input, locale);
 }

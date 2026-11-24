@@ -11,6 +11,7 @@
 // Checkout doesn't exist: nothing here charges or pretends to — "See
 // plans" opens Settings → Plan & billing → Compare plans. Pure.
 
+import { POSTSTUDIO_ON_SALE } from "@/lib/postStudio";
 import { NEW_PAGES_LIVE } from "@/lib/routes";
 import { t, type Locale, type MessageKey } from "./i18n";
 import type { Plan } from "./plan";
@@ -246,7 +247,7 @@ export function promoContent(feature: PromoFeature, f: PromoFacts, locale: Local
       // Posting replies is Beta ("(Beta)" in the line, dropped at launch) — never "coming soon".
       return named("replies", [line(U("feature.replies.b1")), line(googleWritesCopy("promoRepliesB2"))]);
     case "postStudio":
-      return { plan, feature: { title: t(locale, U("feature.postStudio.name")), lines: [line(U("feature.postStudio.b1"), true), line(U("feature.postStudio.b2"))] }, plans: boxPlans("premium", locale) };
+      return { plan, feature: { title: t(locale, U("feature.postStudio.name")), lines: [line(U("feature.postStudio.b1"), true), ...(POSTSTUDIO_ON_SALE ? [line(U("feature.postStudio.b2"))] : [])] }, plans: boxPlans("premium", locale) };
     case "premium":
     case "grow": {
       // A plain "Unlock with Grow/Premium": both plans; Grow leads with up
@@ -272,6 +273,8 @@ export function boxReducer(state: BoxState, action: BoxAction): BoxState {
  * which doesn't include it). */
 export function promosFor(plan: Plan, feature: PromoFeature): boolean {
   if (plan === "multi") return false;
+  // No way to buy PostStudio until it's on sale (lib/postStudio.ts).
+  if (feature === "postStudio" && !POSTSTUDIO_ON_SALE) return false;
   if (plan === "premium") return feature === "postStudio";
   return !(plan === "grow" && featurePlan(feature) === "grow");
 }
@@ -308,7 +311,8 @@ const PREMIUM_CHIPS: Record<ShowcasePage, Chip[]> = {
   growth: [DONE_FOR_YOU, SEARCH_INSIGHTS, chip("postai"), AI_REPLIES],
   campaigns: [chip("campaignChannels", true), chip("designs"), chip("postai"), DONE_FOR_YOU],
   reviews: [AI_REPLIES, chip("designs"), chip("postai"), DONE_FOR_YOU],
-  website: [chip("postStudio", true), DONE_FOR_YOU, chip("postai"), SEARCH_INSIGHTS],
+  // "PostStudio (coming soon)" says it in its own words — no second pill.
+  website: [chip("postStudio"), DONE_FOR_YOU, chip("postai"), SEARCH_INSIGHTS],
   competitors: [SEARCH_INSIGHTS, DONE_FOR_YOU, chip("postai"), AI_REPLIES],
   pricing: [chip("postai"), SEARCH_INSIGHTS, DONE_FOR_YOU, chip("campaignChannels", true)],
   reports: [chip("pdfReports"), SEARCH_INSIGHTS, chip("postai"), DONE_FOR_YOU],

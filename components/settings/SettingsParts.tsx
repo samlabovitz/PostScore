@@ -16,6 +16,7 @@ import { t, useLocale, type MessageKey } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import { COMPARE_PLANS, compareRows, HIGHLIGHT_PLAN, planCopy, type Cell } from "@/lib/planComparison";
 import { PostStudioBullets, PostStudioOptions } from "@/components/studio/PostStudioOptions";
+import { POSTSTUDIO_ON_SALE } from "@/lib/postStudio";
 
 /** Icons are named by a plain string key: the Settings page is a Server
  * Component, and a component (a function) can't be passed to a Client
@@ -228,7 +229,8 @@ function PostStudioSection({ plan }: { plan: Plan }) {
           <h3 className="text-[14px] font-semibold text-ink">{t(locale, "dashboard.postStudioPlans.title")}</h3>
           <span className="rounded-full border border-paper-deep bg-paper px-2 py-0.5 text-[10.5px] font-semibold text-ink-soft">{t(locale, "dashboard.common.comingSoon")}</span>
         </div>
-        <p className="text-[12.5px] text-ink-soft">{t(locale, "dashboard.postStudioPlans.sub")}</p>
+        {/* "…or add it to a plan": only once it's on sale (lib/postStudio.ts). */}
+        {POSTSTUDIO_ON_SALE && <p className="text-[12.5px] text-ink-soft">{t(locale, "dashboard.postStudioPlans.sub")}</p>}
       </div>
       <PostStudioBullets />
       <PostStudioOptions plan={plan} />

@@ -25,6 +25,8 @@ export async function loadHoursCheck(
   if (!business.place_id) return null;
   const { publicPlacesListing } = await import("@/lib/ownerListing.server");
   const pub = await publicPlacesListing(businessId, business.place_id).catch(() => null);
+  // Maps couldn't be read: unknown — the scan's own result stays. Never
+  // the Business Profile in its place (it can be ahead of Maps).
   if (pub?.status !== "ok") return null;
   return hoursCheckState(site, weekFromPlacesPeriods(pub.values.openingHoursPeriods), visit);
 }

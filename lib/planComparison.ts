@@ -6,6 +6,7 @@
 // working. Pure.
 
 import { NEW_PAGES_LIVE } from "@/lib/routes";
+import { POSTSTUDIO_ON_SALE } from "@/lib/postStudio";
 import type { MessageKey } from "./i18n";
 import type { Plan } from "./plan";
 import { GOOGLE_WRITES_FOR_EVERYONE, googleWritesCopy } from "./googleWritesLaunch";
@@ -78,9 +79,12 @@ export function compareRows(monthlyReportsLive = false, newPagesLive: boolean = 
     // Free gets no monthly report email (lib/plan.ts planIncludesMonthlyReports).
     row("reports", no, text("weeklyRecap"), text("weeklyPdf")),
     row("monthlyEmail", no, monthly, monthly),
-    // PostStudio (coming soon): $30/mo on its own (the free audit +
-    // PostStudio), +$15 on Grow, +$10 on Premium, included in Multi.
-    row("postStudio", text("alone30"), text("plus15"), text("plus10"), text("included", true)),
+    // PostStudio: $30/mo on its own (the free audit + PostStudio), +$15 on
+    // Grow, +$10 on Premium, included in Multi — shown only once it's on
+    // sale (lib/postStudio.ts); until then "Coming soon" on every plan.
+    POSTSTUDIO_ON_SALE
+      ? row("postStudio", text("alone30"), text("plus15"), text("plus10"), text("included", true))
+      : row("postStudio", text("comingSoon"), text("comingSoon"), text("comingSoon"), text("comingSoon")),
     row("locations", text("one"), text("one"), text("one"), text("upTo5")),
   ];
 }

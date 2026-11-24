@@ -92,8 +92,9 @@ export function fixDestination(item: FixItem, ctx: FixContext): FixDestination {
   const id = item.checkId;
 
   if (id === "visibility.review_replies" || (item.mergedCheckIds ?? []).includes("visibility.review_replies")) {
-    // Premium + connected: the replies go out from PostScore's inbox.
-    return { kind: doIt ? "do_it" : "steps", key: doIt ? "doItForYou" : "replyReviews", href: reviewsHref(ctx.businessId, { hash: "google-reviews" }) };
+    // Replies live on Reviews (Presence): "Reply in Reviews →" on every plan.
+    // Premium + connected: the replies go out from PostScore's inbox there.
+    return { kind: doIt ? "do_it" : "steps", key: "replyInReviews", href: reviewsHref(ctx.businessId, { hash: "reply-to-reviews" }) };
   }
   if (id.startsWith("visibility.") || id.startsWith("reviews")) return { kind: "steps", key: "moreReviews", href: getReviewsHref(ctx.businessId, { hash: "review-link" }) };
 
@@ -122,4 +123,35 @@ export function fixDestination(item: FixItem, ctx: FixContext): FixDestination {
   if (id.startsWith("website.")) return { kind: "steps", key: "fixWebsite", href: `${base}/website#check-${id.slice("website.".length)}` };
   // Anything else: its Growth recap step.
   return { kind: "steps", key: "fixIt", href: steps(id) };
+}
+
+/** Day 25B step 3 (spec §2b): fixes the owner can finish alone, today,
+ * without waiting on customers, Google or time — "This week". Every other
+ * score fix "Takes a few weeks"; review growth past the next few reviews
+ * "Takes months" (set on those rows in lib/actionPlan.ts splitReviewTasks). */
+const THIS_WEEK_CHECKS: ReadonlySet<string> = new Set([
+  "visibility.review_replies",
+  "completeness.phone",
+  "completeness.hours",
+  "completeness.website_link",
+  "completeness.categories",
+  "completeness.photos",
+  "completeness.customer_details",
+  "website.info_consistency",
+  "website.notice_freshness",
+  "website.links",
+  "website.content_depth",
+  "website.contact_conversion",
+  "website.about_presence",
+  "website.services_presence",
+  "website.social_links",
+]);
+
+export type FixWhenTag = "this_week" | "weeks" | "months";
+
+/** A fix's tag. `pendingGoogleReview`: its Google edit is held for review —
+ * "Takes a few weeks" until it's live. */
+export function fixWhen(checkId: string, opts: { pendingGoogleReview?: boolean } = {}): FixWhenTag {
+  if (THIS_WEEK_CHECKS.has(checkId)) return opts.pendingGoogleReview ? "weeks" : "this_week";
+  return "weeks";
 }

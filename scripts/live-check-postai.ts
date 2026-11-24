@@ -21,7 +21,7 @@
 // the caller's own Supabase session), so this re-reads the same real
 // tables directly via a service-role client, then runs the data through
 // the exact same real, pure decision functions (scoreBusinessWithClient's
-// pure half, buildActionPlan/mergeReviewTasks/mergeWebsiteTasks,
+// pure half, buildActionPlan/splitReviewTasks/mergeWebsiteTasks,
 // buildGrowthMoves, buildWeeklyChecklistState, buildAssistantStarterPrompts)
 // every other page already uses — never a second, hand-written
 // reimplementation of any real decision.
@@ -68,7 +68,7 @@ import { priceLevelToSymbol } from "../lib/priceLevel";
 import {
   buildActionPlan,
   buildCompletedTasks,
-  mergeReviewTasks,
+  splitReviewTasks,
   mergeWebsiteTasks,
   applyGrowthWebsiteRules,
   buildWebsiteBanner,
@@ -300,7 +300,7 @@ async function loadBusinessContext(businessId: string, localeOverride?: Locale):
 
   const taskRows = await readTaskRows(businessId);
   const rawTasks = buildActionPlan(breakdown, suggestions, taskRows, input, locale);
-  const reviewMerged = mergeReviewTasks(rawTasks, breakdown, input, locale);
+  const reviewMerged = splitReviewTasks(rawTasks, breakdown, input, locale);
   const tasks = applyGrowthWebsiteRules(mergeWebsiteTasks(reviewMerged, breakdown, input, locale, null), input, locale);
   const websiteSummary = buildWebsiteBanner(breakdown, input, null);
   const completed = buildCompletedTasks(breakdown, taskRows);

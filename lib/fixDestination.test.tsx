@@ -35,9 +35,10 @@ describe("destination per check (lib/fixDestination.ts)", () => {
     expect(go("website.info_consistency", ctx({ canEdit: false }), { hoursMismatch: true })).toEqual({ kind: "steps", key: "compareHours", href: "/business/b1/growth?tab=google#compare-hours" });
   });
   test("reviews and the website", () => {
-    // Premium + connected: the replies go out from PostScore's inbox; Grow: the steps there.
-    expect(go("visibility.review_replies")).toEqual({ kind: "do_it", key: "doItForYou", href: "/business/b1/website-reviews#google-reviews" });
-    expect(go("visibility.review_replies", ctx({ premium: false }))).toEqual({ kind: "steps", key: "replyReviews", href: "/business/b1/website-reviews#google-reviews" });
+    // Day 25B step 3: "Reply in Reviews →" on every plan. Premium + connected: the
+    // replies go out from PostScore's inbox there; Grow: the steps there.
+    expect(go("visibility.review_replies")).toEqual({ kind: "do_it", key: "replyInReviews", href: "/business/b1/website-reviews#reply-to-reviews" });
+    expect(go("visibility.review_replies", ctx({ premium: false }))).toEqual({ kind: "steps", key: "replyInReviews", href: "/business/b1/website-reviews#reply-to-reviews" });
     expect(go("visibility.review_count").key).toBe("moreReviews");
     expect(go("visibility.review_count").href).toBe("/business/b1/website-reviews#review-link");
     expect(go("website.performance_mobile")).toEqual({ kind: "steps", key: "fixWebsite", href: "/business/b1/website#check-performance_mobile" });

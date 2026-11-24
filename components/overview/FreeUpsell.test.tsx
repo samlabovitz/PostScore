@@ -130,7 +130,9 @@ describe("the upgrade box shows only on Free", () => {
     expect(row("aiReplies")).not.toContain("Coming soon");
     expect(row("campaignHub")).toMatch(/Coming soon Premium$/);
     expect(row("postaiUnlimited")).not.toContain("Coming soon");
-    expect(row("postStudio")).toMatch(/\$30\/mo on its own.*Coming soon Add-on$/);
+    // Not on sale yet: no price.
+    expect(row("postStudio")).toMatch(/Coming soon\..*Coming soon Add-on$/);
+    expect(row("postStudio")).not.toMatch(/\$\d/);
     expect(group("addOn")).toContain('data-testid="plan-extra-postStudio"');
     // Only the two "See plans" buttons.
     expect(html.match(/href="\/business\/b1\/settings#compare-plans"/g)).toHaveLength(2);

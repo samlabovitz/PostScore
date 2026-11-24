@@ -1,3 +1,4 @@
+import { POSTSTUDIO_ON_SALE } from "@/lib/postStudio";
 import { describe, expect, test } from "vitest";
 import { readFileSync } from "node:fs";
 import { hasPostStudio, POSTSTUDIO_OPTIONS, POSTSTUDIO_PRICES, postStudioOptionFor } from "./postStudio";
@@ -39,12 +40,14 @@ describe("PostStudio pricing: its own $30 option, or added to a plan", () => {
     expect(postStudioOptionFor("multi")).toBe("multi");
   });
 
-  test("the copy everywhere names the $30 option and stays 'coming soon'; nothing says it can be bought today", () => {
-    expect(t("en", "dashboard.free.tile.postStudioPrice")).toBe("$30/mo alone · +$15 on Grow · +$10 on Premium");
+  test("not on sale yet (Nov 22): the copy shown says 'coming soon' with no price; nothing says it can be bought today", () => {
+    expect(POSTSTUDIO_ON_SALE).toBe(false);
+    expect(unlockLine("postStudio", NO_FACTS, "en")).toBe("A full website we build and host for you. PostStudio, coming soon.");
+    expect(unlockLine("postStudio", NO_FACTS, "es")).toBe("Un sitio web completo que construimos y alojamos por usted. PostStudio, próximamente.");
+    expect(t("en", "dashboard.free.planList.postStudio.l")).not.toMatch(/\$/);
+    expect(t("es", "dashboard.free.planList.postStudio.l")).not.toMatch(/\$/);
+    // The prices stay in the code for launch (lib/postStudio.ts), shown only once on sale.
     expect(t("en", "dashboard.website.studioShowcase.price")).toBe("$30/mo on its own · +$15 on Grow · +$10 on Premium · included in Multi");
-    expect(unlockLine("postStudio", NO_FACTS, "en")).toBe("A full website we build and host for you — $30/mo on its own, or add it to Grow or Premium. PostStudio, coming soon.");
-    expect(unlockLine("postStudio", NO_FACTS, "es")).toContain("$30/mes por sí solo");
-    expect(t("es", "dashboard.website.studioShowcase.price")).toContain("$30/mes por sí solo");
     for (const locale of ["en", "es"] as const)
       for (const [key, value] of Object.entries(messages[locale]))
         if (/postStudio|PostStudio/.test(key)) expect(value, key).not.toMatch(/buy now|available now|disponible ahora|compre ahora/i);

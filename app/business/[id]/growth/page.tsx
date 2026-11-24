@@ -139,6 +139,9 @@ export default async function GrowthPage({ params, searchParams = {} }: { params
     checkedItemIds: checklistStateResult.status === "ok" ? checklistStateResult.state.checkedItemIds : [],
     streakWeeks: checklistStateResult.status === "ok" ? checklistStateResult.state.streakWeeks : 0,
     weekStart: checklistStateResult.status === "ok" ? checklistStateResult.state.weekStart : weekStartFor(new Date(), business.time_zone ?? undefined),
+    // What PostScore checked itself this week (connected Premium), and which note fits.
+    auto: checklistStateResult.status === "ok" ? checklistStateResult.state.auto : {},
+    notice: checklistStateResult.status === "ok" ? checklistStateResult.state.notice : ("self" as const),
   };
 
   const gbpConnected = gbpStatus.status === "ok" && gbpStatus.connected;
