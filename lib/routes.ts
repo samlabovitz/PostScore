@@ -33,6 +33,12 @@ export function fixPlanHref(businessId: string, opts?: RouteOptions): string {
   return NEW_PAGES_LIVE ? build(`${biz(businessId)}/fix-plan`, {}, opts) : build(`${biz(businessId)}/growth`, {}, opts);
 }
 
+/** The Fix plan page itself, whatever the switch: for links shown only
+ * where the new pages can be opened (NEW_PAGES_LIVE, or the dev test login). */
+export function fixPlanPageHref(businessId: string, opts?: RouteOptions): string {
+  return build(`${biz(businessId)}/fix-plan`, {}, opts);
+}
+
 /** Presence → Google listing (listing rows, ideas, protection). Today: the Growth page's Google tab. */
 export function googleListingHref(businessId: string, opts?: RouteOptions): string {
   return NEW_PAGES_LIVE ? build(`${biz(businessId)}/google-listing`, {}, opts) : build(`${biz(businessId)}/growth`, { tab: "google" }, opts);

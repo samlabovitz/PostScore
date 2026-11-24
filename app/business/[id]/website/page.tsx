@@ -17,7 +17,10 @@ import { WebsiteScoreBreakdown, WebsiteScoreCompact } from "./WebsiteScoreBreakd
 import { getLastScanAt } from "@/app/actions/scoring";
 import { getWebsiteRecheckStatus } from "@/app/actions/websiteRecheck";
 import { WebsiteRecheck } from "@/components/scoring/WebsiteRecheck";
-import { formatShortDate, t } from "@/lib/i18n";
+import { formatShortDate, t, tPlural } from "@/lib/i18n";
+import { fixPlanPageHref } from "@/lib/routes";
+import { canOpenNewGooglePages } from "@/lib/googlePages.server";
+import { loadWebsiteFixLine } from "@/lib/fixPlan.server";
 import { HackedSiteBanner } from "@/components/scoring/HackedSiteBanner";
 import { hackSignsFor } from "@/lib/siteSecurity";
 import { socialPagePlatform } from "@/lib/websiteTrust";
@@ -164,6 +167,8 @@ export default async function WebsitePage({ params }: { params: { id: string } }
     ).length > 0;
 
   const gbpStatus = await getGbpConnectionStatus(params.id);
+  // Shown only where the new pages can be opened (NEW_PAGES_LIVE, or the dev test login).
+  const fixLine = hasWebsite && (await canOpenNewGooglePages()) ? await loadWebsiteFixLine(params.id) : null;
   const gbpConnected = gbpStatus.status === "ok" && gbpStatus.connected;
 
   return (
@@ -202,6 +207,18 @@ export default async function WebsitePage({ params }: { params: { id: string } }
           <div className="mt-2">
             <ScanningLine businessId={params.id} site={data.gradedSite} />
           </div>
+          {/* Day 25B step 3: this page's fixes in one line, to Fix plan (with the new pages only). */}
+          {fixLine && (
+            <p className="mt-3 text-[13.5px] text-ink" data-testid="website-fix-line">
+              {fixLine.summary
+                ? tPlural(locale, "dashboard.fixPlan.websiteSummary", fixLine.summary.count, { count: fixLine.summary.count, from: fixLine.summary.from, to: fixLine.summary.to, score: fixLine.summary.score, after: fixLine.summary.after })
+                : t(locale, "dashboard.fixPlan.websiteSummary.none")}{" "}
+              {fixLine.speedPending && <span className="text-ink-soft">{t(locale, "dashboard.fixPlan.websiteSummary.speed")} </span>}
+              <Link href={fixPlanPageHref(params.id)} className="font-semibold underline decoration-brass underline-offset-2">
+                {t(locale, "dashboard.fixPlan.link")}
+              </Link>
+            </p>
+          )}
         </div>
 
         {/* The listing's own link is parked or broken: a warning, never its picture. */}
