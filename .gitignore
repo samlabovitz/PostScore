@@ -11,6 +11,8 @@
 
 # next.js
 /.next/
+# the new-design preview (npm run dev:new) and other dev servers' own build folders
+/.next-*/
 /out/
 
 # production

@@ -58,6 +58,9 @@ Next.js 14 + Supabase. These rules are standing: follow them in every session.
 - **Growth tier reset:** before launch (or when Sam says), wipe every business's Growth tier and the activity history used for tiers, for ALL accounts, the dev test login included. Every tier then starts fresh from real owner actions after that date. Test/dev activity from before the reset never counts for anyone.
   - Run it with `scripts/reset-growth-tiers.ts` (built in Day 25B): dry run first, listing what would be cleared. It runs only when Sam asks, never automatically.
   - It never touches PostScore scores, scans or the Google listing.
+- **New design (Presence/Growth):** it goes live for owners (`NEW_PAGES_LIVE` true in production, `lib/routes.ts`) only after Sam approves the full version in person on localhost:3001. Never flip it without that OK.
+  - Preview: `npm run dev:new` runs the same code on localhost:3001 with the new design on (`NEXT_PUBLIC_NEW_DESIGN_PREVIEW=true`, its own `.next-new` build folder). `npm run dev` on :3000 and production stay as today.
+  - Claude Code's own dev servers and screenshots use port 3100 (its own build folder), never 3000 or 3001.
 - Until then: test and practice rows never count toward a real owner's tier. Only the dev test login's businesses count their own test activity, shown with a "Test account" tag.
 
 ## Committing

@@ -1,5 +1,8 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // `npm run dev:new` (the new-design preview on :3001) builds into its own
+  // folder, so it never overwrites `npm run dev`'s .next on :3000.
+  distDir: process.env.NEXT_DIST_DIR || ".next",
   experimental: {
     // instrumentation.ts: startup warnings for GOOGLE_WRITES_LIVE_PLACES.
     instrumentationHook: true,

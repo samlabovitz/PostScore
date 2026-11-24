@@ -11,6 +11,8 @@ import { featureMapFor } from "@/lib/postaiFeatureMap";
 import { postaiQuestionsByPage } from "@/lib/postaiDock";
 import { getPlan } from "@/lib/premium";
 import { createClient } from "@/lib/supabase/server";
+import { NEW_PAGES_LIVE } from "@/lib/routes";
+import { ShellDataProvider } from "@/components/layout/ShellData";
 
 /**
  * Every business page shares this layout for "Ask PostAI" and for bringing
@@ -35,9 +37,11 @@ export default async function BusinessLayout({ children, params }: { children: R
   }
   // Local development only: the dev language cookie (scripts/devShot.ts --lang), never a saved setting.
   const { devLocaleOverride } = await import("@/lib/viewLocale.server");
+  // Day 25B step 4: the two-tab sidebar's score, plan and tags (new-design preview only).
+  const shell = NEW_PAGES_LIVE ? await (await import("@/lib/shellData.server")).loadShellData(params.id) : null;
   return (
     <DevLocaleProvider value={devLocaleOverride()}>
-      {children}
+      <ShellDataProvider value={shell}>{children}</ShellDataProvider>
       <Dock businessId={params.id} />
     </DevLocaleProvider>
   );

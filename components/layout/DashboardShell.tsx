@@ -5,6 +5,11 @@ import { ReactNode, Suspense, useEffect, useState } from "react";
 import Link from "next/link";
 import { IconMenu2 } from "@tabler/icons-react";
 import { Sidebar } from "@/components/layout/Sidebar";
+import { GrowthTierLine, PhoneNavBar, TabbedSidebar } from "@/components/layout/TabbedSidebar";
+import { usePathname } from "next/navigation";
+import { tabForPath } from "@/lib/navTabs";
+import { useShellData } from "@/components/layout/ShellData";
+import { NEW_PAGES_LIVE } from "@/lib/routes";
 import { AnchorHighlight } from "@/components/layout/AnchorHighlight";
 import { LegacyHashRedirect } from "@/components/layout/LegacyHashRedirect";
 import { cn } from "@/lib/utils";
@@ -41,6 +46,10 @@ export function DashboardShell({
   children: ReactNode;
 }) {
   const [navOpen, setNavOpen] = useState(false);
+  // Day 25B step 4: the new-design preview's two-tab sidebar (lib/routes.ts NEW_PAGES_LIVE).
+  const shellData = useShellData();
+  const shownPlan = upgrade?.plan ?? plan ?? shellData?.plan ?? null;
+  const shell = shellData ? { ...shellData, plan: shownPlan ?? shellData.plan } : null;
   // For the next page's loading skeleton (components/layout/PageSkeleton.tsx).
   useEffect(() => rememberShellBusiness(business), [business]);
   // No business (the home list, the intake page, a not-yet-loaded error
@@ -94,6 +103,9 @@ export function DashboardShell({
         <AnchorHighlight />
         <LegacyHashRedirect />
         <div className="min-h-screen bg-paper" data-locale={locale}>
+          {NEW_PAGES_LIVE ? (
+            <PhoneNavBar businessId={business?.id ?? null} shell={shell} onOpenMenu={() => setNavOpen(true)} />
+          ) : (
           <div className="sticky top-0 z-30 flex h-14 items-center justify-between bg-ink px-4 nav:hidden">
             <button
               type="button"
@@ -109,6 +121,7 @@ export function DashboardShell({
             </Link>
             <span className="w-[34px]" aria-hidden="true" />
           </div>
+          )}
 
           <div
             className={cn(
@@ -119,6 +132,19 @@ export function DashboardShell({
             aria-hidden="true"
           />
 
+          {NEW_PAGES_LIVE ? (
+            <TabbedSidebar
+              business={business}
+              userEmail={userEmail}
+              shell={shell}
+              className={cn(
+                "fixed inset-y-0 left-0 z-50 -translate-x-full transition-transform duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] nav:translate-x-0",
+                navOpen && "translate-x-0"
+              )}
+              onNavigate={() => setNavOpen(false)}
+              onClose={() => setNavOpen(false)}
+            />
+          ) : (
           <Sidebar
             business={business}
             userEmail={userEmail}
@@ -130,12 +156,15 @@ export function DashboardShell({
             onNavigate={() => setNavOpen(false)}
             onClose={() => setNavOpen(false)}
           />
+          )}
 
           <main className="min-w-0 p-4 sm:p-8 nav:ml-[250px] nav:p-10">
             {/* Day 23B: arrived from the Overview's fix buttons. */}
             <Suspense fallback={null}>
               <BackToScore />
             </Suspense>
+            {/* New design: the Growth pages' header line (tier + "Test account"). */}
+            {NEW_PAGES_LIVE && business && <GrowthPagesLine shell={shell} />}
             {children}
             {upgrade && upgrade.cards.length > 0 && <PromoCards />}
             <footer className="mt-12 border-t border-paper-line pt-4">
@@ -149,4 +178,9 @@ export function DashboardShell({
       </UpgradeProvider>
     </LocaleProvider>
   );
+}
+
+function GrowthPagesLine({ shell }: { shell: ReturnType<typeof useShellData> }) {
+  // Growth pages only (by URL) — never a shared page like Reports.
+  return tabForPath(usePathname()) === "growth" ? <GrowthTierLine shell={shell} /> : null;
 }

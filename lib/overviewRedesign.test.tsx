@@ -601,8 +601,8 @@ describe("Overview layout and scan history (GBP card tweaks)", () => {
         <TopRecommendations businessId={businessId} recommendations={recommendations ?? null} limit={TOP_RECOMMENDATIONS} detailsMismatch={detailsMismatch} hoursCheck={hoursCheck} lastScanAt={lastScanAt} />
         <SinceLastScanCard businessId={businessId} snapshots={recentSnapshots} liveBreakdown={breakdown} gbpConnected={gbpConnected} now={{ rating: business.rating, reviewCount: business.review_count }} />
       </div>`);
-    // PostStudio keeps its own row.
-    expect(view).toMatch(/\n      <StudioComingSoon businessId=\{businessId\} \/>\n/);
+    // PostStudio keeps its own row (today's design; the new design has it only in the sidebar).
+    expect(view).toMatch(/\n      \{!NEW_PAGES_LIVE && <StudioComingSoon businessId=\{businessId\} \/>\}\n/);
     expect(view).not.toContain("versionColumn");
     expect(view).toContain('"dashboard.overview.scoringUpdatedVersionTip", { version: row.scoring_version }');
   });

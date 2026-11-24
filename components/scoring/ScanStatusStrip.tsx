@@ -281,7 +281,7 @@ export function RescanCompetitorsNote({ businessId, plan, latestCompetitorScanAt
   const locale = useLocale();
   const timeZone = useTimeZone();
   return (
-    <p data-testid="rescan-competitors-note" data-plan={plan} className="max-w-[22rem] text-[12px] leading-snug text-ink-soft sm:text-right">
+    <p data-testid="rescan-competitors-note" data-plan={plan} className="max-w-[22rem] text-[12px] leading-snug text-ink-soft [@container(min-width:760px)]:text-right">
       {rescanCompetitorsLine(plan, latestCompetitorScanAt, locale, timeZone, new Date(now))}
       {(plan === "free" || plan === "grow") && (
         <>

@@ -83,15 +83,20 @@ export function ListingPhoto({
   );
 }
 
-// The header as a grid. From sm up: name (and photo) | buttons, then the
-// chips and the scan line across the full width. On a phone: one column,
-// the buttons last.
-const HEADER_GRID = "m-0 grid min-w-0 grid-cols-1 gap-x-4 gap-y-2 sm:grid-cols-[minmax(0,1fr)_auto]";
-const TOP = "flex min-w-0 items-start gap-3.5 sm:col-start-1 sm:row-start-1";
-const ASIDE = "order-last mt-1 flex min-w-0 flex-col items-start gap-1.5 sm:order-none sm:col-start-2 sm:row-start-1 sm:mt-0 sm:items-end";
-const CHIPS = "min-w-0 sm:col-span-2 sm:row-start-2";
-const FOOT = "sm:col-span-2 sm:row-start-3";
-const NOTE = "min-w-0 sm:col-span-2 sm:row-start-4";
+// The header as a grid, by the header's own width (a container query; the
+// Overview wraps it in an inline-size container), never the window's, so a
+// half-screen laptop window never crowds the name:
+//   - 760px and up: name (and photo) | buttons, then the chips and the scan
+//     line across the full width;
+//   - 480–760px: one column, the buttons right under the name;
+//   - narrower (phones): one column, the buttons last.
+// (Tailwind needs each class written out in full.)
+const HEADER_GRID = "m-0 grid min-w-0 grid-cols-1 gap-x-4 gap-y-2 [@container(min-width:760px)]:grid-cols-[minmax(0,1fr)_auto]";
+const TOP = "flex min-w-0 items-start gap-3.5 [@container(min-width:760px)]:col-start-1 [@container(min-width:760px)]:row-start-1";
+const ASIDE = "order-last mt-1 flex min-w-0 flex-col items-start gap-1.5 [@container(min-width:480px)]:order-none [@container(min-width:760px)]:col-start-2 [@container(min-width:760px)]:row-start-1 [@container(min-width:760px)]:mt-0 [@container(min-width:760px)]:items-end";
+const CHIPS = "min-w-0 [@container(min-width:760px)]:col-span-2 [@container(min-width:760px)]:row-start-2";
+const FOOT = "[@container(min-width:760px)]:col-span-2 [@container(min-width:760px)]:row-start-3";
+const NOTE = "min-w-0 [@container(min-width:760px)]:col-span-2 [@container(min-width:760px)]:row-start-4";
 
 /** The header row as drawn (exported for tests): `photo` null → no image. */
 export function ListingPhotoView({

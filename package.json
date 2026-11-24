@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "dev:fast": "next dev --turbo",
+    "dev:new": "NEXT_PUBLIC_NEW_DESIGN_PREVIEW=true NEXT_DIST_DIR=.next-new next dev -p 3001",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",

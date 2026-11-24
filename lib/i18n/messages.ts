@@ -138,6 +138,36 @@ export type MessageKey =
   | "dashboard.nav.competitors"
   | "dashboard.nav.pricing"
   | "dashboard.nav.reports"
+  | "dashboard.nav.tab.presence"
+  | "dashboard.nav.tab.growth"
+  | "dashboard.nav.fixPlan"
+  | "dashboard.nav.googleListing"
+  | "dashboard.nav.growthPlan"
+  | "dashboard.nav.googleResults"
+  | "dashboard.nav.getReviews"
+  | "dashboard.nav.offers"
+  | "dashboard.nav.printKit"
+  | "dashboard.nav.localEvents"
+  | "dashboard.nav.postStudio"
+  | "dashboard.nav.testAccount"
+  | "dashboard.nav.reportsNew"
+  | "dashboard.nav.tierShort"
+  | "dashboard.nav.soon"
+  | "dashboard.growthTier.1"
+  | "dashboard.growthTier.2"
+  | "dashboard.growthTier.3"
+  | "dashboard.growthTier.4"
+  | "dashboard.growthTier.5"
+  | "dashboard.overview.growthLine.label"
+  | "dashboard.overview.growthLine.tier"
+  | "dashboard.overview.growthLine.open"
+  | "dashboard.overview.growthLine.locked"
+  | "dashboard.overview.growthLine.freeLink"
+  | "dashboard.overview.listingRow.disconnected"
+  | "dashboard.overview.listingRow.reconnect"
+  | "dashboard.overview.listingRow.connectLine"
+  | "dashboard.overview.listingRow.connect"
+  | "dashboard.overview.listingRow.connectWithGrow"
   | "dashboard.settings.plans.heading"
   | "dashboard.settings.plans.current"
   | "dashboard.settings.plans.bestValue"
@@ -6604,6 +6634,36 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.nav.competitors": "Competitors",
     "dashboard.nav.pricing": "Price check",
     "dashboard.nav.reports": "Reports",
+    "dashboard.nav.tab.presence": "Presence",
+    "dashboard.nav.tab.growth": "Growth",
+    "dashboard.nav.fixPlan": "Fix plan",
+    "dashboard.nav.googleListing": "Google listing",
+    "dashboard.nav.growthPlan": "Growth plan",
+    "dashboard.nav.googleResults": "Google results",
+    "dashboard.nav.getReviews": "Get more reviews",
+    "dashboard.nav.offers": "Customer offers",
+    "dashboard.nav.printKit": "Print kit & QR",
+    "dashboard.nav.localEvents": "Local events",
+    "dashboard.nav.postStudio": "PostStudio",
+    "dashboard.nav.testAccount": "Test account",
+    "dashboard.nav.reportsNew": "New report ready",
+    "dashboard.nav.tierShort": "Tier {n}",
+    "dashboard.nav.soon": "Coming soon",
+    "dashboard.growthTier.1": "Starting out",
+    "dashboard.growthTier.2": "Building",
+    "dashboard.growthTier.3": "Growing",
+    "dashboard.growthTier.4": "Thriving",
+    "dashboard.growthTier.5": "Local favorite",
+    "dashboard.overview.growthLine.label": "Growth",
+    "dashboard.overview.growthLine.tier": "Tier {n} {name}",
+    "dashboard.overview.growthLine.open": "Open your Growth plan",
+    "dashboard.overview.growthLine.locked": "? Locked",
+    "dashboard.overview.growthLine.freeLink": "See what your Growth score would measure",
+    "dashboard.overview.listingRow.disconnected": "Disconnected: reconnect to keep your listing checked",
+    "dashboard.overview.listingRow.reconnect": "Reconnect",
+    "dashboard.overview.listingRow.connectLine": "Connect Google to check your listing every day",
+    "dashboard.overview.listingRow.connect": "Connect",
+    "dashboard.overview.listingRow.connectWithGrow": "Connect Google with Grow",
     "dashboard.settings.plans.heading": "Compare plans",
     "dashboard.settings.plans.current": "Your plan",
     "dashboard.settings.plans.bestValue": "Best value",
@@ -13414,6 +13474,36 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.nav.competitors": "Competencia",
     "dashboard.nav.pricing": "Revisión de precios",
     "dashboard.nav.reports": "Informes",
+    "dashboard.nav.tab.presence": "Presencia",
+    "dashboard.nav.tab.growth": "Crecimiento",
+    "dashboard.nav.fixPlan": "Plan de correcciones",
+    "dashboard.nav.googleListing": "Ficha de Google",
+    "dashboard.nav.growthPlan": "Plan de crecimiento",
+    "dashboard.nav.googleResults": "Resultados en Google",
+    "dashboard.nav.getReviews": "Consiga más reseñas",
+    "dashboard.nav.offers": "Ofertas para clientes",
+    "dashboard.nav.printKit": "Kit de impresión y QR",
+    "dashboard.nav.localEvents": "Eventos locales",
+    "dashboard.nav.postStudio": "PostStudio",
+    "dashboard.nav.testAccount": "Cuenta de prueba",
+    "dashboard.nav.reportsNew": "Nuevo informe listo",
+    "dashboard.nav.tierShort": "Nivel {n}",
+    "dashboard.nav.soon": "Pronto",
+    "dashboard.growthTier.1": "Comenzando",
+    "dashboard.growthTier.2": "Construyendo",
+    "dashboard.growthTier.3": "Creciendo",
+    "dashboard.growthTier.4": "Prosperando",
+    "dashboard.growthTier.5": "Favorito local",
+    "dashboard.overview.growthLine.label": "Crecimiento",
+    "dashboard.overview.growthLine.tier": "Nivel {n} {name}",
+    "dashboard.overview.growthLine.open": "Abra su plan de crecimiento",
+    "dashboard.overview.growthLine.locked": "? Bloqueado",
+    "dashboard.overview.growthLine.freeLink": "Vea lo que mediría su puntuación de crecimiento",
+    "dashboard.overview.listingRow.disconnected": "Desconectado: vuelva a conectar para que sigamos revisando su ficha",
+    "dashboard.overview.listingRow.reconnect": "Volver a conectar",
+    "dashboard.overview.listingRow.connectLine": "Conecte Google para revisar su ficha todos los días",
+    "dashboard.overview.listingRow.connect": "Conectar",
+    "dashboard.overview.listingRow.connectWithGrow": "Conecte Google con Grow",
     "dashboard.settings.plans.heading": "Comparar planes",
     "dashboard.settings.plans.current": "Su plan",
     "dashboard.settings.plans.bestValue": "Mejor valor",

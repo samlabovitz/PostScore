@@ -45,6 +45,7 @@ export function AccountMenu({
   business,
   userEmail,
   initialNotifications,
+  divider = true,
 }: {
   business: BusinessSummary | null;
   /** The logged-in user's email, if known yet — see DashboardShell's own
@@ -53,6 +54,8 @@ export function AccountMenu({
    * shown as nothing (no placeholder dash) while unknown. */
   userEmail: string | null;
   initialNotifications?: NotificationRow[];
+  /** The thin line above Account (today's sidebar); the new design's has none. */
+  divider?: boolean;
 }) {
   const locale = useLocale();
   const pathname = usePathname();
@@ -118,7 +121,7 @@ export function AccountMenu({
   }, [open]);
 
   return (
-    <div ref={containerRef} className="relative mt-3 border-t border-white/10 pt-3">
+    <div ref={containerRef} className={cn("relative", divider ? "mt-3 border-t border-white/10 pt-3" : "mt-1.5")}>
       <button
         ref={buttonRef}
         type="button"

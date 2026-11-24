@@ -6,8 +6,23 @@
 // test/routesNoHandWritten.test.ts fails on any hand-written link to
 // these pages outside this file. Pure.
 
-/** One switch for the new Presence/Growth pages and their redirects. */
-export const NEW_PAGES_LIVE = false;
+/** One switch for the new Presence/Growth pages and their redirects.
+ * Off for owners (production) and on localhost:3000. On only for the
+ * new-design preview, `npm run dev:new` on localhost:3001
+ * (NEXT_PUBLIC_NEW_DESIGN_PREVIEW=true, never in a production build).
+ * Going live for owners needs Sam's OK on the full version (CLAUDE.md). */
+export const NEW_PAGES_LIVE: boolean = newDesignPreview({ NODE_ENV: process.env.NODE_ENV, NEXT_PUBLIC_NEW_DESIGN_PREVIEW: process.env.NEXT_PUBLIC_NEW_DESIGN_PREVIEW });
+
+/** The preview flag, never in production. (process.env is read literally
+ * above so Next inlines it into the browser bundle.) */
+export function newDesignPreview(env: { NODE_ENV?: string; NEXT_PUBLIC_NEW_DESIGN_PREVIEW?: string }): boolean {
+  return env.NODE_ENV !== "production" && env.NEXT_PUBLIC_NEW_DESIGN_PREVIEW === "true";
+}
+
+/** The new pages built so far (Day 25B steps 2–3). A link or redirect to a
+ * page not built yet keeps today's URL until its step (5–6). */
+export const BUILT_NEW_PAGES: ReadonlySet<string> = new Set(["fix-plan", "google-listing", "google-results"]);
+const built = (page: string) => NEW_PAGES_LIVE && BUILT_NEW_PAGES.has(page);
 
 export type OffersTab = "all" | "coupons" | "referrals";
 
@@ -61,13 +76,13 @@ export function reviewsHref(businessId: string, opts?: RouteOptions): string {
 
 /** Growth → Get more reviews (asking: link, QR, guide, signs). Today: the Reviews page. */
 export function getReviewsHref(businessId: string, opts?: RouteOptions): string {
-  return NEW_PAGES_LIVE ? build(`${biz(businessId)}/get-reviews`, {}, opts) : build(`${biz(businessId)}/website-reviews`, {}, opts);
+  return built("get-reviews") ? build(`${biz(businessId)}/get-reviews`, {}, opts) : build(`${biz(businessId)}/website-reviews`, {}, opts);
 }
 
 /** Growth → Customer offers, on a tab. Today: the Campaigns page's tabs. */
 export function offersHref(businessId: string, tab: OffersTab = "all", opts?: RouteOptions): string {
   const base: Record<string, string> = tab === "all" ? {} : { tab };
-  return NEW_PAGES_LIVE ? build(`${biz(businessId)}/offers`, base, opts) : build(`${biz(businessId)}/campaigns`, base, opts);
+  return built("offers") ? build(`${biz(businessId)}/offers`, base, opts) : build(`${biz(businessId)}/campaigns`, base, opts);
 }
 
 /** Growth → Campaigns (email, text, social). The URL stays /campaigns. */
@@ -151,5 +166,12 @@ export function legacyRedirect(url: LegacyUrl): string | null {
 
 /** legacyRedirect, only once the new pages are live. */
 export function legacyRedirectIfLive(url: LegacyUrl): string | null {
-  return NEW_PAGES_LIVE ? legacyRedirect(url) : null;
+  if (!NEW_PAGES_LIVE) return null;
+  return redirectToBuilt(legacyRedirect(url));
+}
+
+/** A redirect only to a page that exists (else null: the old page stays). */
+export function redirectToBuilt(to: string | null, builtPages: ReadonlySet<string> = BUILT_NEW_PAGES): string | null {
+  const page = to?.match(/^\/business\/[A-Za-z0-9-]+\/([a-z-]+)/)?.[1];
+  return page && builtPages.has(page) ? to : null;
 }

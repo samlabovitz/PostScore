@@ -16,7 +16,7 @@ All numbers are Hair Express's real numbers: scan of Nov 20, 2026 (78 · C), and
 9. Growth plan: the "Your results" number cards are removed. One link line replaces them: "See what Google brought you last month → Google results". Offer tracking (offers started / uses logged) lives on Customer offers.
 10. Overview: Your Google listing becomes one compact row, with a red disconnected state (§2a).
 11. Overview: the PostStudio card is removed; PostStudio appears only in the sidebar.
-12. Sidebar: PostStudio and Reports sit directly under the open tab's pages after a thin divider; only Account is pinned to the bottom. Reports gets a gold "New" dot for an unopened monthly report (§1).
+12. Sidebar: PostStudio and Reports sit directly under the open tab's pages after a thin divider; only Account is pinned to the bottom, with space above it. Reports gets a gold "New" dot for an unopened monthly report (§1). *(Nov 24: briefly pinned above Account, then moved back under the pages.)*
 13. Mockups: all dashed design-note boxes removed. Their content is in §6b, and they never appear in the app.
 14. Dev test login: real tier including test actions, with a "Test account" tag and the dev-only preview-tier switch. Hair Express = **Tier 2 · Building** (§6.6). Real owners keep the test/practice rule.
 15. `is_test` on offers: yes, in 25B, with a SQL file.
@@ -66,14 +66,14 @@ PostScore
 Presence open:  Overview · Fix plan · Google listing · Reviews · Website · Competitors · Price check
 Growth open:    Growth plan · Google results · Get more reviews · Customer offers · Campaigns · Print kit & QR · Local events (Coming soon, last)
 ────────── (thin divider, normal spacing, directly under the open tab's pages)
-PostStudio (Coming soon)
+PostStudio  [Coming soon]  (chip on the same line)
 Reports  ● (gold "New" dot when a monthly report is ready and not opened yet)
 
             … empty space …
-Account ▾ (pinned to the bottom; notification count; Settings stays in here)
+Account ▾ (pinned to the bottom, with space above it; no divider; notification count; Settings stays in here)
 ```
 
-- **PostStudio and Reports are not pinned.** They follow the open tab's pages after a thin divider, with normal item spacing. Only Account is pinned to the bottom. Same layout on Presence, Growth and Free, and in the phone menu (the drawer is this same sidebar).
+- **PostStudio and Reports are not pinned.** They follow the open tab's pages after a thin divider, with normal item spacing. Only Account is pinned to the bottom, with space above it. Same layout on Presence, Growth and Free, and in the phone menu (the drawer is this same sidebar). *(Nov 24: briefly pinned above Account, then moved back here.)*
 - **Reports "New" dot:** a small gold dot on the right of the Reports item when the newest monthly report is ready and the owner hasn't opened it. It clears when they open Reports. Screen readers hear "New report ready".
   - It needs a "last opened" date per user and business; 25B decides where that's stored (SQL for you to paste if it's a column).
   - While `MONTHLY_REPORTS_LIVE` isn't "true" (testing mode), the dot shows only for test reports in dev, never to owners.

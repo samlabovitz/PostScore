@@ -5,7 +5,9 @@
 // (lib/urgency.ts), otherwise from their real points on the 0–100 total —
 // High 5+, Medium 2+ (lib/overviewTiles.ts) — and ONE button to where each is fixed.
 
-import { fixPlanHref } from "@/lib/routes";
+import { NEW_PAGES_LIVE, fixPlanHref, growthPlanHref } from "@/lib/routes";
+import { useShellData } from "@/components/layout/ShellData";
+import { TIER_NAME_KEYS } from "@/lib/navTabs";
 import Link from "next/link";
 import { IconArrowRight, IconMapPin, IconStar, IconWorld } from "@tabler/icons-react";
 import { pointsText, recRangeText, websiteRangeText, wholePointRange } from "@/lib/pointRange";
@@ -141,6 +143,9 @@ export function TopRecommendations({
         </Link>
       </div>
 
+      {NEW_PAGES_LIVE ? (
+        <GrowthLine businessId={businessId} />
+      ) : (
       <Link
         href={fixPlanHref(businessId, { hash: "weekly-plan" })}
         className="mt-3 flex items-center justify-between gap-3 rounded-xl bg-ink px-4 py-3 text-paper transition-colors hover:bg-[color:color-mix(in_srgb,var(--color-ink)_90%,transparent)]"
@@ -150,6 +155,7 @@ export function TopRecommendations({
         </span>
         <IconArrowRight size={16} className="shrink-0 text-brass" aria-hidden />
       </Link>
+      )}
 
       {/* Equal height with "Since your last scan": the list always sits
           right under the banner; any extra height goes below it, above
@@ -235,5 +241,32 @@ export function TopRecommendations({
         {t(locale, "dashboard.overview.recs.priorityNote", { high: HIGH_PRIORITY_POINTS, medium: MEDIUM_PRIORITY_POINTS })}
       </p>
     </section>
+  );
+}
+
+/** Day 25B step 4 (spec §2a, §5): the Growth line in place of "Start here" —
+ * "Growth · Tier 1 Starting out · Open your Growth plan →"; Free:
+ * "Growth · ? Locked · See what your Growth score would measure →". Every
+ * paid owner shows Tier 1 until the tiers arrive (step 6). */
+export function GrowthLine({ businessId }: { businessId: string }) {
+  const locale = useLocale();
+  const shell = useShellData();
+  const free = shell?.plan === "free";
+  return (
+    <Link
+      href={growthPlanHref(businessId)}
+      data-testid="growth-line"
+      data-locked={free || undefined}
+      className="mt-3 flex items-center justify-between gap-3 rounded-xl bg-ink px-4 py-3 text-paper transition-colors hover:bg-[color:color-mix(in_srgb,var(--color-ink)_90%,transparent)]"
+    >
+      <span className="text-[13.5px] font-semibold">
+        <span className="text-brass">{t(locale, "dashboard.overview.growthLine.label")}</span>
+        {" · "}
+        {free ? t(locale, "dashboard.overview.growthLine.locked") : t(locale, "dashboard.overview.growthLine.tier", { n: 1, name: t(locale, TIER_NAME_KEYS[0]) })}
+        {" · "}
+        <span className="font-medium">{free ? t(locale, "dashboard.overview.growthLine.freeLink") : t(locale, "dashboard.overview.growthLine.open")}</span>
+      </span>
+      <IconArrowRight size={16} className="shrink-0 text-brass" aria-hidden />
+    </Link>
   );
 }

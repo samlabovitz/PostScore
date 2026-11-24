@@ -25,6 +25,8 @@ import { googleWritesPageState } from "@/app/actions/gbpWebsiteLink";
 import { getWebsiteLinkUndoForPage } from "@/app/actions/gbpWebsiteLink";
 import { shownWebsite } from "@/lib/businessWebsite";
 import { isPremiumPlan } from "@/lib/plan";
+import { mismatchedFields } from "@/lib/actionPlan";
+import { NEW_PAGES_LIVE } from "@/lib/routes";
 import { resolveBizProfile } from "@/config/bizProfiles";
 import { viewLocale } from "@/lib/viewLocale.server";
 import { BusinessScoreView } from "./BusinessScoreView";
@@ -155,6 +157,39 @@ export default async function BusinessPage({ params, searchParams = {} }: { para
   const freeGate = rescanGate(upgrade.plan === "free", null, lastOwnerRescan, new Date());
   const freeRescanNextAt = freeGate.limit === "weekly" ? freeGate.nextAvailableAt : null;
 
+  // The Google Profile tab's section 4, from the same reads (connected only).
+  const overviewListing = async () =>
+    gbpStatus.status === "ok" && gbpStatus.connected
+      ? await loadOverviewListing(createClient(), params.id, {
+          business: scored.business,
+          checks: scored.result.breakdown.checks,
+          connected: true,
+          practice: false,
+          timeZone: scored.business.time_zone ?? DEFAULT_BUSINESS_TIMEZONE,
+          replyCounts: gbpStatus.replyCounts,
+          lastScanAt: history[0]?.created_at ?? null,
+        }).catch(() => null)
+      : null;
+  // Free's compact listing row: the same rows the Google listing page builds from the scan.
+  const freeListingInput = () => {
+    const row = scored.business;
+    return {
+      businessId: params.id,
+      checks: scored.result.breakdown.checks,
+      phone: row.phone,
+      website: row.website,
+      category: row.category,
+      openingHours: row.opening_hours ?? null,
+      photoCount: row.photo_count,
+      rating: row.rating,
+      reviewCount: row.review_count,
+      messagingOn: null,
+      replies: gbpStatus.status === "ok" && gbpStatus.replyCounts ? { replied: gbpStatus.replyCounts.replied, inWindow: gbpStatus.replyCounts.reviewsInWindow } : null,
+      booking: null,
+      media: null,
+      extras: null,
+    };
+  };
   const linkOptions = { referralOk: profile.referralOk, couponsOk: profile.couponsOk, pricingOk: profile.pricingOk };
   // The scored hours check as it is now; waiting on Google → "Takes a few weeks".
   const hoursCheck = actionPlan.status === "ok" ? await loadHoursCheck(params.id, scored.scoringBusiness ?? scored.business, actionPlan.tasks).catch(() => null) : null;
@@ -251,24 +286,39 @@ export default async function BusinessPage({ params, searchParams = {} }: { para
         hoursCheck={hoursCheck}
         detailsMismatch={await loadDetailsMismatches(createClient(), params.id, scored.scoringBusiness ?? scored.business).catch(() => null)}
         googleListing={
-          isPremiumPlan(upgrade.plan)
+          !NEW_PAGES_LIVE && isPremiumPlan(upgrade.plan)
             ? {
                 businessId: params.id,
                 connected: gbpStatus.status === "ok" && gbpStatus.connected,
                 canStart: canConnectGbp() && isGbpOAuthConfigured(),
                 // Day 23B: the Google Profile tab's section 4, from the same reads.
-                data:
-                  gbpStatus.status === "ok" && gbpStatus.connected
-                    ? await loadOverviewListing(createClient(), params.id, {
-                        business: scored.business,
-                        checks: scored.result.breakdown.checks,
-                        connected: true,
-                        practice: false,
-                        timeZone: scored.business.time_zone ?? DEFAULT_BUSINESS_TIMEZONE,
-                        replyCounts: gbpStatus.replyCounts,
-                        lastScanAt: history[0]?.created_at ?? null,
-                      }).catch(() => null)
-                    : null,
+                data: await overviewListing(),
+              }
+            : null
+        }
+        googleListingRow={
+          // Day 25B step 4 (new-design preview): one compact row on every paid plan.
+          NEW_PAGES_LIVE && upgrade.plan === "free"
+            ? {
+                // Free: the scan's counts + "Connect Google with Grow →" in place of the connection.
+                businessId: params.id,
+                connected: false,
+                needsReconnect: false,
+                canStart: false,
+                free: true,
+                hoursMismatch: mismatchedFields(businessRowToScoringInput(scored.scoringBusiness ?? scored.business)).includes("hours"),
+                // Connected (a downgrade, or the dev plan switch): the same rows as the Google listing page.
+                data: (await overviewListing()) ?? { input: freeListingInput(), saved: null, syncedAt: null },
+              }
+            : NEW_PAGES_LIVE
+            ? {
+                businessId: params.id,
+                connected: gbpStatus.status === "ok" && gbpStatus.connected,
+                needsReconnect: gbpStatus.status === "ok" && gbpStatus.needsReconnect === true,
+                canStart: canConnectGbp() && isGbpOAuthConfigured(),
+                // The same counts as the Google listing page header: a website hours mismatch is "to improve".
+                hoursMismatch: mismatchedFields(businessRowToScoringInput(scored.scoringBusiness ?? scored.business)).includes("hours"),
+                data: await overviewListing(),
               }
             : null
         }

@@ -42,6 +42,8 @@ import type { LinkOptions } from "@/lib/postaiLinks";
 import type { GetLocalBenchmarkResult } from "@/app/actions/competitors";
 import { LiveListingSection } from "@/components/gbp/LiveListingSection";
 import { GoogleListingCard } from "@/components/overview/GoogleListingCard";
+import { GoogleListingRow } from "@/components/overview/GoogleListingRow";
+import { NEW_PAGES_LIVE } from "@/lib/routes";
 import { InfoTip } from "@/components/reports/ScoreHistoryChart";
 import { FreeReviews, FreeSection, RankUnlockLine } from "@/components/overview/FreeOverview";
 import { FixPlanBox } from "@/components/overview/FixPlanUpsell";
@@ -83,6 +85,7 @@ export function BusinessScoreView({
   freePostai = null,
   gbpReplyCheck = null,
   googleListing = null,
+  googleListingRow = null,
   detailsMismatch = null,
   hoursCheck = null,
   monthlyReportsLive = false,
@@ -135,6 +138,8 @@ export function BusinessScoreView({
   gbpReplyCheck?: GbpReplyCheckState | null;
   /** Premium: the "Your Google listing" card (Day 23B); null = the Premium preview (Free, Grow). */
   googleListing?: ComponentProps<typeof GoogleListingCard> | null;
+  /** New-design preview (Day 25B step 4): the compact "Your Google listing" row, for every paid plan. */
+  googleListingRow?: ComponentProps<typeof GoogleListingRow> | null;
   /** Day 23B: confirmed details that differ from Google or the website (lib/detailsMismatch.ts). */
   detailsMismatch?: DetailsMismatchState | null;
   /** Day 23B: the scored hours check as it is now (lib/hoursCheck.ts). */
@@ -173,7 +178,7 @@ export function BusinessScoreView({
     <>
     {/* Name and address on top, as before; the listing's own photo when
         Google has one; freshness and Re-scan on the right. */}
-    <div id="rescan" className="scroll-mt-20">
+    <div id="rescan" className="scroll-mt-20 [container-type:inline-size]">
       <ListingPhoto
         businessId={businessId}
         businessName={displayName}
@@ -266,6 +271,8 @@ export function BusinessScoreView({
             <RankUnlockLine />
             <GoogleMapsAttribution />
           </Card>
+          {/* New design (preview): the same compact "Your Google listing" row, with the scan's counts. */}
+          {googleListingRow && <GoogleListingRow {...googleListingRow} />}
         </FreeSection>
 
         {/* D. Free tools: Reviews (link, QR, reply drafts), then PostAI —
@@ -392,9 +399,12 @@ export function BusinessScoreView({
         <GoogleMapsAttribution />
       </Card>
 
-      <StudioComingSoon businessId={businessId} />
+      {/* The new design: PostStudio lives only in the sidebar ("Coming soon"). */}
+      {!NEW_PAGES_LIVE && <StudioComingSoon businessId={businessId} />}
 
-      {googleListing ? (
+      {googleListingRow ? (
+        <GoogleListingRow {...googleListingRow} />
+      ) : googleListing ? (
         // Day 23B: the real listing card (Premium — the Google Profile tab is Premium).
         <GoogleListingCard {...googleListing} />
       ) : (

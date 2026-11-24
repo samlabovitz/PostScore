@@ -209,12 +209,15 @@ export function ScoreBand({
     );
   }
   return (
-    <section className="relative rounded-2xl bg-ink p-5 shadow-card sm:p-6 nav:p-7">
+    // Reflows by the card's own width (a container query), never the window's:
+    // three boxes side by side only with room for all three; else the ring on
+    // top and the two boxes side by side under it; narrow: all stacked.
+    <section className="relative rounded-2xl bg-ink p-5 shadow-card [container-type:inline-size] sm:p-6 nav:p-7">
       <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden rounded-2xl">
         <div className="absolute -right-24 -top-24 h-64 w-64 rounded-full bg-[color:color-mix(in_srgb,var(--color-brass)_15%,transparent)] blur-3xl" />
       </div>
-      <div className="relative grid grid-cols-1 items-center gap-5 nav:grid-cols-[auto_minmax(0,1fr)_minmax(0,1fr)] nav:gap-6">
-        <div className="flex items-center justify-center gap-5 nav:justify-start">
+      <div className="relative grid grid-cols-1 items-center gap-5 [@container(min-width:560px)]:grid-cols-2 [@container(min-width:980px)]:grid-cols-[auto_minmax(0,1fr)_minmax(0,1fr)] [@container(min-width:560px)]:gap-6">
+        <div className="flex items-center justify-center gap-5 [@container(min-width:560px)]:col-span-2 [@container(min-width:980px)]:col-span-1 [@container(min-width:980px)]:justify-start">
           {/* The ring and its button share one centered column: the button
               sits under the ring's center with even space above and below. */}
           <div data-testid="score-ring-column" className="flex w-max flex-col items-center gap-3">
@@ -263,7 +266,7 @@ export function ScoreBand({
             <div className="text-[11px] font-medium uppercase tracking-[0.08em] text-[color:color-mix(in_srgb,var(--color-paper)_70%,transparent)]">{t(locale, "dashboard.overview.projectedLabel")}</div>
             <div className="flex items-baseline gap-2">
               <span className="font-serif text-2xl font-bold text-paper">{projectedScore}</span>
-              <span className="text-sm text-[color:color-mix(in_srgb,var(--color-paper)_70%,transparent)]">{t(locale, "dashboard.overview.scoreOutOf100WithGrade", { grade: projectedGrade })}</span>
+              <span className="whitespace-nowrap text-sm text-[color:color-mix(in_srgb,var(--color-paper)_70%,transparent)]">{t(locale, "dashboard.overview.scoreOutOf100WithGrade", { grade: projectedGrade })}</span>
             </div>
             {someTakeMonths && (
               <p data-testid="projection-months" className="-mt-1 text-[12px] text-[color:color-mix(in_srgb,var(--color-paper)_70%,transparent)]">
@@ -281,7 +284,8 @@ export function ScoreBand({
                 className="mt-1 inline-flex w-fit max-w-full items-start gap-1.5 rounded-[14px] border border-[color:color-mix(in_srgb,var(--color-brass)_50%,transparent)] bg-[color:color-mix(in_srgb,var(--color-brass)_15%,transparent)] px-3 py-1 text-[12.5px] font-semibold text-paper hover:bg-[color:color-mix(in_srgb,var(--color-brass)_25%,transparent)]"
               >
                 <IconSparkles size={14} className="mt-[3px] shrink-0 text-brass" />
-                <span className="min-w-0 break-words leading-snug">
+                {/* Wraps between words only, never inside one. */}
+                <span className="min-w-0 leading-snug [overflow-wrap:normal]">
                   {t(locale, "dashboard.overview.biggestBoost", { points: boostPoints(biggestBoost.weightedPoints ?? biggestBoost.promisedPoints), label: biggestBoost.label })}
                 </span>
               </Link>

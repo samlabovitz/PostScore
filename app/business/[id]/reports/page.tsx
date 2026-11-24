@@ -17,6 +17,7 @@ import { weekEndDay } from "@/lib/weekly/weeks";
 import { resolveBizProfile } from "@/config/bizProfiles";
 import { loadBusinessNiche } from "@/lib/businessNiche.server";
 import { ownerCompetitorNoun } from "@/lib/competitorQuery";
+import { NEW_PAGES_LIVE } from "@/lib/routes";
 
 export default async function ReportsPage({ params, searchParams }: { params: { id: string }; searchParams: { week?: string } }) {
   // Free: this tab is locked — its showroom, before any of its own data loads.
@@ -37,6 +38,8 @@ export default async function ReportsPage({ params, searchParams }: { params: { 
     loadUpgradeContext(params.id, "reports"),
   ]);
   if (websiteOnly) return websiteOnly;
+  // The new design's Reports "New" dot clears once Reports is open (preview only for now).
+  if (NEW_PAGES_LIVE) await (await import("@/lib/shellData.server")).markReportsOpened(params.id);
 
   if (summary.status === "unauthenticated") {
     redirect("/login");
