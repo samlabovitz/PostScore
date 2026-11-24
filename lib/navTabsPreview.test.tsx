@@ -81,7 +81,7 @@ describe("tabs and pages", () => {
     expect(hrefOf("localEvents")).toBeNull();
     // On /campaigns, Campaigns is the highlighted page (Customer offers only stands in for now).
     expect(activeItem("/business/b1/campaigns", "b1", GROWTH_ITEMS)).toBe("campaigns");
-    expect(text(sidebar("/business/b1/growth", PAID, "es"))).toContain("Plan de crecimiento Resultados en Google Consiga más reseñas Ofertas para clientes Campañas Kit de impresión y QR Eventos locales");
+    expect(text(sidebar("/business/b1/growth", PAID, "es"))).toContain("Plan de crecimiento Resultados en Google Consiga más reseñas Ofertas para clientes Campañas Kit de impresión y QR Eventos locales Pronto PostStudio Pronto Informes");
   });
 
   test("the switch: icon + name on one line each; the tier name and 'Test account' only in the Growth pages' header line (EN + ES)", () => {

@@ -56,10 +56,11 @@ describe("listing chips", () => {
     expect(html).toContain('href="https://jgdeli.com/"');
     expect(html).toContain("jgdeli.com");
     expect(html).toContain("View on Google Maps");
-    // One row: never wraps; swipes sideways below 1024px, fits on one line from lg.
+    // Phones (under 860px): one swipeable row. From 860px: wraps onto a second line, never off the edge.
     const row = html.match(/<div data-testid="listing-chips" class="([^"]+)"/)![1];
-    for (const c of ["flex-nowrap", "overflow-x-auto", "lg:overflow-visible"]) expect(row).toContain(c);
-    expect(row).not.toContain("flex-wrap ");
+    for (const c of ["flex-nowrap", "overflow-x-auto", "nav:flex-wrap", "nav:overflow-visible"]) expect(row).toContain(c);
+    expect(row).not.toMatch(/(^| )flex-wrap( |$)/);
+    expect(row).not.toContain("lg:");
     // The website chip shows the domain, truncates, and has the full URL on hover.
     expect(html).toMatch(/<a href="https:\/\/jgdeli.com\/"[^>]*class="[^"]*max-w-\[16rem\][^"]*"[^>]*title="https:\/\/jgdeli.com\/"/);
     expect(html).toMatch(/title="Open today 11:00 AM – 10:00 PM"/);

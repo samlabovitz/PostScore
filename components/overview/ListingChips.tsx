@@ -37,7 +37,10 @@ export interface ListingChipsBusiness {
 
 const CHIP = "inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-full border border-paper-deep bg-white px-2 py-[3px] text-[12px] text-ink";
 /** May shrink with "…" on a desktop line (hours, website). */
-const SHRINK = "min-w-0 lg:shrink";
+// Phones (under 860px): one swipeable row. From 860px the chips wrap onto
+// a second line instead of hiding off the edge (a long one shrinks with "…"
+// only if it alone is wider than the row).
+const SHRINK = "min-w-0 nav:shrink";
 const LINK_CHIP = `${CHIP} font-medium transition-colors hover:border-[color:color-mix(in_srgb,var(--color-brass)_50%,white)] hover:text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-brass`;
 const MUTED_CHIP = `${CHIP} text-ink-mute`;
 
@@ -155,7 +158,7 @@ export function ListingChips({ business, now, businessId = null }: { business: L
   return (
     <div
       data-testid="listing-chips"
-      className="-mx-1 flex min-w-0 flex-nowrap items-center gap-1.5 overflow-x-auto px-1 py-0.5 [scrollbar-width:none] lg:overflow-visible [&::-webkit-scrollbar]:hidden"
+      className="-mx-1 flex min-w-0 flex-nowrap items-center gap-1.5 overflow-x-auto px-1 py-0.5 [scrollbar-width:none] nav:flex-wrap nav:gap-y-2 nav:overflow-visible [&::-webkit-scrollbar]:hidden"
     >
       {business.phone ? (
         <a href={`tel:${business.phone.replace(/[^\d+]/g, "")}`} className={LINK_CHIP}>
