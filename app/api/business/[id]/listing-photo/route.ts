@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { devRunSkipsLivePlaces } from "@/lib/placesDevGuard";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getFirstPhotoRef, resolvePhotoUri } from "@/lib/google/places";
@@ -55,6 +56,9 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
     const [photo, live] = await Promise.all([gbpHeaderPhoto(admin, business.id).catch(() => null), liveListingForRow(supabase, business.id, business)]);
     return reply({ photo: photo ? { uri: photo.uri, attributions: [], googleMapsUri: live.status === "ok" ? live.values.googleMapsUri : null } : null });
   }
+
+  // Dev-only runs never spend Places calls (lib/placesDevGuard.ts).
+  if (devRunSkipsLivePlaces()) return reply({ photo: null });
 
   try {
     // Free (IDs Only SKU). No photos on the listing → no image at all.

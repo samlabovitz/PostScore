@@ -12,6 +12,7 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { getOwnerListingLive } from "@/lib/google/places";
 import { canMakeLiveCall, placesLiveMonthlyCap } from "@/lib/placesLive";
+import { devRunSkipsLivePlaces } from "@/lib/placesDevGuard";
 import { liveCache, liveCallsThisMonth } from "@/lib/placesLive.server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { columnsFromBusinessProfile, liveListingFromPlaces, liveValuesFromBusinessProfile, withLiveListing, type ListingColumns, type LiveListing } from "@/lib/ownerListing";
@@ -27,6 +28,8 @@ export interface OwnerListingDeps {
   log: (businessId: string, kind: "live_read" | "live_read_skipped", calls: number) => Promise<void>;
   admin: () => SupabaseClient;
   now: () => number;
+  /** A dev-only run (lib/placesDevGuard.ts): the cache only, never a Places call. */
+  devOnly?: () => boolean;
 }
 
 async function logCall(businessId: string, kind: "live_read" | "live_read_skipped", calls: number): Promise<void> {
@@ -129,6 +132,7 @@ const defaultDeps = (): OwnerListingDeps => ({
   log: logCall,
   admin: createAdminClient,
   now: Date.now,
+  devOnly: () => devRunSkipsLivePlaces(),
 });
 
 const key = (businessId: string) => `owner-listing:${businessId}`;
@@ -168,6 +172,8 @@ async function readOwnerListing(businessId: string, listing: { placeId: string; 
   let result: LiveListing;
   if (listing.connected) {
     result = await deps.gbp(deps.admin(), businessId).catch((): LiveListing => ({ status: "unavailable" }));
+  } else if (deps.devOnly?.()) {
+    result = { status: "unavailable" };
   } else if (!canMakeLiveCall(await deps.used(), placesLiveMonthlyCap("live_read"))) {
     await deps.log(businessId, "live_read_skipped", 0);
     result = { status: "unavailable" };
@@ -192,7 +198,9 @@ export async function publicPlacesListing(businessId: string, placeId: string, d
   const hit = cache.get<LiveListing>(k, deps.now());
   if (hit) return hit;
   let result: LiveListing;
-  if (!canMakeLiveCall(await deps.used(), placesLiveMonthlyCap("live_read"))) {
+  if (deps.devOnly?.()) {
+    result = { status: "unavailable" };
+  } else if (!canMakeLiveCall(await deps.used(), placesLiveMonthlyCap("live_read"))) {
     await deps.log(businessId, "live_read_skipped", 0);
     result = { status: "unavailable" };
   } else {

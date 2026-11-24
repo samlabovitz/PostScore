@@ -2963,6 +2963,7 @@ export type MessageKey =
   | "dashboard.hoursCheck.differ"
   | "dashboard.hoursCheck.more"
   | "dashboard.hoursCheck.profileAhead"
+  | "dashboard.fixPlan.waitingForGoogle"
   | "dashboard.fix.premiumOneClick"
   | "dashboard.detailsMismatch.heading"
   | "dashboard.detailsMismatch.merged.ownerOnly.hours"
@@ -9544,6 +9545,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.hoursCheck.staleTitle": "Changed since your last scan · Re-scan to update",
     "dashboard.hoursCheck.differ": "{day}: website {website} · Google {google}",
     "dashboard.hoursCheck.more": "+{count} more",
+    "dashboard.fixPlan.waitingForGoogle": "Waiting for Google",
     "dashboard.hoursCheck.profileAhead": "Your Business Profile already shows your website's hours, but Google Maps hasn't published them yet. Google may still be reviewing the change.",
     "dashboard.fix.premiumOneClick": "Premium does this for you in one click →",
     "dashboard.detailsMismatch.heading": "Your details don't match",
@@ -16244,6 +16246,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.hoursCheck.staleTitle": "Cambió desde su último análisis · Vuelva a analizar para actualizar",
     "dashboard.hoursCheck.differ": "{day}: sitio web {website} · Google {google}",
     "dashboard.hoursCheck.more": "+{count} más",
+    "dashboard.fixPlan.waitingForGoogle": "Esperando a Google",
     "dashboard.hoursCheck.profileAhead": "Su Perfil de Empresa ya muestra el horario de su sitio web, pero Google Maps aún no lo ha publicado. Es posible que Google todavía esté revisando el cambio.",
     "dashboard.fix.premiumOneClick": "Premium lo hace por usted con un clic →",
     "dashboard.detailsMismatch.heading": "Sus datos no coinciden",

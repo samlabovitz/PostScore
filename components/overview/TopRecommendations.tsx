@@ -12,8 +12,8 @@ import { pointsText, recRangeText, websiteRangeText, wholePointRange } from "@/l
 import { FixButton, FIX_BUTTON_CLASS } from "@/components/scoring/FixButton";
 import { DetailsMismatchTasks, DetailsVersions, MergedActions, mergedTitle } from "@/components/overview/DetailsMismatchTasks";
 import { mergedKind, mismatchesCoveredBy, URGENT_DETAILS, type DetailsMismatch } from "@/lib/detailsMismatch";
-import { isHoursCheck, type HoursCheckState } from "@/lib/hoursCheck";
-import { HoursDiffLines, RescanNowButton } from "@/components/scoring/HoursCheck";
+import { hoursWaitingOnGoogle, isHoursCheck, type HoursCheckState } from "@/lib/hoursCheck";
+import { HoursDiffLines, RescanNowButton, WaitingForGoogleTag } from "@/components/scoring/HoursCheck";
 import type { OwnerDetails } from "@/lib/ownerDetails";
 import { withFromScore } from "@/lib/fixDestination";
 import { HIGH_PRIORITY_POINTS, MEDIUM_PRIORITY_POINTS, type Priority, type Recommendation } from "@/lib/overviewTiles";
@@ -116,8 +116,11 @@ export function TopRecommendations({
   // check about the same field are ONE task — first, Urgent for hours/phone.
   const mismatches = detailsMismatch?.mismatches ?? [];
   const covered = (rec: Recommendation) => (rec.source.kind === "task" ? mismatchesCoveredBy(rec.source.task, mismatches) : []);
-  // Day 25B step 3: an hours check that matches now (a re-scan away) is never first — after every other item.
-  const staleHours = (r: Recommendation) => hoursCheck?.kind === "stale" && covered(r).length === 0 && r.source.kind === "task" && isHoursCheck(r.source.task);
+  // Day 25B step 3: an hours check that matches now (a re-scan away) or
+  // waits on Google (Business Profile ahead of Maps) is never in the top
+  // items — after every other one.
+  const staleHours = (r: Recommendation) =>
+    (hoursCheck?.kind === "stale" || hoursWaitingOnGoogle(hoursCheck)) && covered(r).length === 0 && r.source.kind === "task" && isHoursCheck(r.source.task);
   const recommendations =
     allRecommendations === null
       ? null
@@ -166,6 +169,7 @@ export function TopRecommendations({
               // The scored hours check, as it is now: matching (re-scan) or the exact days that differ.
               const hours = merged.length === 0 && rec.source.kind === "task" && isHoursCheck(rec.source.task) ? hoursCheck : null;
               const stale = hours?.kind === "stale";
+              const waiting = hoursWaitingOnGoogle(hours);
               const priority = merged.some((m) => URGENT_DETAILS.includes(m.field)) ? "urgent" : rec.priority;
               return (
               <li key={rec.key} data-merged={merged.length > 0 ? merged.map((m) => m.field).join(",") : undefined} className="flex gap-3 py-3 first:pt-1 last:pb-1">
@@ -194,7 +198,7 @@ export function TopRecommendations({
                       {rec.pending && <span className="text-[12px] font-medium text-ink-soft">{t(locale, "dashboard.overview.recs.pending")}</span>}
                     </div>
                     <div className="flex shrink-0 flex-col items-end gap-1">
-                      {priority && !stale && <PriorityTag priority={priority} />}
+                      {waiting ? <WaitingForGoogleTag /> : priority && !stale && <PriorityTag priority={priority} />}
                       {!ownerOnly && !stale && <span className="whitespace-nowrap text-[12px] font-semibold tabular-nums text-ink">{recPointsText(locale, rec)}</span>}
                     </div>
                   </div>

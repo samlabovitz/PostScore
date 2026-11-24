@@ -1,5 +1,6 @@
 import { GOOGLE_MISMATCH_CHECK_ID } from "@/lib/actionPlan";
 import { loadHoursCheck } from "@/lib/hoursCheck.server";
+import { withHoursWhen } from "@/lib/hoursCheck";
 import { loadDetailsMismatches, loadNowMatchPrompts } from "@/lib/detailsMismatch.server";
 import { googleWritesAllowed } from "@/lib/gbpReviewPractice";
 import { parseGbpResult } from "@/lib/gbpLanding";
@@ -316,9 +317,16 @@ export default async function GrowthPage({ params, searchParams = {} }: { params
         })()
       : null;
 
+  // The scored hours check as it is now; waiting on Google → "Takes a few weeks".
+  const hoursCheck = actionPlanResult.status === "ok" ? await loadHoursCheck(params.id, scored.scoringBusiness ?? scored.business, actionPlanResult.tasks).catch(() => null) : null;
   const actionPlan =
     actionPlanResult.status === "ok"
-      ? actionPlanResult
+      ? {
+          ...actionPlanResult,
+          tasks: withHoursWhen(actionPlanResult.tasks, hoursCheck),
+          weeklyTasks: withHoursWhen(actionPlanResult.weeklyTasks, hoursCheck),
+          laterTasks: withHoursWhen(actionPlanResult.laterTasks, hoursCheck),
+        }
       : {
           tasks: [],
           completed: [],
@@ -364,7 +372,7 @@ export default async function GrowthPage({ params, searchParams = {} }: { params
         googleProfile={{ ...googleProfile, recs: growRecs }}
         googleTab={googleTab}
         bookingTask={bookingState?.tracking.kind === "turn_on" ? { provider: bookingState.tracking.provider, still: bookingState.tracking.still } : null}
-        hoursCheck={actionPlanResult.status === "ok" ? await loadHoursCheck(params.id, scored.scoringBusiness ?? scored.business, actionPlanResult.tasks).catch(() => null) : null}
+        hoursCheck={hoursCheck}
         detailsMismatch={await loadDetailsMismatches(createClient(), params.id, scored.scoringBusiness ?? scored.business).catch(() => null)}
         actionPlan={actionPlan}
         growthMoves={growthMoves}

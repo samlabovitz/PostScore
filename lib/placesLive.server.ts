@@ -4,6 +4,7 @@
 // logged in places_calls (counts only).
 import "server-only";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { devRunSkipsLivePlaces } from "@/lib/placesDevGuard";
 import { monthStartUtc } from "@/lib/placesSearchBudget";
 import { placesCallsTableMissing } from "@/lib/placesSearchBudget.server";
 import { getPlaceLive, searchNearbyLive, searchTextLive } from "@/lib/google/places";
@@ -56,6 +57,8 @@ export interface LiveDeps {
   log: (businessId: string, kind: LiveKind | `${LiveKind}_skipped`, calls: number) => Promise<void>;
   cache: LiveCache;
   now: () => number;
+  /** A dev-only run (lib/placesDevGuard.ts): the cache only, never a Places call. */
+  devOnly?: () => boolean;
 }
 
 const defaultDeps = (): LiveDeps => ({
@@ -66,6 +69,7 @@ const defaultDeps = (): LiveDeps => ({
   log: logLiveCall,
   cache: liveCache(),
   now: Date.now,
+  devOnly: () => devRunSkipsLivePlaces(),
 });
 
 export type LiveCompetitorsResult =
@@ -115,6 +119,7 @@ export async function liveCompetitorPlaces(
   const missing = () => allIds.filter((id) => !places[id]);
   fromCache();
   if (missing().length === 0) return { status: "ok", places };
+  if (deps.devOnly?.()) return Object.keys(places).length > 0 ? { status: "ok", places } : { status: "unavailable" };
 
   let reachedGoogle = Object.keys(places).length > 0;
   // One list call per visit: a second load within the 10 minutes goes

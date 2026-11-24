@@ -18,6 +18,7 @@ import { getLocalBenchmark } from "@/app/actions/competitors";
 import { getCustomerDetailsUndo } from "@/app/actions/gbpCustomerDetails";
 import { getWebsiteLinkUndoForPage, googleWritesPageState } from "@/app/actions/gbpWebsiteLink";
 import { loadHoursCheck } from "@/lib/hoursCheck.server";
+import { withHoursWhen } from "@/lib/hoursCheck";
 import { loadDetailsMismatches } from "@/lib/detailsMismatch.server";
 import { reviewGoalLines } from "@/lib/reviewGoal";
 import { shownWebsite } from "@/lib/businessWebsite";
@@ -76,7 +77,9 @@ export default async function FixPlanRoute({ params }: { params: { id: string } 
     );
   }
   const gbpConnected = gbpStatus.status === "ok" && gbpStatus.connected;
-  const fixPlan = buildFixPlan({ tasks: actionPlan.tasks, websiteBanner: actionPlan.websiteBanner, breakdown });
+  // The scored hours check as it is now; waiting on Google → "Takes a few weeks".
+  const hoursCheck = await loadHoursCheck(params.id, scored.scoringBusiness ?? scored.business, actionPlan.tasks).catch(() => null);
+  const fixPlan = buildFixPlan({ tasks: withHoursWhen(actionPlan.tasks, hoursCheck), websiteBanner: actionPlan.websiteBanner, breakdown });
   const row = scored.business;
   return (
     <DashboardShell upgrade={upgrade} business={business}>
@@ -109,7 +112,7 @@ export default async function FixPlanRoute({ params }: { params: { id: string } 
           completed={actionPlan.completed}
           gbpConnected={gbpConnected}
           websiteRecheck={recheck.status === "ok" ? { left: recheck.availability.left, hasWebsite: recheck.hasWebsite } : null}
-          hoursCheck={await loadHoursCheck(params.id, scored.scoringBusiness ?? scored.business, actionPlan.tasks).catch(() => null)}
+          hoursCheck={hoursCheck}
           detailsMismatch={await loadDetailsMismatches(createClient(), params.id, scored.scoringBusiness ?? scored.business).catch(() => null)}
           reviewGoalLines={benchmark.status === "ok" && benchmark.benchmark.reviewGoal ? reviewGoalLines(benchmark.benchmark.reviewGoal, benchmark.benchmark.reviewGroup, locale) : []}
         />

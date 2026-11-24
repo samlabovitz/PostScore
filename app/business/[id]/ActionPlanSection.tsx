@@ -3,8 +3,8 @@
 import { DetailsVersions, MergedActions, mergedOneClickItem, mergedTitle } from "@/components/overview/DetailsMismatchTasks";
 import { PremiumOneClickLine } from "@/components/scoring/PremiumOneClickLine";
 import { mergedKind, mismatchesCoveredBy, type DetailsMismatch } from "@/lib/detailsMismatch";
-import { isHoursCheck, type HoursCheckState } from "@/lib/hoursCheck";
-import { HoursDiffLines, RescanNowButton } from "@/components/scoring/HoursCheck";
+import { hoursWaitingOnGoogle, isHoursCheck, type HoursCheckState } from "@/lib/hoursCheck";
+import { HoursDiffLines, RescanNowButton, WaitingForGoogleTag } from "@/components/scoring/HoursCheck";
 import { useEffect, useState, createContext, useContext } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -435,6 +435,7 @@ export function TaskCard({
   // Merged with the confirmed details: "Your hours don't match everywhere".
   const hours = merged.length === 0 ? hoursCheck : null;
   const stale = hours?.kind === "stale";
+  const waiting = hoursWaitingOnGoogle(hours);
   // A hours check that matches now keeps its real title; "Changed since your last scan" is a note under it.
   const plainTitle = merged.length > 0 ? mergedTitle(merged, locale) : stale ? t(locale, "content.actionPlan.title.website.info_consistency.hours") : (task.title ?? task.label);
   // "Get 3 new reviews in the next 90 days (30 → 33)": the target already says the title — one line.
@@ -462,8 +463,14 @@ export function TaskCard({
               <h3 className="text-[14.5px] font-semibold text-ink">{title}</h3>
               {fixPlan ? (
                 <>
-                  {!task.urgent && !stale && <FixPriorityTag priority={fixPlan.priority} />}
-                  <FixWhenTag when={task.when ?? "weeks"} />
+                  {waiting ? (
+                    <WaitingForGoogleTag />
+                  ) : (
+                    <>
+                      {!task.urgent && !stale && <FixPriorityTag priority={fixPlan.priority} />}
+                      <FixWhenTag when={task.when ?? "weeks"} />
+                    </>
+                  )}
                   {/* Phones: the status under the tags, so the title keeps its width. */}
                   {isPending && (
                     <StatusPill variant={status.variant} className="sm:hidden">
@@ -474,7 +481,7 @@ export function TaskCard({
               ) : (
                 <>
                   {/* Day 25B step 3: the same tag as Fix plan (This week / Takes a few weeks / Takes months). */}
-                  {!isSetup && (task.when ? <FixWhenTag when={task.when} /> : <span className="text-[11.5px] text-ink-mute">{effortBadge(task, context, locale)}</span>)}
+                  {!isSetup && (waiting ? <WaitingForGoogleTag /> : task.when ? <FixWhenTag when={task.when} /> : <span className="text-[11.5px] text-ink-mute">{effortBadge(task, context, locale)}</span>)}
                   {task.minutes ? <span className="text-[11.5px] text-ink-mute">· {timeEstimateText(task.minutes, locale)}</span> : null}
                 </>
               )}

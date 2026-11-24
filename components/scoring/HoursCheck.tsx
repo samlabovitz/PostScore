@@ -76,3 +76,12 @@ export function RescanNowButton({ businessId, lastScanAt }: { businessId: string
   );
 }
 
+/** Business Profile already shows the website's hours, Maps hasn't published them: no pill, only this. */
+export function WaitingForGoogleTag() {
+  const locale = useLocale();
+  return (
+    <span data-testid="fix-waiting-google" className="inline-flex items-center whitespace-nowrap rounded-full border border-paper-deep bg-paper px-2 py-0.5 text-[11px] font-semibold text-ink-soft">
+      {t(locale, "dashboard.fixPlan.waitingForGoogle")}
+    </span>
+  );
+}

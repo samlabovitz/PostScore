@@ -9,6 +9,7 @@
 // Unknown on either side: null (the scan's own words stay). Pure.
 
 import { sameWeek, type DayHours, type WeeklyHours } from "@/lib/gbpProfileEdits";
+import { fixWhen, type FixWhenTag } from "@/lib/fixDestination";
 
 export type HoursCheckState =
   | { kind: "stale" }
@@ -37,3 +38,15 @@ export function withoutStaleHours<T extends { source: { kind: string; task?: { c
   return recs.filter((r) => !(r.source.kind === "task" && r.source.task && isHoursCheck(r.source.task)));
 }
 
+/** The owner's Business Profile already shows the website's hours; Google
+ * Maps hasn't published them yet: waiting on Google, not on the owner. */
+export function hoursWaitingOnGoogle(state: HoursCheckState | null | undefined): boolean {
+  return state?.kind === "differs" && state.profileAhead;
+}
+
+/** While it waits on Google, the hours fix "Takes a few weeks" (fixWhen's
+ * pendingGoogleReview rule) — on Overview, Fix plan and the recap alike. */
+export function withHoursWhen<T extends { checkId: string; mismatchFields?: string[] | null; when?: FixWhenTag }>(tasks: T[], state: HoursCheckState | null | undefined): T[] {
+  if (!hoursWaitingOnGoogle(state)) return tasks;
+  return tasks.map((task) => (isHoursCheck(task) ? { ...task, when: fixWhen(task.checkId, { pendingGoogleReview: true }) } : task));
+}
