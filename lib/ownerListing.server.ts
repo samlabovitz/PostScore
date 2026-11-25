@@ -249,7 +249,13 @@ export async function liveListingForRow(db: SupabaseClient, businessId: string, 
  * No Google listing (website only): the name, address and site the owner gave. */
 export async function withLiveListingFor<T extends ListingColumns & { place_id?: string | null; listing_mode?: string | null }>(db: SupabaseClient, businessId: string, row: T) {
   const live = await liveListingForRow(db, businessId, row);
-  return withLiveListing(live.status === "none" && row.listing_mode === "website_only" ? { ...row, ...(await websiteOnlyDetails(db, businessId)) } : row, live);
+  const merged = withLiveListing(live.status === "none" && row.listing_mode === "website_only" ? { ...row, ...(await websiteOnlyDetails(db, businessId)) } : row, live);
+  // Can't be read right now: keep the site our last scan graded (our own result), as the connected path does.
+  if (live.status === "unavailable" && !(merged as { website?: string | null }).website) {
+    const site = await gradedSiteOfLastScan(db, businessId);
+    if (site) return { ...merged, website: site };
+  }
+  return merged;
 }
 
 /**

@@ -43,6 +43,7 @@ import {
 } from "@/lib/pricing";
 import type { BizProfile } from "@/config/bizProfiles";
 import { formatDateTime, t, tPlural, useLocale, useTimeZone, type MessageKey } from "@/lib/i18n";
+import { NEW_PAGES_LIVE } from "@/lib/routes";
 
 /**
  * Not a value judgment (premium isn't "bad") — just five visually
@@ -717,15 +718,18 @@ export function PricingView({
   return (
     <div className="flex flex-col gap-8 nav:gap-10">
       <div>
-        <Link
-          href={`/business/${businessId}`}
-          className="inline-flex items-center gap-1.5 text-[13px] font-medium text-ink-soft hover:text-ink"
-        >
-          <IconArrowLeft size={15} />
-          {t(locale, "dashboard.competitors.backTo", {
-            name: businessName ?? t(locale, "dashboard.competitors.businessFallback"),
-          })}
-        </Link>
+        {/* New design: the sidebar handles navigation. */}
+        {!NEW_PAGES_LIVE && (
+          <Link
+            href={`/business/${businessId}`}
+            className="inline-flex items-center gap-1.5 text-[13px] font-medium text-ink-soft hover:text-ink"
+          >
+            <IconArrowLeft size={15} />
+            {t(locale, "dashboard.competitors.backTo", {
+              name: businessName ?? t(locale, "dashboard.competitors.businessFallback"),
+            })}
+          </Link>
+        )}
         <div className="mt-2 flex flex-wrap items-center gap-2.5">
           <h1 className="font-serif text-2xl font-semibold text-ink nav:text-[27px]">
             {t(locale, "dashboard.pricing.pageTitle")}

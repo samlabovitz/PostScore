@@ -1,5 +1,5 @@
 import { isMonthlyReportsLive } from "@/lib/monthlyReportsFeatureFlag";
-import { growthPlanHref } from "@/lib/routes";
+import { growthPlanHref, NEW_PAGES_LIVE } from "@/lib/routes";
 import { Fragment } from "react";
 import { viewLocale } from "@/lib/viewLocale.server";
 import { notFound, redirect } from "next/navigation";
@@ -91,10 +91,13 @@ export default async function SettingsPage({ params, searchParams = {} }: { para
     <DashboardShell business={business} plan={plan}>
       <div className="flex flex-col gap-6">
         <div>
-          <Link href={`/business/${params.id}`} className="inline-flex items-center gap-1.5 text-[13px] font-medium text-ink-soft hover:text-ink">
-            <IconArrowLeft size={15} />
-            {t(locale, "dashboard.settings.backTo", { name: business.name ?? t(locale, "dashboard.settings.businessFallback") })}
-          </Link>
+          {/* New design: the sidebar handles navigation. */}
+          {!NEW_PAGES_LIVE && (
+            <Link href={`/business/${params.id}`} className="inline-flex items-center gap-1.5 text-[13px] font-medium text-ink-soft hover:text-ink">
+              <IconArrowLeft size={15} />
+              {t(locale, "dashboard.settings.backTo", { name: business.name ?? t(locale, "dashboard.settings.businessFallback") })}
+            </Link>
+          )}
           <h1 className="mt-2 font-serif text-2xl font-semibold text-ink nav:text-[27px]">{t(locale, "dashboard.nav.settings")}</h1>
         </div>
 

@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { IconLock,
-  IconChevronDown,
   IconChevronLeft,
   IconChevronRight,
   IconPhoto,
@@ -15,7 +14,7 @@ import { Modal } from "@/components/ui/Modal";
 import { Button, buttonClasses } from "@/components/ui/Button";
 import { UpgradeButton, UpgradeTrigger } from "@/components/upgrade/UpgradeTrigger";
 import { cn } from "@/lib/utils";
-import { SCREENSHOT_REFRESH_COOLDOWN_DAYS, type WebsiteAnalysis, type WebsiteAnalysisPage } from "@/lib/scoring";
+import { SCREENSHOT_REFRESH_COOLDOWN_DAYS, type WebsiteAnalysis } from "@/lib/scoring";
 import { refreshWebsiteScreenshots } from "@/app/actions/websiteScreenshots";
 import { screenshotFreshness, visibleAdditionalPages, visibleHomepageScreenshot, type GradedSite } from "@/lib/screenshotFreshness";
 import { siteHost } from "@/lib/ownerWebsite";
@@ -103,44 +102,43 @@ function RefreshScreenshotsControl({
   );
 }
 
-function AdditionalPageThumbnail({
-  page,
-  onOpen,
-}: {
-  page: WebsiteAnalysisPage;
-  onOpen: () => void;
-}) {
+/** One page in a simple browser frame: the top of the page, fading out at the bottom. */
+function PageThumb({ label, src, onOpen }: { label: string; src: string | null; onOpen: () => void }) {
   const locale = useLocale();
   return (
-    <button
-      type="button"
-      onClick={onOpen}
-      disabled={!page.screenshotUrl}
-      className={cn(
-        "flex flex-col overflow-hidden rounded-lg border border-paper-line text-left",
-        page.screenshotUrl ? "hover:border-ink-mute" : "cursor-default"
-      )}
-    >
-      {page.screenshotUrl ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={page.screenshotUrl}
-          alt={t(locale, "dashboard.website.screenshotAlt", { label: page.label })}
-          className="h-20 w-full object-cover object-top"
-        />
-      ) : (
-        <div className="flex h-20 w-full flex-col items-center justify-center gap-1 bg-paper text-ink-mute">
-          <IconPhotoOff size={16} />
-        </div>
-      )}
-      <div className="px-2 py-1.5">
-        <div className="truncate text-[12px] font-medium text-ink">{page.label}</div>
-        <div className="text-[11px] text-ink-mute">
-          {page.screenshotUrl
-            ? t(locale, "dashboard.website.tapToView")
-            : t(locale, "dashboard.website.couldntCapturePage")}
-        </div>
-      </div>
+    <button type="button" onClick={onOpen} disabled={!src} className="group flex w-[220px] shrink-0 snap-start flex-col gap-1.5 text-left nav:w-auto nav:min-w-0 nav:flex-1" data-testid="website-thumb">
+      <span className="overflow-hidden rounded-lg border border-paper-deep bg-white shadow-card group-hover:border-ink-mute">
+        <span className="flex h-5 items-center gap-1 border-b border-paper-line bg-paper px-2" aria-hidden>
+          <i className="h-1.5 w-1.5 rounded-full bg-paper-deep" />
+          <i className="h-1.5 w-1.5 rounded-full bg-paper-deep" />
+          <i className="h-1.5 w-1.5 rounded-full bg-paper-deep" />
+        </span>
+        <span className="relative block h-36 overflow-hidden">
+          {src ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={src} alt={t(locale, "dashboard.website.screenshotAlt", { label })} className="w-full object-cover object-top" />
+          ) : (
+            <span className="flex h-full items-center justify-center text-[12px] text-ink-mute">{t(locale, "dashboard.website.couldNotCapture")}</span>
+          )}
+          <span aria-hidden className="pointer-events-none absolute inset-x-0 bottom-0 h-12 bg-gradient-to-t from-white to-transparent" />
+        </span>
+      </span>
+      <span className="px-0.5 text-[12.5px] font-medium text-ink-soft">{label}</span>
+    </button>
+  );
+}
+
+/** The homepage at a phone's size, in a phone frame. */
+function PhoneThumb({ src, onOpen }: { src: string; onOpen: () => void }) {
+  const locale = useLocale();
+  return (
+    <button type="button" onClick={onOpen} className="group flex w-[96px] shrink-0 snap-start flex-col gap-1.5 text-left" data-testid="website-thumb-phone">
+      <span className="relative block h-[171px] overflow-hidden rounded-[14px] border-[3px] border-ink bg-white shadow-card group-hover:border-ink-soft">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={src} alt={t(locale, "dashboard.website.phoneAlt")} className="w-full object-cover object-top" />
+        <span aria-hidden className="pointer-events-none absolute inset-x-0 bottom-0 h-10 bg-gradient-to-t from-white to-transparent" />
+      </span>
+      <span className="px-0.5 text-[12.5px] font-medium text-ink-soft">{t(locale, "dashboard.website.phoneLabel")}</span>
     </button>
   );
 }
@@ -208,12 +206,14 @@ function ScreenshotLightbox({
           </>
         )}
         {page.screenshotUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={page.screenshotUrl}
-            alt={t(locale, "dashboard.website.screenshotAlt", { label: page.label })}
-            className="w-full rounded-md"
-          />
+          <div className="max-h-[75vh] overflow-y-auto rounded-md" data-testid="screenshot-viewer-scroll">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={page.screenshotUrl}
+              alt={t(locale, "dashboard.website.screenshotAlt", { label: page.label })}
+              className="mx-auto w-full rounded-md"
+            />
+          </div>
         ) : (
           <div className="flex flex-col items-center justify-center gap-2 rounded-md bg-paper py-24 text-center">
             <IconPhotoOff size={28} className="text-ink-mute" />
@@ -250,8 +250,11 @@ export function WebsiteVisualAnalysis({
   siteUrl = null,
   site = null,
   locked = false,
+  recheck = null,
 }: {
   businessId: string;
+  /** "Re-check my website" (with its "N of 2 left today"), beside "Refresh screenshots". */
+  recheck?: React.ReactNode;
   websiteAnalysis: WebsiteAnalysis | null;
   /** Free: shown as is, but "Refresh screenshots" is a lock (promo box). */
   locked?: boolean;
@@ -265,7 +268,6 @@ export function WebsiteVisualAnalysis({
 }) {
   const locale = useLocale();
   const timeZone = useTimeZone();
-  const [expanded, setExpanded] = useState(false);
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
 
   // Step 2d: a capture whose stored status is 4xx/5xx is never shown,
@@ -274,15 +276,18 @@ export function WebsiteVisualAnalysis({
   // Never a picture of a parked/broken listing link, or of another site.
   const hidden = freshness.kind === "broken_listing" || freshness.kind === "other_site";
   const additionalPages = hidden ? [] : visibleAdditionalPages(websiteAnalysis);
-  const hasAdditionalPages = additionalPages.length > 0;
   const homepageScreenshotUrl = hidden ? null : visibleHomepageScreenshot(websiteAnalysis);
 
+  // Home, then the pages we found (Services, About, Contact…): at most 4 frames.
   const lightboxPages: LightboxPage[] = websiteAnalysis
     ? [
         { label: t(locale, "dashboard.website.homepageLabel"), screenshotUrl: homepageScreenshotUrl },
-        ...additionalPages.map((p) => ({ label: p.label, screenshotUrl: p.screenshotUrl })),
+        ...additionalPages.slice(0, 3).map((p) => ({ label: p.label, screenshotUrl: p.screenshotUrl })),
       ]
     : [];
+  // The homepage at a phone's size (captured with the screenshots since Day 25B; absent until the next capture).
+  const phoneScreenshotUrl = hidden ? null : (websiteAnalysis as { mobileScreenshotUrl?: string | null } | null)?.mobileScreenshotUrl ?? null;
+  const viewerPages: LightboxPage[] = phoneScreenshotUrl ? [...lightboxPages, { label: t(locale, "dashboard.website.phoneLabel"), screenshotUrl: phoneScreenshotUrl }] : lightboxPages;
 
   return (
     <div>
@@ -313,6 +318,7 @@ export function WebsiteVisualAnalysis({
             </p>
           )}
         </div>
+        <div className="flex shrink-0 flex-wrap items-start gap-3" data-testid="website-top-actions">
         {locked ? (
           // Free: a new capture is a paid call — the button is a lock.
           <div className="flex flex-col items-start gap-1.5 nav:items-end">
@@ -328,64 +334,40 @@ export function WebsiteVisualAnalysis({
             lastScreenshotRefreshAt={websiteAnalysis?.lastScreenshotRefreshAt ?? null}
           />
         )}
+        {recheck}
+        </div>
       </div>
 
       <div className="flex flex-col gap-1.5">
-        <Card className="flex flex-col overflow-hidden p-0">
-          {homepageScreenshotUrl ? (
-            <>
-              <button
-                type="button"
-                onClick={() => setLightboxIndex(0)}
-                aria-label={t(locale, "dashboard.website.viewFullSizeAriaLabel")}
-                className="block w-full text-left"
-              >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={homepageScreenshotUrl}
-                  alt={t(locale, "dashboard.website.homepageScreenshotAlt")}
-                  className="max-h-[440px] w-full border-b border-paper-line object-cover object-top"
-                />
-              </button>
-              {hasAdditionalPages && (
-                <button
-                  type="button"
-                  onClick={() => setExpanded((e) => !e)}
-                  aria-expanded={expanded}
-                  className="flex items-center justify-center gap-1.5 border-b border-paper-line px-3 py-2 text-[12.5px] font-medium text-ink-soft hover:text-ink"
-                >
-                  {expanded
-                    ? t(locale, "dashboard.website.hideOtherPages")
-                    : tPlural(locale, "dashboard.website.seeMorePages", additionalPages.length)}
-                  <IconChevronDown size={13} className={cn("transition-transform", expanded && "rotate-180")} />
-                </button>
-              )}
-            </>
-          ) : freshness.kind === "automated_error_page" ? (
-            // Step 2d: never show a picture of an error page our automated
-            // check was served — real customers may see the real page.
-            <div className="flex flex-col items-center justify-center gap-2 p-10 text-center">
-              <IconPhotoOff size={28} className="text-ink-mute" />
-              <p className="max-w-md text-sm text-ink-soft">
-                {t(locale, "dashboard.website.screenshotAutomatedErrorPage", { url: siteUrl ?? "" })}
-              </p>
-            </div>
-          ) : (
-            <div className="flex flex-col items-center justify-center gap-2 p-10 text-center">
-              <IconPhoto size={28} className="text-ink-mute" />
-              <p className="text-sm text-ink-soft">{t(locale, "dashboard.website.noPreviewCaptured")}</p>
-              <p className="text-[12px] text-ink-mute">{t(locale, "dashboard.website.noPreviewCapturedNote")}</p>
-            </div>
-          )}
-
-          {hasAdditionalPages && expanded && (
-            <div className="grid grid-cols-2 gap-3 p-4 nav:grid-cols-4">
-              {additionalPages.map((page, i) => (
-                <AdditionalPageThumbnail key={page.url} page={page} onOpen={() => setLightboxIndex(i + 1)} />
-              ))}
-            </div>
-          )}
-        </Card>
+        {homepageScreenshotUrl ? (
+          // Day 25B: small framed pages (Home, then the pages we found) and the homepage at a phone's size; a click
+          // opens the full page. Each frame fades at the bottom, so nothing looks cut off mid-text.
+          <div className="-mx-4 flex snap-x gap-3 overflow-x-auto px-4 pb-1 nav:mx-0 nav:px-0" data-testid="website-thumbnails">
+            {lightboxPages.map((p, i) => (
+              <PageThumb key={`${p.label}-${i}`} label={p.label} src={p.screenshotUrl} onOpen={() => setLightboxIndex(i)} />
+            ))}
+            {phoneScreenshotUrl && <PhoneThumb src={phoneScreenshotUrl} onOpen={() => setLightboxIndex(lightboxPages.length)} />}
+          </div>
+        ) : (
+          <Card className="flex flex-col overflow-hidden p-0">
+            {freshness.kind === "automated_error_page" ? (
+              // Step 2d: never show a picture of an error page our automated
+              // check was served — real customers may see the real page.
+              <div className="flex flex-col items-center justify-center gap-2 p-10 text-center">
+                <IconPhotoOff size={28} className="text-ink-mute" />
+                <p className="max-w-md text-sm text-ink-soft">
+                  {t(locale, "dashboard.website.screenshotAutomatedErrorPage", { url: siteUrl ?? "" })}
+                </p>
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center gap-2 p-10 text-center">
+                <IconPhoto size={28} className="text-ink-mute" />
+                <p className="text-sm text-ink-soft">{t(locale, "dashboard.website.noPreviewCaptured")}</p>
+                <p className="text-[12px] text-ink-mute">{t(locale, "dashboard.website.noPreviewCapturedNote")}</p>
+              </div>
+            )}
+          </Card>
+        )}
         {websiteAnalysis?.lastScreenshotRefreshAt && (
           <p className="px-0.5 text-[11.5px] text-ink-mute">
             {t(locale, "dashboard.website.screenshotsCaptured", {
@@ -395,9 +377,9 @@ export function WebsiteVisualAnalysis({
         )}
       </div>
 
-      {lightboxIndex !== null && lightboxPages.length > 0 && (
+      {lightboxIndex !== null && viewerPages.length > 0 && (
         <ScreenshotLightbox
-          pages={lightboxPages}
+          pages={viewerPages}
           index={lightboxIndex}
           onIndexChange={setLightboxIndex}
           onClose={() => setLightboxIndex(null)}

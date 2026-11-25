@@ -22,7 +22,7 @@ import { approveCount, approveItems } from "@/components/gbp/ApproveAll";
 import { postSystemPrompt, postUserMessage, qaPostText, requestGivesStory, type PostFacts } from "@/lib/gbpPosts";
 import { spelledRight } from "@/lib/gbpPostsContext.server";
 import { leverShort } from "@/components/gbp/GoogleProfileTab";
-import { RequestBox, type PostDraftState } from "@/components/gbp/PostPreview";
+import { DraftSteer, type PostDraftState } from "@/components/gbp/PostPreview";
 import type { WeekRepliesState } from "@/components/gbp/RepliesPreview";
 import { faqEntries } from "@/lib/googleAnswers";
 import { LocaleProvider } from "@/lib/i18n";
@@ -110,7 +110,7 @@ describe("4. the weekly post: Ready with a general topic", () => {
 });
 
 describe("5. Approve all counts exactly what it will send now", () => {
-  const replies = (ready: string[], canPost = true): WeekRepliesState => ({ status: "ok", items: [], canPost, practice: false, more: 0, setText: vi.fn(), setInclude: vi.fn(), ready, post: vi.fn(), load: vi.fn() });
+  const replies = (ready: string[], canPost = true): WeekRepliesState => ({ status: "ok", items: [], canPost, practice: false, more: 0, setText: vi.fn(), setInclude: vi.fn(), ready, post: vi.fn(), load: vi.fn(), redraft: vi.fn(), reload: vi.fn() });
   test("10 replies + the answers = 11; no duplicates; nothing blocked", () => {
     const ids = Array.from({ length: 10 }, (_, i) => `r${i}`);
     expect(approveItems({ replies: replies([...ids, "r0", "r1"]), post: post({ blockedToday: "posted_today" }) })).toEqual({ replies: 10, post: false, answers: false });
@@ -146,11 +146,14 @@ describe("6. 'Tell PostScore what you want'", () => {
     expect(requestGivesStory("Friendlier tone")).toBe(false);
     expect(requestGivesStory("A real before-and-after: balayage for a regular, done Tuesday")).toBe(true);
   });
-  test("example chips, a 44px write button; gone once Grow's 3 are used", () => {
-    const html = wrap(<RequestBox chips={["Make it shorter", "Friendlier tone"]} onWrite={vi.fn()} busy={false} limited={false} testId="t" />);
-    expect(html).toContain('data-testid="t-open"');
-    expect(html).toContain("Tell PostScore what you want →");
-    expect(wrap(<RequestBox chips={[]} onWrite={vi.fn()} busy={false} limited testId="t" />)).toBe("");
+  test("one optional theme and the gold 'Draft another with PostAI'; Grow's allowance; gone once Grow's 3 are used", () => {
+    const html = wrap(<DraftSteer label="What should this post be about? (optional)" placeholder="e.g. x" onDraft={vi.fn()} busy={false} left={2} limited={false} testId="t" />);
+    expect(html).toContain('data-testid="t-text"');
+    expect(html).toContain("Draft another with PostAI");
+    expect(html).toContain("bg-brass");
+    expect(html).toContain("2 of 3 drafts left this week");
+    expect(wrap(<DraftSteer label="l" placeholder="p" onDraft={vi.fn()} busy={false} left={null} limited={false} testId="t" />)).not.toContain("drafts left");
+    expect(wrap(<DraftSteer label="l" placeholder="p" onDraft={vi.fn()} busy={false} left={0} limited={false} testId="t" />)).toContain("No more new drafts this week");
     const src = readFileSync("app/actions/gbpPosts.ts", "utf8");
     expect(src).toContain('in("kind", ["another", "qa", "offer", "description"])');
     expect(src).toContain("export async function redraftDescription(");

@@ -17,6 +17,10 @@ export interface ShellData {
   testAccount: boolean;
   /** The Reports "New" dot (lib/reportDot.ts). */
   reportsNew?: boolean;
+  /** "How your two scores work together" was hidden by this user (their own account metadata, every business). */
+  twoScoresHidden?: boolean;
+  /** The real Growth tier (lib/growthPlan.server.ts); null on Free ("?") or when it couldn't load. */
+  growth?: { tier: 1 | 2 | 3 | 4 | 5; warning: boolean; preview: boolean } | null;
 }
 
 const Ctx = createContext<ShellData | null>(null);

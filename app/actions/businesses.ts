@@ -135,8 +135,9 @@ async function finishAutoScreenshots(
   // retried (and re-billed) on every regular re-scan afterward. The
   // one honest way to retry a failed capture is the rate-limited
   // "Refresh screenshots" action.
-  const { screenshotUrl, additionalPages } = await uploadWebsiteScreenshots(businessId, {
+  const { screenshotUrl, mobileScreenshotUrl, additionalPages } = await uploadWebsiteScreenshots(businessId, {
     screenshotBytes: analysis?.screenshotBytes ?? null,
+    mobileScreenshotBytes: analysis?.mobileScreenshotBytes ?? null,
     additionalPages: analysis?.additionalPages ?? [],
   });
 
@@ -147,6 +148,7 @@ async function finishAutoScreenshots(
       website_analysis_json: {
         ...websiteAnalysis,
         screenshotUrl,
+        mobileScreenshotUrl: mobileScreenshotUrl ?? null,
         additionalPages,
         lastScreenshotRefreshAt,
         screenshotHttpStatus: analysis?.screenshotHttpStatus ?? null,

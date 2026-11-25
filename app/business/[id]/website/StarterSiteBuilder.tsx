@@ -192,6 +192,7 @@ export function StarterSiteBuilder({
   builderOfferReason,
   postStudioHref = null,
   onSiteLocaleChange,
+  compactHeader = false,
   free = false,
 }: {
   businessId: string;
@@ -242,6 +243,8 @@ export function StarterSiteBuilder({
    * this component) mirror the generated site's chosen language — see
    * WebsiteGeneratorSection.tsx. */
   onSiteLocaleChange?: (locale: Locale) => void;
+  /** The Website page (Day 25B): no heading, intro or footnote of its own — the page's section has them. */
+  compactHeader?: boolean;
   /** Free: everything can be customized; the download is locked and "Open
    * full preview" shows a watermarked preview instead. */
   free?: boolean;
@@ -435,6 +438,8 @@ export function StarterSiteBuilder({
 
   return (
     <div className="flex flex-col gap-6">
+      {/* The Website page's section carries its own one-line heading and the PostStudio line. */}
+      {!compactHeader && (
       <div>
         <div className="inline-flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.08em] text-brass">
           <IconWand size={14} />
@@ -467,6 +472,7 @@ export function StarterSiteBuilder({
           </p>
         )}
       </div>
+      )}
 
       <div className="grid grid-cols-1 gap-6 nav:grid-cols-2">
         {/* The options: numbered section cards, 24px apart. */}
@@ -841,9 +847,11 @@ export function StarterSiteBuilder({
           <li>{t(locale, "dashboard.website.starter.publishStep3")}</li>
           <li>{t(locale, "dashboard.website.starter.publishStep4")}</li>
         </ol>
-        <p className="mt-3 border-t border-paper-line pt-3 text-[12px] text-ink-mute">
-          {t(locale, "dashboard.website.starter.publishFootnote")}
-        </p>
+        {!compactHeader && (
+          <p className="mt-3 border-t border-paper-line pt-3 text-[12px] text-ink-mute">
+            {t(locale, "dashboard.website.starter.publishFootnote")}
+          </p>
+        )}
       </Card>
 
       <Card className="flex items-center justify-between gap-4 p-4">

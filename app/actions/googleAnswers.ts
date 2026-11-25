@@ -36,6 +36,8 @@ export type OpenAnswersResult =
       /** For the website FAQ and the "Good to know" post. */
       facts: Pick<AnswerFacts, "name" | "city" | "hours" | "bookingUrl">;
       locale: "en" | "es";
+      /** The business's kind, for the description's example ("our curly hair specialists" for a salon). */
+      topic: import("@/lib/gbpPosts").PostTopic | null;
     }
   | Blocked;
 
@@ -141,6 +143,10 @@ export async function openAnswers(businessId: string): Promise<OpenAnswersResult
       bookingUrl: booking && booking.kind !== "none" ? booking.uri : null,
     },
     locale: viewLocale(row.language),
+    topic: await import("@/lib/gbpPostsContext.server")
+      .then(({ loadDraftInputs }) => loadDraftInputs(db, admin, businessId))
+      .then((i) => i?.topic ?? null)
+      .catch(() => null),
   };
 }
 

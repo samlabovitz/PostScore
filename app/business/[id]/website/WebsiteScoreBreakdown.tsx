@@ -23,7 +23,7 @@ import { reachabilityReasonMessageKey } from "@/lib/websiteReachability";
 import { hackSignsFor } from "@/lib/siteSecurity";
 import { SiteSecurityDetails } from "./SiteSecurityDetails";
 import { WebsiteCoverageNote } from "@/components/scoring/WebsiteCoverageNote";
-import { t, tPlural, useLocale, type Locale, type MessageKey } from "@/lib/i18n";
+import { t, useLocale, type Locale, type MessageKey } from "@/lib/i18n";
 import { checkAnchorId } from "@/lib/postaiLinks";
 import { websiteFixPlan, type WebsiteFix, type WebsiteFixPlan } from "@/lib/websiteFixes";
 import { resolveWebsiteBuilder, WEBSITE_BUILDER_NAMES, type WebsiteBuilderId } from "@/lib/websiteBuilder";
@@ -315,7 +315,7 @@ function websitePoints(category: Pick<CategoryResult, "relativeScore" | "weight"
   return category.relativeScore === null ? null : Math.round((category.relativeScore * category.weight) / 100);
 }
 
-function WebsiteScoreRing({ relativeScore, grade, weight = 30 }: { relativeScore: number | null; grade: Grade | null; weight?: number }) {
+function WebsiteScoreRing({ relativeScore, grade, weight = 30, whole = null }: { relativeScore: number | null; grade: Grade | null; weight?: number; /** The Overview breakdown's whole points (the page title's number). */ whole?: number | null }) {
   const locale = useLocale();
   const size = 100;
   const viewBox = 120;
@@ -353,7 +353,7 @@ function WebsiteScoreRing({ relativeScore, grade, weight = 30 }: { relativeScore
         )}
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <div className="font-serif text-[24px] font-bold leading-none text-ink">{pct === null ? "—" : Math.round((pct * weight) / 100)}</div>
+        <div className="font-serif text-[24px] font-bold leading-none text-ink">{pct === null ? "—" : (whole ?? Math.round((pct * weight) / 100))}</div>
         <div className="mt-0.5 text-[10px] text-ink-mute">{t(locale, "dashboard.website.outOfPoints", { of: weight })}</div>
       </div>
     </div>
@@ -385,8 +385,13 @@ export function WebsiteScoreBreakdown({
   websiteSuggestions,
   siteUrl = null,
   businessName = null,
-  scoreBasis = null,
+  points = null,
+  belowScore = null,
 }: {
+  /** The page title's "29 / 30 pts · speed not scored yet" (lib/categoryPoints.ts): the card shows the same one number. */
+  points?: { earned: number; of: number; speedPending: boolean } | null;
+  /** Under the score card: "1 check left · How to fix each check ↑". */
+  belowScore?: React.ReactNode;
   websiteCategory: CategoryResult | null;
   /** See WebsiteCoverageNote's scoreBasis. */
   scoreBasis?: number | null;
@@ -431,38 +436,15 @@ export function WebsiteScoreBreakdown({
       </div>
 
       <Card className="mb-5 flex flex-col items-start gap-4 nav:flex-row nav:items-center">
-        <WebsiteScoreRing relativeScore={websiteCategory.relativeScore} grade={grade} weight={websiteCategory.weight} />
+        <WebsiteScoreRing relativeScore={websiteCategory.relativeScore} grade={grade} weight={websiteCategory.weight} whole={points?.earned ?? null} />
         <div className="flex flex-col gap-1">
-          <div className="flex items-baseline gap-2">
-            <span className="font-serif text-2xl font-bold text-ink">
-              {formatPoints(websiteCategory.earnedPoints)}
-            </span>
-            <span className="text-sm text-ink-mute">
-              / {formatPoints(websiteCategory.possiblePoints)} {t(locale, "dashboard.website.ptsAbbrev")}
-            </span>
-            {grade && (
-              <span
-                className={cn(
-                  "ml-1 rounded-md px-2 py-0.5 text-[13px] font-bold",
-                  grade === "A" || grade === "B"
-                    ? "bg-green/10 text-green"
-                    : grade === "C" || grade === "D"
-                      ? "bg-amber/10 text-amber"
-                      : "bg-red/10 text-red"
-                )}
-              >
-                {grade}
-              </span>
-            )}
+          {/* One number — the ring, the same as the page title — and the speed note when speed isn't scored yet. */}
+          <div className="flex flex-wrap items-baseline gap-x-2" data-testid="website-score-one">
+            <span className="font-serif text-2xl font-bold text-ink">{t(locale, "dashboard.googlePages.listing.pts", { earned: points?.earned ?? Math.round(((websiteCategory.relativeScore ?? 0) * websiteCategory.weight) / 100), of: points?.of ?? websiteCategory.weight })}</span>
+            {(points?.speedPending ?? excludedPoints > 0) && <span className="text-[13px] text-ink-mute">{t(locale, "dashboard.website.speedNotScored")}</span>}
           </div>
-          {/* Only rendered for a business with a website (see page.tsx). */}
-          <WebsiteCoverageNote category={websiteCategory} hasWebsite scoreBasis={scoreBasis} className="text-[13px] font-medium text-ink-soft" />
-          <p className="text-[13px] text-ink-soft">
-            {excludedPoints > 0
-              ? tPlural(locale, "dashboard.website.excludedPoints", excludedPoints)
-              : t(locale, "dashboard.website.allVerified")}
-          </p>
           <p className="text-[13.5px] font-semibold text-ink">{websiteFixSummary(plan, locale)}</p>
+          {belowScore}
           <p className="text-[12.5px] text-ink-mute">
             {builder === null
               ? t(locale, "dashboard.websiteFix.builder.notYet")
@@ -473,7 +455,7 @@ export function WebsiteScoreBreakdown({
         </div>
       </Card>
 
-      <div className="flex flex-col gap-5">
+      <div id="website-checks-list" className="flex scroll-mt-20 flex-col gap-5">
         {groups
           .filter((group) => group.checks.length > 0)
           .map((group) => (

@@ -67,16 +67,16 @@ describe("How to fix this in {builder}", () => {
 });
 
 describe("Re-check my website", () => {
-  test("button with '2 of 3 left today'; disabled with none left", () => {
+  test("button with '2 of 2 left today'; disabled with none left", () => {
     const html = wrap(<WebsiteRecheck businessId="b1" initialLeft={2} hasWebsite />);
     expect(text(html)).toContain("Re-check my website");
-    expect(text(html)).toContain("2 of 3 left today");
+    expect(text(html)).toContain("2 of 2 left today");
     expect(text(html)).toContain("not your Google listing");
     const none = wrap(<WebsiteRecheck businessId="b1" initialLeft={0} hasWebsite />);
     expect(none).toMatch(/<button[^>]*disabled=""/);
-    expect(text(none)).toContain("All 3 website re-checks used today");
+    expect(text(none)).toContain("All 2 website re-checks used today");
     expect(wrap(<WebsiteRecheck businessId="b1" initialLeft={3} hasWebsite={false} />)).toBe("");
-    expect(text(wrap(<WebsiteRecheck businessId="b1" initialLeft={1} hasWebsite />, "es"))).toContain("Quedan 1 de 3 hoy");
+    expect(text(wrap(<WebsiteRecheck businessId="b1" initialLeft={1} hasWebsite />, "es"))).toContain("Quedan 1 de 2 hoy");
   });
 
   const base = { status: "ok" as const, scoreBefore: 71, scoreAfter: 74, websiteBefore: 60, websiteAfter: 72, tasksConfirmed: 1, pointsConfirmed: 3, availability: { used: 1, left: 2, allowed: true } };

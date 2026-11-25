@@ -7,6 +7,7 @@
 // content only: no listing rows, no OK / to fix counts, no points. The
 // sections are also the old Google Profile tab's 1–3.
 
+import { useTierOrder } from "@/components/growth/TierPlanContext";
 import Link from "next/link";
 import { googleListingHref } from "@/lib/routes";
 import { useEffect, useRef, useState, type ReactNode } from "react";
@@ -19,7 +20,7 @@ import { actions, addMonths, callsByDays, isSmallMonth, leftOnTable, totalViews,
 import { cn } from "@/lib/utils";
 import { change, chartMarkers, leftMoney, revenueMath, SAMPLE_SINCE, SHARE_PRESETS, shareChoice, parseSharePercent, sharePercent, sinceActions, sinceStatus, localToday, within, type ActionEvent, type VisitShare, type WindowTotals } from "@/lib/googleRecommendations";
 import { shortDate } from "@/components/gbp/GoogleRecs";
-import { loadMonthSoFar, loadSinceNumbers, saveVisitShare, type MonthSoFarResult, type SinceResult } from "@/app/actions/googleSince";
+import { loadMonthSoFar, saveVisitShare, type MonthSoFarResult, type SinceResult } from "@/app/actions/googleSince";
 import { saveAverageVisitValue } from "@/app/actions/averageVisit";
 import { ThisWeekList } from "@/components/gbp/ThisWeekList";
 import { IconLock } from "@tabler/icons-react";
@@ -778,10 +779,19 @@ export function SinceCard({ businessId, connected, sample, events, recap = null,
     if (sample || !connected || !readyKey) return;
     let alive = true;
     setData("loading");
-    // Never stuck on "Reading…": a failed or slow read says it couldn't load.
-    void within(loadSinceNumbers(businessId, readyKey.split(",")), 20_000, { status: "failed" } as SinceResult).then((r) => alive && setData(r));
+    // Never stuck on "Reading…": a failed or slow read says it couldn't load. A plain fetch (not a server
+    // action, which waits its turn behind the page's others): the 20 seconds start when it's sent.
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 20_000);
+    fetch(`/api/business/${businessId}/since?dates=${encodeURIComponent(readyKey)}`, { signal: ctrl.signal, cache: "no-store" })
+      .then((r) => (r.ok ? (r.json() as Promise<SinceResult>) : ({ status: "failed" } as SinceResult)))
+      .catch(() => ({ status: "failed" }) as SinceResult)
+      .then((r) => alive && setData(r))
+      .finally(() => clearTimeout(timer));
     return () => {
       alive = false;
+      clearTimeout(timer);
+      ctrl.abort();
     };
   }, [businessId, connected, sample, readyKey]);
   const box = "flex flex-col gap-3 rounded-xl border border-paper-deep bg-white p-5 text-ink shadow-card sm:p-6 lg:px-5 lg:py-4";
@@ -824,7 +834,7 @@ export function SinceCard({ businessId, connected, sample, events, recap = null,
     return (
       <div className={box} data-testid="google-tab-since">
         {head}
-        <p className="text-[13px] text-ink-soft" data-testid="since-none">{t(locale, K("since.none"))}</p>
+        <p className="text-[13px] text-ink-soft" data-testid="since-none">{t(locale, page ? "dashboard.growthPlan.sinceNone" : K("since.none"))}</p>
       </div>
     );
   }
@@ -1389,10 +1399,11 @@ function ResultsConnected(props: GoogleResultsProps) {
 
 /** Grow: the same to-dos as Premium's list, each with the steps to do it
  * yourself (and its draft), and "Premium approves all of these in one click →". */
-function GrowThisWeek({ props, chips }: { props: GoogleProfileTabProps; chips: ReactNode }) {
+export function GrowThisWeek({ props, chips }: { props: GoogleProfileTabProps; chips: ReactNode }) {
   const locale = useLocale();
   const { recs, type } = useTabIdeas(props);
-  const list = thisWeekRecs(recs);
+  // Growth plan (Day 25B step 6): the same order, by what each task does for the tier.
+  const list = useTierOrder(thisWeekRecs(recs));
   return (
     <div className="flex flex-col gap-3" data-testid="google-results-grow-week">
       {chips}

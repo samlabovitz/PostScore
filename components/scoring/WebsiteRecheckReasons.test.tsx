@@ -47,7 +47,7 @@ describe("the server action returns the real reason", () => {
 describe("the message under the button (EN + ES)", () => {
   const cases = [
     [{ status: "plan_locked" }, "Re-checks are on Grow and Premium. See plans in Settings → Plan & billing.", "Las revisiones están incluidas en Grow y Premium. Vea los planes en Configuración → Plan y facturación."],
-    [{ status: "limit_reached", availability: { used: 3, left: 0, allowed: false } }, "You've used today's 3 re-checks — try again tomorrow.", "Ya usó las 3 revisiones de hoy; inténtelo de nuevo mañana."],
+    [{ status: "limit_reached", availability: { used: 2, left: 0, allowed: false } }, "You've used today's 2 re-checks — try again tomorrow.", "Ya usó las 2 revisiones de hoy; inténtelo de nuevo mañana."],
     [{ status: "archived" }, "This business is archived. Restore it on the Overview to re-check its website.", "Este negocio está archivado. Restáurelo en el Resumen para volver a revisar su sitio web."],
     [{ status: "error", message: "connection reset by the database" }, "Couldn't re-check your website: connection reset by the database", "No se pudo revisar su sitio web: connection reset by the database"],
   ] as const;

@@ -1,12 +1,15 @@
 "use client";
 
-// Day 25B step 3: Presence → Fix plan (docs/plans/day25a-spec.md §2b,
-// mockup 07). The top card ("This week: 78 → 87" · "When every fix is done:
-// 100 · A"), then every score fix ranked Urgent → High → Medium → Low with
-// "+N pts", the running score and one button to where it's fixed
-// (lib/fixDestination.ts); then "Website speed: not scored yet". The rows
-// are the Growth recap's own step cards (#task-…, "How to fix it", "I did
-// this"), so anchors and the step-by-step keep working.
+// Day 25B step 3, v2 (docs/mockups/day25b/fix-plan-v2.html): Presence → Fix
+// plan. A slim top card ("This week: 78 → 87" · "When every fix is done:
+// 100 · A"), then the fixes under "This week" · "Takes a few weeks" · "Takes
+// months", each with its subtotal, as compact rows: number, priority, title,
+// a status dot, one short why, "+6 pts → 84" and the one button to where
+// it's fixed (lib/fixDestination.ts; outline under "Takes months"). A row
+// opens to its evidence, how to fix it and "I did this" / "Check again";
+// only the first starts open. "Website speed: not scored yet" ends "Takes a
+// few weeks". The rows are the Growth recap's own step cards in compact mode
+// (#task-…, ?open=howto), so anchors and the step-by-step keep working.
 // Plans: Free sees the whole ranked list with points (it's the audit) and
 // the steps as a locked preview; Grow gets the steps, "I did this" and
 // "Premium does this for you in one click →"; Premium's "Fix it" lands on
@@ -14,13 +17,13 @@
 
 import Link from "next/link";
 import { IconWorld } from "@tabler/icons-react";
-import { TaskCard, CompletedTasksCard, FixPriorityTag, FixWhenTag, ReviewGoalLinesContext, type WebsiteRecheckProps } from "@/app/business/[id]/ActionPlanSection";
+import { TaskCard, CompletedTasksCard, FixPriorityTag, ReviewGoalLinesContext, type WebsiteRecheckProps } from "@/app/business/[id]/ActionPlanSection";
 import { WeeklyPlanCelebration } from "@/app/business/[id]/growth/WeeklyPlanCelebration";
 import { DetailsMismatchTasks } from "@/components/overview/DetailsMismatchTasks";
 import { FIX_BUTTON_CLASS } from "@/components/scoring/FixButton";
 import { GoogleMapsAttribution } from "@/components/google/GoogleMapsAttribution";
 import type { ActionPlanTask, CompletedTask } from "@/lib/actionPlan";
-import type { FixPlan, FixPlanRow } from "@/lib/fixPlan";
+import { groupFixPlan, type FixPlan, type FixPlanRow } from "@/lib/fixPlan";
 import type { DetailsMismatchState } from "@/lib/detailsMismatch.server";
 import { mismatchesCoveredBy, URGENT_DETAILS } from "@/lib/detailsMismatch";
 import { isHoursCheck, type HoursCheckState } from "@/lib/hoursCheck";
@@ -28,6 +31,7 @@ import { formatShortDate, t, tPlural, useLocale, useTimeZone } from "@/lib/i18n"
 import { cn } from "@/lib/utils";
 import { displayPoints } from "@/lib/pointRange";
 
+const ORDER = ["this_week", "weeks", "months"] as const;
 // One decimal under 10, whole from 10 up (lib/pointRange.ts).
 const round1 = (n: number) => String(displayPoints(n));
 
@@ -42,7 +46,7 @@ function TopCard({ plan, every, lastScanAt }: { plan: FixPlan; every: { score: n
   // On the 0–100 scale.
   const pct = (n: number) => `${Math.max(0, Math.min(100, n))}%`;
   return (
-    <section data-testid="fix-plan-top" className="rounded-2xl bg-ink p-5 text-paper shadow-card sm:p-6">
+    <section data-testid="fix-plan-top" className="rounded-2xl bg-ink px-5 py-4 text-paper shadow-card sm:px-6 sm:py-5">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
           {plan.thisWeekDone ? (
@@ -60,9 +64,9 @@ function TopCard({ plan, every, lastScanAt }: { plan: FixPlan; every: { score: n
             <>
               <p className="text-[13.5px] text-[color:color-mix(in_srgb,var(--color-paper)_75%,transparent)]">{tPlural(locale, "dashboard.fixPlan.thisWeekLabel", plan.thisWeekCount, { count: plan.thisWeekCount })}</p>
               <p className="mt-1 flex items-baseline gap-3 font-serif font-semibold leading-none" data-testid="fix-plan-this-week">
-                <span className="text-[44px] tabular-nums sm:text-[56px]">{plan.today}</span>
-                <span aria-hidden className="text-[32px] text-brass sm:text-[40px]">→</span>
-                <span className="text-[44px] tabular-nums text-brass sm:text-[56px]">{plan.thisWeek}</span>
+                <span className="text-[38px] tabular-nums sm:text-[44px]">{plan.today}</span>
+                <span aria-hidden className="text-[28px] text-brass sm:text-[32px]">→</span>
+                <span className="text-[38px] tabular-nums text-brass sm:text-[44px]">{plan.thisWeek}</span>
               </p>
             </>
           )}
@@ -76,7 +80,7 @@ function TopCard({ plan, every, lastScanAt }: { plan: FixPlan; every: { score: n
         </div>
       </div>
       {/* Today (solid), this week (brass), the rest of the way to "every fix" (lighter). */}
-      <div className="relative mt-5 h-2.5 overflow-hidden rounded-full bg-[color:color-mix(in_srgb,var(--color-paper)_15%,transparent)]" role="img" aria-label={`${plan.today} → ${plan.thisWeek} → ${every.score}`}>
+      <div className="relative mt-4 h-2 overflow-hidden rounded-full bg-[color:color-mix(in_srgb,var(--color-paper)_15%,transparent)]" role="img" aria-label={`${plan.today} → ${plan.thisWeek} → ${every.score}`}>
         <div className="absolute inset-y-0 left-0 rounded-full bg-[color:color-mix(in_srgb,var(--color-paper)_35%,transparent)]" style={{ width: pct(every.score) }} />
         <div className="absolute inset-y-0 left-0 rounded-full bg-brass" style={{ width: pct(plan.thisWeek) }} />
         <div className="absolute inset-y-0 left-0 rounded-full bg-[color:color-mix(in_srgb,var(--color-brass)_60%,black)]" style={{ width: pct(plan.today) }} />
@@ -89,36 +93,27 @@ function TopCard({ plan, every, lastScanAt }: { plan: FixPlan; every: { score: n
   );
 }
 
-/** The other website checks, as one row to the Website page. */
-function WebsiteRow({ row, step, businessId }: { row: Extract<FixPlanRow, { kind: "website" }>; step: number; businessId: string }) {
+/** The other website checks, as one compact row to the Website page. */
+function WebsiteRow({ row, step, businessId, outline }: { row: Extract<FixPlanRow, { kind: "website" }>; step: number; businessId: string; outline: boolean }) {
   const locale = useLocale();
   return (
-    <li id="fix-website" className="scroll-mt-20 rounded-2xl border border-paper-deep bg-white p-4 shadow-card sm:p-5" data-testid="fix-plan-website">
-      <div className="flex items-start gap-3">
-        <span aria-hidden className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full font-serif text-[14px] font-semibold text-ink ps-icon-tile">
-          {step}
-        </span>
-        <div className="flex min-w-0 flex-1 flex-col gap-2.5">
-          <div className="flex items-start justify-between gap-3">
-            <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
-              <IconWorld size={15} className="text-ink-soft" aria-hidden />
-              <h3 className="text-[14.5px] font-semibold text-ink">{rowTitle(row, locale)}</h3>
-              <FixPriorityTag priority={row.priority} />
-              <FixWhenTag when={row.when} />
-            </div>
-            <div className="flex shrink-0 flex-col items-end gap-1.5">
-              <span className="inline-flex whitespace-nowrap rounded-full border border-[color:color-mix(in_srgb,var(--color-brass)_40%,white)] bg-[color:color-mix(in_srgb,var(--color-brass)_10%,white)] px-2.5 py-0.5 text-[12px] font-semibold text-ink">{t(locale, "dashboard.fixPlan.pts", { points: round1(row.points) })}</span>
-              <span className="whitespace-nowrap text-[13px] text-ink-soft">
-                {t(locale, "dashboard.fixPlan.scoreArrow", { score: "" }).trim()} <b className="font-serif text-[18px] text-ink">{row.running}</b>
-              </span>
-            </div>
-          </div>
-          <p className="text-[13px] text-ink-soft">{tPlural(locale, "dashboard.growth.websiteBanner.improve", row.banner.improvements, { earned: row.banner.earned, of: row.banner.of, points: Math.max(1, Math.round(row.points)) })}</p>
-          <div className="border-t border-paper-line pt-3">
-            <Link href={`/business/${businessId}/website`} data-testid="fix-button" data-kind="steps" className={FIX_BUTTON_CLASS}>
-              {t(locale, "dashboard.fixPlan.fixIt")} →
-            </Link>
-          </div>
+    <li id="fix-website" className="scroll-mt-20 border-t border-paper-line first:border-t-0" data-testid="fix-plan-website">
+      <div className="grid grid-cols-[26px_minmax(0,1fr)] items-center gap-x-3 gap-y-2 px-4 py-3.5 sm:px-5 nav:grid-cols-[26px_112px_minmax(0,1fr)_auto]">
+        <span aria-hidden className="flex h-6 w-6 items-center justify-center rounded-full font-serif text-[12.5px] font-semibold text-ink ps-icon-tile">{step}</span>
+        <span className="hidden nav:block"><FixPriorityTag priority={row.priority} /></span>
+        <div className="col-start-2 min-w-0 nav:col-start-3">
+          <span className="mb-1 flex nav:hidden"><FixPriorityTag priority={row.priority} /></span>
+          <p className="flex items-center gap-2 text-[14.5px] font-semibold text-ink"><IconWorld size={15} className="text-ink-soft" aria-hidden />{rowTitle(row, locale)}</p>
+          <p className="mt-0.5 text-[12.5px] leading-snug text-ink-mute">{tPlural(locale, "dashboard.growth.websiteBanner.improve", row.banner.improvements, { earned: row.banner.earned, of: row.banner.of, points: Math.max(1, Math.round(row.points)) })}</p>
+        </div>
+        <div className="col-start-2 flex items-center justify-between gap-3 nav:col-start-4 nav:justify-end">
+          <span className="whitespace-nowrap text-[13px] font-semibold text-ink-soft">
+            {t(locale, "dashboard.fixPlan.pts", { points: round1(row.points) })} → <b className="font-serif text-[16px] text-ink">{row.running}</b>
+          </span>
+          <Link href={`/business/${businessId}/website`} data-testid="fix-button" data-kind="steps" className={cn(FIX_BUTTON_CLASS, outline && "!border-paper-deep !bg-white !text-ink hover:!bg-paper")}>
+            {t(locale, "dashboard.fixPlan.fixIt")} →
+          </Link>
+          <span className="w-4" aria-hidden />
         </div>
       </div>
     </li>
@@ -174,42 +169,62 @@ export function FixPlanView({
 
         {standalone.length > 0 && <DetailsMismatchTasks businessId={businessId} mismatches={standalone} owner={detailsMismatch?.owner ?? null} />}
 
-        <div id="weekly-plan" className="scroll-mt-20 flex flex-col gap-3">
+        <div id="weekly-plan" className="scroll-mt-20 flex flex-col gap-6">
           {plan.rows.length === 0 ? (
             <p className="rounded-2xl border border-paper-deep bg-white p-5 text-sm text-ink-soft">{t(locale, "dashboard.fixPlan.empty")}</p>
           ) : (
-            <ol className="flex flex-col gap-3" data-testid="fix-plan-rows">
-              {plan.rows.map((row, i) =>
-                row.kind === "website" ? (
-                  <WebsiteRow key={row.key} row={row} step={i + 1} businessId={businessId} />
-                ) : (
-                  <TaskCard
-                    key={row.key}
-                    task={mismatchesCoveredBy(row.task, mismatches).some((m) => URGENT_DETAILS.includes(m.field)) ? { ...row.task, urgent: true } : row.task}
-                    businessId={businessId}
-                    context="weekly"
-                    step={i + 1}
-                    lastScanAt={lastScanAt}
-                    websiteRecheck={websiteRecheck}
-                    premium={premium}
-                    merged={mismatchesCoveredBy(row.task, mismatches)}
-                    hoursCheck={isHoursCheck(row.task) ? hoursCheck : null}
-                    fixPlan={{ priority: row.priority, running: row.running, locked: free }}
-                  />
-                )
-              )}
-            </ol>
-          )}
-          {plan.speed && (
-            <div className={cn("flex items-start gap-3 rounded-2xl border border-dashed border-paper-deep bg-white/60 p-4 sm:p-5")} data-testid="fix-plan-speed">
-              <span aria-hidden className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-paper-deep text-[13px] text-ink-mute">–</span>
-              <div className="min-w-0">
-                <p className="text-[14.5px] font-semibold text-ink">{t(locale, "dashboard.fixPlan.speedTitle")}</p>
-                <p className="mt-0.5 text-[13px] text-ink-soft">
-                  {plan.speed.explanation} {t(locale, "dashboard.fixPlan.speedUpTo", { points: plan.speed.upTo })}
-                </p>
-              </div>
-            </div>
+            (() => {
+              const groups = groupFixPlan(plan);
+              // "Website speed: not scored yet" ends "Takes a few weeks" (its own group when there's none).
+              const withSpeed = plan.speed && !groups.some((g) => g.when === "weeks") ? [...groups, { when: "weeks" as const, rows: [], points: 0, upTo: false, to: 0 }].sort((a, b) => ORDER.indexOf(a.when) - ORDER.indexOf(b.when)) : groups;
+              let step = 0;
+              return withSpeed.map((g) => (
+                <section key={g.when} className="flex flex-col gap-2.5" data-testid={`fix-group-${g.when}`}>
+                  <div className="flex items-baseline gap-3 px-0.5">
+                    <h2 className="font-serif text-[18px] font-semibold text-ink">{t(locale, `dashboard.fixPlan.when.${g.when}` as Parameters<typeof t>[1])}</h2>
+                    {g.rows.length > 0 && (
+                      <span className="ml-auto whitespace-nowrap text-[13px] font-semibold text-ink-soft" data-testid="fix-group-subtotal">
+                        {t(locale, g.upTo ? "dashboard.fixPlan.upToPts" : "dashboard.fixPlan.pts", { points: round1(g.points) })} → <b className="font-serif text-[16px] text-ink">{g.to}</b>
+                      </span>
+                    )}
+                  </div>
+                  <ol className="overflow-hidden rounded-2xl border border-paper-deep bg-white shadow-card" data-testid="fix-plan-rows">
+                    {g.rows.map((row) => {
+                      step++;
+                      const outline = g.when === "months";
+                      return row.kind === "website" ? (
+                        <WebsiteRow key={row.key} row={row} step={step} businessId={businessId} outline={outline} />
+                      ) : (
+                        <TaskCard
+                          key={row.key}
+                          task={mismatchesCoveredBy(row.task, mismatches).some((m) => URGENT_DETAILS.includes(m.field)) ? { ...row.task, urgent: true } : row.task}
+                          businessId={businessId}
+                          context="weekly"
+                          step={step}
+                          lastScanAt={lastScanAt}
+                          websiteRecheck={websiteRecheck}
+                          premium={premium}
+                          merged={mismatchesCoveredBy(row.task, mismatches)}
+                          hoursCheck={isHoursCheck(row.task) ? hoursCheck : null}
+                          fixPlan={{ priority: row.priority, running: row.running, locked: free, compact: { open: step === 1, outline } }}
+                        />
+                      );
+                    })}
+                    {g.when === "weeks" && plan.speed && (
+                      <li className="grid grid-cols-[26px_minmax(0,1fr)] items-center gap-x-3 gap-y-1 border-t border-dashed border-paper-deep bg-paper/60 px-4 py-3.5 first:border-t-0 sm:px-5 nav:grid-cols-[26px_112px_minmax(0,1fr)_auto]" data-testid="fix-plan-speed">
+                        <span aria-hidden className="flex h-6 w-6 items-center justify-center rounded-full border border-dashed border-paper-deep text-[12px] text-ink-mute">–</span>
+                        <span className="hidden nav:block" />
+                        <div className="col-start-2 min-w-0 nav:col-start-3">
+                          <p className="text-[14px] font-medium text-ink-soft">{t(locale, "dashboard.fixPlan.speedTitle")}</p>
+                          <p className="mt-0.5 text-[12.5px] leading-snug text-ink-mute">{t(locale, "dashboard.fixPlan.speedShort")}</p>
+                        </div>
+                        <span className="col-start-2 whitespace-nowrap text-[13px] font-semibold text-ink-mute nav:col-start-4">{t(locale, "dashboard.fixPlan.speedUpTo", { points: plan.speed.upTo })}</span>
+                      </li>
+                    )}
+                  </ol>
+                </section>
+              ));
+            })()
           )}
           {/* Rows quote the Google listing (reviews, rating, hours…). */}
           <GoogleMapsAttribution className="mt-0 px-1">

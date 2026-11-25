@@ -1,6 +1,6 @@
 "use client";
 
-import { reviewsHref } from "@/lib/routes";
+import { reviewsHref, NEW_PAGES_LIVE } from "@/lib/routes";
 import { shortName as displayName } from "@/lib/displayName";
 import { AddCompetitor, RemoveCompetitorButton, RemovedByOwner } from "./CompetitorOwnerControls";
 import { HeadToHead } from "@/components/competitors/HeadToHead";
@@ -173,15 +173,18 @@ export function CompetitorsView({
   return (
     <div className="flex flex-col gap-6 nav:gap-8">
       <div>
-        <Link
-          href={`/business/${businessId}`}
-          className="inline-flex items-center gap-1.5 text-[13px] font-medium text-ink-soft hover:text-ink"
-        >
-          <IconArrowLeft size={15} />
-          {t(locale, "dashboard.competitors.backTo", {
-            name: data.businessName ?? t(locale, "dashboard.competitors.businessFallback"),
-          })}
-        </Link>
+        {/* New design: the sidebar handles navigation. */}
+        {!NEW_PAGES_LIVE && (
+          <Link
+            href={`/business/${businessId}`}
+            className="inline-flex items-center gap-1.5 text-[13px] font-medium text-ink-soft hover:text-ink"
+          >
+            <IconArrowLeft size={15} />
+            {t(locale, "dashboard.competitors.backTo", {
+              name: data.businessName ?? t(locale, "dashboard.competitors.businessFallback"),
+            })}
+          </Link>
+        )}
         <h1 className="mt-2 font-serif text-2xl font-semibold text-ink nav:text-[27px]">{t(locale, "dashboard.competitors.title")}</h1>
         <p className="mt-1 max-w-2xl text-sm text-ink-soft">{t(locale, "dashboard.competitors.comparableNote")}</p>
       </div>

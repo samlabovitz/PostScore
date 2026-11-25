@@ -296,6 +296,7 @@ export default async function BusinessPage({ params, searchParams = {} }: { para
               }
             : null
         }
+        growthCount={NEW_PAGES_LIVE && upgrade.plan !== "free" ? await growthPlanCount(params.id, scored.business.time_zone ?? DEFAULT_BUSINESS_TIMEZONE).catch(() => null) : null}
         googleListingRow={
           // Day 25B step 4 (new-design preview): one compact row on every paid plan.
           NEW_PAGES_LIVE && upgrade.plan === "free"
@@ -327,4 +328,11 @@ export default async function BusinessPage({ params, searchParams = {} }: { para
       </GbpEditProvider>
     </DashboardShell>
   );
+}
+
+/** New design: how many tasks this week's Growth plan has (the Overview's Growth line). */
+async function growthPlanCount(businessId: string, timeZone: string): Promise<number | null> {
+  const [{ loadGoogleResults }, { tabIdeasFor, weekKinds }] = await Promise.all([import("@/lib/googlePages.server"), import("@/lib/tabIdeas")]);
+  const data = await loadGoogleResults(businessId);
+  return data.status === "ok" ? weekKinds(tabIdeasFor(data.props, timeZone, Date.now()).recs).length : null;
 }

@@ -75,7 +75,8 @@ describe("links and redirects on the preview", () => {
     expect(getReviewsHref("b1")).toBe("/business/b1/get-reviews");
     expect(offersHref("b1")).toBe("/business/b1/offers");
     expect(offersHref("b1", "first-time")).toBe("/business/b1/offers?tab=first-time");
-    expect(printKitHref("b1")).toBe("/business/b1/print-kit");
+    // Print kit & QR is hidden until Day 34 / 37-Core: its links go to the review link & QR.
+    expect(printKitHref("b1")).toBe("/business/b1/get-reviews#review-link");
     expect(localEventsHref("b1")).toBe("/business/b1/local-events");
   });
   test("old links: /website-reviews#get-more-reviews and #review-link → Get more reviews; /campaigns?tab=… → Customer offers", () => {
@@ -88,7 +89,9 @@ describe("links and redirects on the preview", () => {
     expect(legacyRedirectIfLive({ pathname: "/business/b1/campaigns" })).toBeNull();
   });
   test("each new page sends everyone else (localhost:3000, production) to today's page", () => {
-    for (const p of ["offers", "get-reviews", "print-kit", "local-events"]) expect(readFileSync(`app/business/[id]/${p}/page.tsx`, "utf8"), p).toMatch(/if \(!NEW_PAGES_LIVE\) redirect\(/);
+    for (const p of ["offers", "get-reviews", "local-events"]) expect(readFileSync(`app/business/[id]/${p}/page.tsx`, "utf8"), p).toMatch(/if \(!NEW_PAGES_LIVE\) redirect\(/);
+    // Print kit: also while it's hidden (PRINT_KIT_LIVE), to Get more reviews #review-link.
+    expect(readFileSync("app/business/[id]/print-kit/page.tsx", "utf8")).toContain("if (!NEW_PAGES_LIVE || !PRINT_KIT_LIVE) redirect(printKitHref(params.id));");
   });
 });
 
@@ -155,7 +158,11 @@ describe("Reviews split", () => {
     const fixLine = { count: 2, from: 21, to: 32, score: 78, after: 89, later: true };
     const html = wrap(<ReviewsView businessId="b1" reviews={DATA} plan="grow" split fixLine={fixLine} />);
     expect(text(html)).toContain("Fix these 2 and Visibility & Reputation goes 21 → 32 pts (score 78 → 89). The rest comes as your reviews grow.");
-    expect(html).toContain('href="/business/b1/get-reviews"');
+    // The gold button, twice: the fix line (right side) and the Review volume card; no "Back to…" (the sidebar navigates).
+    expect(html.match(/href="\/business\/b1\/get-reviews#review-link"/g)?.length).toBe(2);
+    expect(html).toContain('data-testid="reviews-get-more-volume"');
+    expect(html.match(/data-testid="reviews-get-more[^"]*" class="[^"]*bg-brass/g)?.length).toBe(2);
+    expect(html).not.toContain("Back to");
     expect(text(html)).toContain("Get more reviews (in Growth)");
     expect(html).toContain('id="reply-to-reviews"');
     expect(html).not.toContain('id="get-more-reviews"');

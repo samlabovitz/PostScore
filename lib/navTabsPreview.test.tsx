@@ -27,7 +27,7 @@ vi.mock("server-only", () => ({}));
 
 const text = (html: string) => html.replace(/<[^>]+>/g, " ").replace(/&amp;/g, "&").replace(/&#x27;/g, "'").replace(/\s+/g, " ").trim();
 const BIZ = { id: "b1", name: "Hair express on Broadway", address: "9 S Broadway" };
-const PAID: ShellData = { presence: { score: 78, grade: "C" }, plan: "premium", testAccount: true };
+const PAID: ShellData = { presence: { score: 78, grade: "C" }, plan: "premium", testAccount: true, growth: { tier: 2, warning: false, preview: false } };
 const FREE: ShellData = { presence: { score: 78, grade: "C" }, plan: "free", testAccount: false };
 const sidebar = (at: string, shell: ShellData, locale: Locale = "en") => {
   path = at;
@@ -68,21 +68,22 @@ describe("tabs and pages", () => {
     expect(text(sidebar("/business/b1/fix-plan", PAID, "es"))).toContain("Resumen Plan de correcciones Ficha de Google Reseñas Sitio web Competencia Revisión de precios PostStudio Pronto Informes");
   });
 
-  test("Growth: its 7 pages, each opening its own page (Day 25B step 5); Local events last, Coming soon", () => {
+  test("Growth: its pages, each opening its own page (Day 25B step 5); Print kit & QR hidden until Day 34 / 37-Core; Local events last, Coming soon", () => {
     const html = sidebar("/business/b1/growth", PAID);
-    expect(items(html)).toEqual(["growthPlan", "googleResults", "getReviews", "offers", "campaigns", "printKit", "localEvents", "postStudio", "reports"]);
-    expect(text(html)).toContain("Growth plan Google results Get more reviews Customer offers Campaigns Print kit & QR Local events Coming soon");
+    expect(items(html)).toEqual(["growthPlan", "googleResults", "getReviews", "offers", "campaigns", "localEvents", "postStudio", "reports"]);
+    expect(text(html)).toContain("Growth plan Google results Get more reviews Customer offers Campaigns Local events Coming soon");
+    expect(text(html)).not.toContain("Print kit");
     const hrefOf = (id: string) => html.match(new RegExp(`<a data-nav="${id}"[^>]*href="([^"]+)"`))?.[1] ?? null;
     expect(hrefOf("growthPlan")).toBe("/business/b1/growth");
     expect(hrefOf("googleResults")).toBe("/business/b1/google-results");
     expect(hrefOf("getReviews")).toBe("/business/b1/get-reviews");
     expect(hrefOf("offers")).toBe("/business/b1/offers");
     expect(hrefOf("campaigns")).toBe("/business/b1/campaigns");
-    expect(hrefOf("printKit")).toBe("/business/b1/print-kit");
+    expect(hrefOf("printKit")).toBeNull();
     expect(hrefOf("localEvents")).toBe("/business/b1/local-events");
     // Each page highlights its own item.
-    for (const [path, id] of [["/business/b1/get-reviews", "getReviews"], ["/business/b1/offers", "offers"], ["/business/b1/campaigns", "campaigns"], ["/business/b1/print-kit", "printKit"], ["/business/b1/local-events", "localEvents"]] as const) expect(activeItem(path, "b1", GROWTH_ITEMS), path).toBe(id);
-    expect(text(sidebar("/business/b1/growth", PAID, "es"))).toContain("Plan de crecimiento Resultados en Google Consiga más reseñas Ofertas para clientes Campañas Kit de impresión y QR Eventos locales Pronto PostStudio Pronto Informes");
+    for (const [path, id] of [["/business/b1/get-reviews", "getReviews"], ["/business/b1/offers", "offers"], ["/business/b1/campaigns", "campaigns"], ["/business/b1/local-events", "localEvents"]] as const) expect(activeItem(path, "b1", GROWTH_ITEMS), path).toBe(id);
+    expect(text(sidebar("/business/b1/growth", PAID, "es"))).toContain("Plan de crecimiento Resultados en Google Consiga más reseñas Ofertas para clientes Campañas Eventos locales Pronto PostStudio Pronto Informes");
   });
 
   test("the switch: icon + name on one line each; the tier name and 'Test account' only in the Growth pages' header line (EN + ES)", () => {
@@ -101,9 +102,9 @@ describe("tabs and pages", () => {
     expect(html).toMatch(/data-testid="nav-tab-presence" data-open="true" aria-current="page" class="[^"]*border-brass bg-white\/\[\.14\]/);
     expect(html).not.toMatch(/nav-tab-[a-z]+"[^>]*class="[^"]*\bbg-white text-ink/);
     const line = (shell: ShellData, locale: Locale = "en") => text(renderToStaticMarkup(<LocaleProvider locale={locale}><GrowthTierLine shell={shell} /></LocaleProvider>));
-    expect(line(PAID)).toBe("Growth · Tier 1 Starting out Test account");
-    expect(line({ ...PAID, testAccount: false })).toBe("Growth · Tier 1 Starting out");
-    expect(line(PAID, "es")).toBe("Crecimiento · Nivel 1 Comenzando Cuenta de prueba");
+    expect(line(PAID)).toBe("Growth · Tier 2 Building Test account");
+    expect(line({ ...PAID, testAccount: false })).toBe("Growth · Tier 2 Building");
+    expect(line(PAID, "es")).toBe("Crecimiento · Nivel 2 Construyendo Cuenta de prueba");
     expect(line(FREE)).toBe("Growth · ? Locked");
   });
 
@@ -127,11 +128,11 @@ describe("tabs and pages", () => {
     expect(html).toContain('data-icon="lock"');
     expect(text(html)).toContain("Growth Locked");
     expect(html).not.toContain("nav-test-account");
-    for (const id of ["growthPlan", "googleResults", "getReviews", "offers", "campaigns", "printKit", "reports"]) expect(navItemLocked("free", id as never), id).toBe(true);
+    for (const id of ["growthPlan", "googleResults", "getReviews", "offers", "campaigns", "reports"]) expect(navItemLocked("free", id as never), id).toBe(true);
     for (const id of ["overview", "fixPlan", "googleListing", "reviews", "website", "competitors", "localEvents", "postStudio"]) expect(navItemLocked("free", id as never), id).toBe(false);
     expect(navItemLocked("free", "pricing")).toBe(true);
     for (const item of [...PRESENCE_ITEMS, ...GROWTH_ITEMS]) expect(navItemLocked("grow", item.id)).toBe(false);
-    expect(html.match(/data-testid="nav-lock"/g)?.length).toBe(7);
+    expect(html.match(/data-testid="nav-lock"/g)?.length).toBe(6);
     // On Presence: only Price check is locked (and Reports below).
     const presence = sidebar("/business/b1", FREE);
     expect(presence.match(/data-testid="nav-lock"/g)?.length).toBe(2);
@@ -146,7 +147,7 @@ describe("tabs and pages", () => {
     expect(phone("en")).toContain('aria-current="page" class="inline-flex');
     expect(text(phone("es"))).toContain("Score · Presencia · 78 C");
     path = "/business/b1/growth";
-    expect(text(phone("en"))).toContain("Score · Growth · Tier 1");
+    expect(text(phone("en"))).toContain("Score · Growth · Tier 2");
   });
 });
 

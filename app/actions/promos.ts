@@ -2,6 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { offerIsTest } from "@/lib/offerTesting";
+import { logOfferUse } from "@/lib/offerUses.server";
 import { MAX_ACTIVE_PROMOS, type PromoRow } from "@/lib/promos";
 
 const PROMO_COLUMNS =
@@ -146,6 +147,8 @@ export async function incrementPromoRedemption(promoId: string): Promise<Increme
   if (data === null || data === undefined) {
     return { status: "not_found" };
   }
+  // Day 25B step 6: the +1, dated (R4 and the Growth tier).
+  await logOfferUse(supabase, "promo", promoId, user.id);
 
   return { status: "ok", redemptions: data as number };
 }

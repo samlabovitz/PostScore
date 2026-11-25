@@ -2,31 +2,24 @@
 
 import type { OwnerHours } from "@/lib/ownerHours";
 import type { StarterSiteDetails } from "@/lib/starterSiteDetails";
-import { useState, type ReactNode } from "react";
-import { Card } from "@/components/ui/Card";
-import { CollapsibleGenerator } from "./CollapsibleGenerator";
+import type { ReactNode } from "react";
+import Link from "next/link";
+import { googleListingHref } from "@/lib/routes";
 import { StarterSiteBuilder } from "./StarterSiteBuilder";
 import type { OpeningHoursPeriod } from "@/lib/google/places";
-import type { FaqEntry } from "@/config/bizProfiles";
-import { normalizeLocale, t, useLocale, type Locale } from "@/lib/i18n";
+import { t, useLocale } from "@/lib/i18n";
 import { studioHref } from "@/lib/postStudio";
-import { LockedPreview } from "@/components/plan/LockedPreview";
 import type { Plan } from "@/lib/plan";
-import { PostStudioShowcase } from "./PostStudioShowcase";
+import type { StarterComparison } from "@/lib/starterComparison";
 
 /**
- * Owns the one piece of state the FAQ card and the starter-site
- * generator need to share — the generated site's own "Site language"
- * (StarterSiteBuilder's own selector) — so the FAQ draft always matches
- * whatever language the generator is currently building in.
- *
- * The Website page's two paths, on every plan:
- * A) "Keep your current website — fix it with PostScore" (a real site
- *    only): `pathA` (Free: the locked how-to and Re-check; Grow+: the
- *    working ones) and the FAQ draft (locked on Free).
- * B) "Or start fresh with a new website": the starter generator (open on
- *    Free and when there's no real site; collapsed next to one on Grow+),
- *    then the PostStudio card.
+ * The Website page's two parts, on every plan, one short heading each:
+ * A) "Fix your website" (a real site only): `pathA` — "1 check left · How to
+ *    fix each check ↑" and Re-check (Free: locked).
+ * B) "One-page starter site": what it would score next to the current site
+ *    (both from the real website scoring, lib/starterComparison.ts), and the
+ *    generator, always open — first on the page when there's no real site.
+ *    Then one line: "Want a full website? PostStudio is coming soon."
  */
 export function WebsiteGeneratorSection({
   businessId,
@@ -49,21 +42,20 @@ export function WebsiteGeneratorSection({
   listingWebsite = null,
   profileId,
   builderOfferReason,
-  faqEn,
-  faqEs,
+  comparison = null,
+  notOnListing = false,
   free = false,
-  plan,
   realSite,
   socialPlatform = null,
-  builderName = null,
   pathA = null,
 }: {
+  /** Kept for the page's call; the section no longer varies by plan beyond `free`. */
   plan: Plan;
   /** A real website (not none, not a social page): path A shows. */
   realSite: boolean;
   /** The social page standing in for a website ("Facebook"), if any. */
   socialPlatform?: string | null;
-  /** The detected site builder's name, for path A's intro. */
+  /** The detected site builder's name (unused since the intro line was removed). */
   builderName?: string | null;
   /** Path A's tools above the FAQ (Free: locked blocks; Grow+: working). */
   pathA?: ReactNode;
@@ -91,40 +83,12 @@ export function WebsiteGeneratorSection({
   listingWebsite?: string | null;
   profileId: string;
   builderOfferReason: "no_website" | "underperforming" | "backup";
-  /** Already token-substituted (renderFaq) for this real business, in
-   * each of the two site languages. */
-  faqEn: FaqEntry[];
-  faqEs: FaqEntry[];
+  /** The current site's Website points next to the starter's (null: can't be compared honestly yet). */
+  comparison?: StarterComparison | null;
+  /** The site isn't linked on the Google listing (read live): say so, with the way to add it. */
+  notOnListing?: boolean;
 }) {
   const locale = useLocale();
-  // Mirrors StarterSiteBuilder's own siteLocale state (via
-  // onSiteLocaleChange below) purely so the FAQ card can pick the
-  // matching language — StarterSiteBuilder's own state stays the one
-  // real source of truth for what the generated site itself uses.
-  const [siteLocale, setSiteLocale] = useState<Locale>(() => normalizeLocale(businessLanguage));
-  const faq = siteLocale === "es" ? faqEs : faqEn;
-
-  const faqSection = free ? (
-    <LockedPreview compact title={t(locale, "dashboard.free.web.faqTitle")} unlock={t(locale, "dashboard.upgrade.unlock.faq")} />
-  ) : (
-    <div>
-      <div className="mb-2 text-[11px] font-medium uppercase tracking-[0.06em] text-ink-mute">
-        {t(locale, "dashboard.website.faqDraftHeading")}
-      </div>
-      <p className="mb-3 text-sm text-ink-soft">{t(locale, "dashboard.website.faqDraftIntro")}</p>
-      <Card className="p-5">
-        <div className="flex flex-col divide-y divide-paper-line">
-          {faq.map((entry) => (
-            <div key={entry.question} className="py-3 first:pt-0 last:pb-0">
-              <div className="text-sm font-semibold text-ink">{entry.question}</div>
-              <p className="mt-0.5 text-[13px] text-ink-soft">{entry.answer}</p>
-            </div>
-          ))}
-        </div>
-      </Card>
-    </div>
-  );
-
   const generator = (
     <StarterSiteBuilder
       businessId={businessId}
@@ -147,54 +111,73 @@ export function WebsiteGeneratorSection({
       listingWebsite={listingWebsite}
       profileId={profileId}
       builderOfferReason={builderOfferReason}
-      onSiteLocaleChange={setSiteLocale}
       free={free}
       postStudioHref={free ? studioHref(businessId, `/business/${businessId}/website`) : null}
+      compactHeader
     />
   );
 
-  // The page's ONE PostStudio card (Multi: "Continue in PostStudio →").
-  const showcase = (
-    <PostStudioShowcase businessId={businessId} businessName={businessName} plan={plan} profileId={profileId} storefront={storefront} />
-  );
-  const heading = (key: "dashboard.free.web.pathA" | "dashboard.free.web.pathB") => (
-    <h2 className="text-[12.5px] font-semibold uppercase tracking-[0.08em] text-ink">{t(locale, key)}</h2>
-  );
-  // Free always shows the generator open ("try it free"); Grow and up keep
-  // it collapsed next to a real site, open when there's none.
-  const open = free || !realSite;
-  const introB = realSite ? t(locale, "dashboard.free.web.pathBIntro") : socialPlatform ? t(locale, "dashboard.free.web.pathBSocial", { platform: socialPlatform }) : null;
+  const W = (k: string) => `dashboard.website.v2.${k}` as Parameters<typeof t>[1];
+  const heading = (key: string) => <h2 className="font-serif text-xl font-semibold text-ink">{t(locale, W(key))}</h2>;
 
   return (
     <>
-      {/* A) Keep the current site and fix it — only for a real site. */}
-      {realSite && (
-        <section data-testid="path-fix" className="flex flex-col gap-4">
-          <div>
-            {heading("dashboard.free.web.pathA")}
-            <p className="mt-1 max-w-2xl text-sm text-ink-soft">
-              {t(locale, free ? "dashboard.free.web.pathAIntro" : "dashboard.free.web.pathAIntroPaid", { builder: builderName ?? t(locale, "dashboard.free.web.yourBuilder") })}
-            </p>
-          </div>
+      {/* A) Fix the current site — only for a real one, and only with something to show (Free's locked how-to). */}
+      {realSite && pathA && (
+        <section data-testid="path-fix" className="flex flex-col gap-3">
+          {heading("fixTitle")}
           {pathA}
-          {faqSection}
         </section>
       )}
-      {/* B) Or start fresh: the starter site, then PostStudio. */}
-      <section data-testid="path-fresh" className={realSite ? "flex flex-col gap-6 border-t border-paper-deep pt-8 nav:pt-10" : "flex flex-col gap-6"}>
-        {(realSite || introB) && (
-          <div>
-            {realSite && heading("dashboard.free.web.pathB")}
-            {introB && <p className="mt-1 max-w-2xl text-sm text-ink-soft">{introB}</p>}
-          </div>
+      {/* B) The one-page starter site: always open; first when there's no real site. */}
+      <section data-testid="path-fresh" className={realSite ? "flex flex-col gap-4 border-t border-paper-deep pt-8 nav:pt-10" : "flex flex-col gap-4"}>
+        {heading("starterTitle")}
+        {socialPlatform && <p className="text-sm text-ink-soft">{t(locale, "dashboard.free.web.pathBSocial", { platform: socialPlatform })}</p>}
+        {notOnListing && (
+          <p className="text-[13.5px] text-ink" data-testid="not-on-listing">
+            {t(locale, W("notOnListing"))}{" "}
+            <Link href={googleListingHref(businessId, { hash: "listing-website" })} className="font-semibold underline decoration-brass underline-offset-2">
+              {t(locale, W("addIt"))}
+            </Link>
+          </p>
         )}
+        {comparison && <StarterCompare comparison={comparison} />}
+        <p className="text-[13px] text-ink-mute" data-testid="starter-points-note">{t(locale, W("pointsNote"))}</p>
         <div id="starter-site" className="scroll-mt-20">
-          {open ? generator : <CollapsibleGenerator defaultExpanded={false}>{generator}</CollapsibleGenerator>}
+          {generator}
         </div>
-        {showcase}
-        {/* No real site: nothing to fix, but the FAQ draft still helps (Grow and up). */}
-        {!realSite && !free && faqSection}
+        <p className="text-[13.5px] text-ink-soft" data-testid="poststudio-line">{t(locale, W("postStudio"))}</p>
       </section>
     </>
+  );
+}
+
+/** "Your website scores 28 / 30. A PostScore starter site would score 30 / 30." — both from the real scoring. */
+export function StarterCompare({ comparison: c }: { comparison: StarterComparison }) {
+  const locale = useLocale();
+  const W = (k: string) => `dashboard.website.v2.${k}` as Parameters<typeof t>[1];
+  return (
+    <div className="flex flex-col gap-2 rounded-xl border border-paper-deep bg-white px-4 py-3 text-[14px] text-ink sm:flex-row sm:items-center sm:justify-between" data-testid="starter-compare" data-kind={c.kind}>
+      <p className="min-w-0">
+        {c.kind === "add" ? (
+          t(locale, W(c.gain === 1 ? "compare.addOne" : "compare.add"), { gain: c.gain })
+        ) : (
+          <>
+            {t(locale, W("compare.scores"), { current: c.current, starter: c.starter, of: c.of })}{" "}
+            {c.kind === "keep" && <span className="text-ink-soft">{t(locale, W(c.starter === c.current ? "compare.keepEqual" : "compare.keep"))}</span>}
+          </>
+        )}
+      </p>
+      {c.kind === "recommended" && (
+        <div className="flex shrink-0 items-center gap-2">
+          <span className="rounded-full border border-brass bg-[color:color-mix(in_srgb,var(--color-brass)_12%,white)] px-2 py-0.5 text-[12px] font-semibold text-brass" data-testid="starter-recommended">
+            {t(locale, W("compare.recommended"))}
+          </span>
+          <a href="#starter-site" className="inline-flex items-center rounded-lg bg-brass px-3.5 py-2 text-[13.5px] font-semibold text-ink hover:bg-[color:color-mix(in_srgb,var(--color-brass)_85%,white)]">
+            {t(locale, W("compare.build"))}
+          </a>
+        </div>
+      )}
+    </div>
   );
 }

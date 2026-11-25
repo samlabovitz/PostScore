@@ -25,9 +25,9 @@ export function screenshotPathOf(ref: string | null | undefined): string | null 
 export const businessOfPath = (path: string) => path.split("/")[0].replace(/\.png$/, "");
 
 /** Every screenshot path a business's current analysis uses. */
-export function referencedPaths(analysis: Pick<WebsiteAnalysis, "screenshotUrl" | "additionalPages"> | null | undefined): string[] {
+export function referencedPaths(analysis: Pick<WebsiteAnalysis, "screenshotUrl" | "additionalPages" | "mobileScreenshotUrl"> | null | undefined): string[] {
   if (!analysis) return [];
-  return [analysis.screenshotUrl, ...(analysis.additionalPages ?? []).map((p) => p.screenshotUrl)].map(screenshotPathOf).filter((p): p is string => !!p);
+  return [analysis.screenshotUrl, analysis.mobileScreenshotUrl, ...(analysis.additionalPages ?? []).map((p) => p.screenshotUrl)].map(screenshotPathOf).filter((p): p is string => !!p);
 }
 
 /** The analysis with signed URLs (1 hour) in place of the stored paths, for
@@ -50,6 +50,7 @@ export async function withSignedScreenshots<T extends Pick<WebsiteAnalysis, "scr
   return {
     ...analysis,
     screenshotUrl: sign(analysis.screenshotUrl),
+    ...("mobileScreenshotUrl" in analysis ? { mobileScreenshotUrl: sign((analysis as { mobileScreenshotUrl?: string | null }).mobileScreenshotUrl) } : {}),
     additionalPages: (analysis.additionalPages ?? []).map((p) => ({ ...p, screenshotUrl: sign(p.screenshotUrl) })),
   };
 }

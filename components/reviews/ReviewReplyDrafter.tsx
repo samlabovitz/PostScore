@@ -13,6 +13,8 @@
 import { useState } from "react";
 import { IconCopy, IconExternalLink, IconMessageCircle, IconSparkles } from "@tabler/icons-react";
 import { draftReviewReply, type ReplyDraftStatus } from "@/app/actions/reviewReplies";
+import { ReplyTweaks, ReplyVoicePicker } from "@/components/reviews/ReplyTweaks";
+import type { ReplyLength } from "@/lib/reviewReplies";
 import { copyText } from "@/app/business/[id]/website-reviews/GetMoreReviews";
 import { UpgradeTrigger } from "@/components/upgrade/UpgradeTrigger";
 import { FREE_REPLY_DRAFTS, googleReviewsHref, MAX_REVIEW_CHARS, replyDraftLimit } from "@/lib/reviewReplies";
@@ -44,6 +46,8 @@ export function ReviewReplyDrafter({
   const locale = useLocale();
   const [review, setReview] = useState("");
   const [stars, setStars] = useState<number | null>(null);
+  const [reviewer, setReviewer] = useState("");
+  const [length, setLength] = useState<ReplyLength>("medium");
   const [reply, setReply] = useState<string | null>(null);
   const [left, setLeft] = useState<number | null>(initial.status === "ok" ? initial.left : null);
   const [busy, setBusy] = useState(false);
@@ -60,7 +64,7 @@ export function ReviewReplyDrafter({
   const usedUp = !premium && left !== null && left <= 0;
   const reviewsHref = googleReviewsHref(placeId);
 
-  async function draft() {
+  async function draft(tweak: { length: ReplyLength; mode: "length" | "different" } | null = null) {
     if (busy) return;
     // The button stays usable while drafts are left; an empty box gets a
     // nudge instead of a dead (disabled) button that looks locked.
@@ -72,9 +76,10 @@ export function ReviewReplyDrafter({
     setMessage(null);
     setCopied(false);
     try {
-      const result = await draftReviewReply(businessId, review, stars);
+      const result = await draftReviewReply(businessId, review, stars, { reviewer, ...(tweak ? { length: tweak.length, mode: tweak.mode, current: reply } : {}) });
       if (result.status === "ok") {
         setReply(result.reply);
+        setLength(tweak?.length ?? "medium");
         setLeft(result.left);
         if (result.resetsAt) setResetsAt(result.resetsAt);
       } else if (result.status === "limit") {
@@ -111,6 +116,7 @@ export function ReviewReplyDrafter({
         )}
       </div>
       <p className="text-[13px] leading-snug text-ink-soft">{t(locale, K("intro"))}</p>
+      {available && <ReplyVoicePicker businessId={businessId} />}
 
       {!available ? (
         <p data-testid="replies-unavailable" className="text-[13px] text-ink-soft">{t(locale, K("errorUnavailable"))}</p>
@@ -139,6 +145,17 @@ export function ReviewReplyDrafter({
               className="w-full resize-y rounded-lg border border-paper-deep bg-white px-3 py-2 text-[14px] text-ink placeholder:text-ink-mute focus:border-brass focus:outline-none"
             />
           </label>
+          <label className="flex flex-col gap-1">
+            <span className="text-[12.5px] font-semibold text-ink">{t(locale, "dashboard.replies.reviewerLabel")}</span>
+            <input
+              value={reviewer}
+              onChange={(e) => setReviewer(e.target.value)}
+              maxLength={60}
+              placeholder={t(locale, "dashboard.replies.reviewerPlaceholder")}
+              className="min-h-[40px] w-full max-w-xs rounded-lg border border-paper-deep bg-white px-3 text-[14px] text-ink placeholder:text-ink-mute focus:border-brass focus:outline-none"
+              data-testid="reply-reviewer"
+            />
+          </label>
           <div className="flex flex-wrap items-center gap-2">
             <label className="flex items-center gap-2 text-[12.5px] font-semibold text-ink">
               {t(locale, K("starsLabel"))}
@@ -157,7 +174,7 @@ export function ReviewReplyDrafter({
             </label>
             <button
               type="button"
-              onClick={draft}
+              onClick={() => void draft()}
               disabled={busy}
               data-testid="draft-reply"
               className="inline-flex items-center gap-1.5 rounded-lg border border-brass bg-brass px-3.5 py-2 text-[13px] font-semibold text-ink hover:bg-[#a5772a] disabled:cursor-not-allowed disabled:opacity-60"
@@ -191,6 +208,7 @@ export function ReviewReplyDrafter({
               className="w-full resize-y rounded-lg border border-paper-deep bg-white px-3 py-2 text-[14px] text-ink focus:border-brass focus:outline-none"
             />
           </label>
+          {!usedUp && <ReplyTweaks length={length} busy={busy} onRedraft={(o) => draft(o)} />}
           <div className="flex flex-wrap items-center gap-2">
             <button
               type="button"

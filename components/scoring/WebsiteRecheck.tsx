@@ -13,6 +13,7 @@ import { recheckWebsite, type WebsiteRecheckResult } from "@/app/actions/website
 import { t, useLocale, type Locale, type MessageKey } from "@/lib/i18n";
 import { WEBSITE_RECHECKS_PER_DAY, type CheckStatus, type WebsiteCheckChange } from "@/lib/websiteRecheckPolicy";
 import { cn } from "@/lib/utils";
+import { buttonClasses } from "@/components/ui/Button";
 
 const k = (key: string) => `dashboard.websiteRecheck.${key}` as MessageKey;
 const STATUS_KEY: Record<CheckStatus, MessageKey> = {
@@ -93,6 +94,7 @@ export function WebsiteRecheck({
   initialLeft,
   hasWebsite,
   compact = false,
+  top = false,
 }: {
   businessId: string;
   /** Re-checks left today (from getWebsiteRecheckStatus). */
@@ -100,6 +102,8 @@ export function WebsiteRecheck({
   hasWebsite: boolean;
   /** The Action plan's small version: the button and its note only. */
   compact?: boolean;
+  /** The Website page's top right, beside "Refresh screenshots": the same button style, the count under it. */
+  top?: boolean;
 }) {
   const locale = useLocale();
   const router = useRouter();
@@ -131,17 +135,18 @@ export function WebsiteRecheck({
 
   return (
     <div className={cn("flex flex-col gap-2", !compact && "rounded-xl border border-paper-deep bg-white p-4 shadow-card")} data-testid="website-recheck">
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
+      {/* top: the Website page's top-right, beside "Refresh screenshots" — the same button, "N of 2 left today" under it. */}
+      <div className={cn("flex flex-wrap gap-x-3 gap-y-1.5", top ? "flex-col items-start gap-y-1 nav:items-end" : "items-center")}>
         <button
           type="button"
           onClick={run}
           disabled={running || left <= 0}
-          className="inline-flex items-center gap-1.5 rounded-lg border border-ink bg-white px-3 py-1.5 text-[13px] font-semibold text-ink hover:bg-paper disabled:cursor-not-allowed disabled:opacity-50"
+          className={top ? buttonClasses("default", "sm") : "inline-flex items-center gap-1.5 rounded-lg border border-ink bg-white px-3 py-1.5 text-[13px] font-semibold text-ink hover:bg-paper disabled:cursor-not-allowed disabled:opacity-50"}
         >
           <IconRefresh size={15} aria-hidden className={cn(running && "animate-spin motion-reduce:animate-none")} />
           {running ? t(locale, k("running")) : t(locale, k("button"))}
         </button>
-        <span className="text-[12.5px] text-ink-soft" data-testid="recheck-left">
+        <span className={top ? "text-[11.5px] text-ink-mute" : "text-[12.5px] text-ink-soft"} data-testid="recheck-left">
           {left > 0 ? t(locale, k("left"), { left, total: WEBSITE_RECHECKS_PER_DAY }) : t(locale, k("noneLeft"), { total: WEBSITE_RECHECKS_PER_DAY })}
         </span>
       </div>

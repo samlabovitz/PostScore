@@ -27,6 +27,7 @@ import { MAX_ACTIVE_REFERRALS } from "@/lib/referrals";
 import { PASS_ON, type CardBusiness } from "@/lib/printStudio/design";
 import type { BizProfile } from "@/config/bizProfiles";
 import type { ReviewsPageData } from "@/app/actions/reviews";
+import { NEW_PAGES_LIVE } from "@/lib/routes";
 
 const S = (key: string) => `dashboard.free.showroom.${key}` as MessageKey;
 
@@ -192,10 +193,13 @@ export function TabShowroom({
   return (
     <div data-testid="tab-showroom" data-tab={tab} className="flex flex-col gap-6 nav:gap-8">
       <div>
-        <Link href={`/business/${businessId}`} className="inline-flex items-center gap-1.5 text-[13px] font-medium text-ink-soft hover:text-ink">
-          <IconArrowLeft size={15} />
-          {t(locale, S("backToAudit"))}
-        </Link>
+        {/* New design: the sidebar handles navigation. */}
+        {!NEW_PAGES_LIVE && (
+          <Link href={`/business/${businessId}`} className="inline-flex items-center gap-1.5 text-[13px] font-medium text-ink-soft hover:text-ink">
+            <IconArrowLeft size={15} />
+            {t(locale, S("backToAudit"))}
+          </Link>
+        )}
         <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1.5">
           <h1 className="font-serif text-2xl font-semibold text-ink nav:text-[27px]">{t(locale, SHOWROOM_NAV[tab])}</h1>
           <span data-testid="showroom-chip" className="inline-flex items-center gap-1 rounded-full border border-paper-deep bg-white px-2.5 py-0.5 text-[12px] font-semibold text-ink">

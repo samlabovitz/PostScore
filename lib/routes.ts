@@ -21,7 +21,7 @@ export function newDesignPreview(env: { NODE_ENV?: string; NEXT_PUBLIC_NEW_DESIG
 
 /** The new pages built so far (Day 25B steps 2–3). A link or redirect to a
  * page not built yet keeps today's URL until its step (5–6). */
-export const BUILT_NEW_PAGES: ReadonlySet<string> = new Set(["fix-plan", "google-listing", "google-results", "get-reviews", "offers", "print-kit", "local-events"]);
+export const BUILT_NEW_PAGES: ReadonlySet<string> = new Set(["fix-plan", "google-listing", "google-results", "get-reviews", "offers", "print-kit", "local-events", "growth"]);
 const built = (page: string) => NEW_PAGES_LIVE && BUILT_NEW_PAGES.has(page);
 
 /** Customer offers' tabs ("all" = Running now). First-time and Loyalty are Coming soon until Day 25D. */
@@ -88,7 +88,12 @@ export function offersHref(businessId: string, tab: OffersTab = "all", opts?: Ro
 }
 
 /** Growth → Print kit & QR (every printable, with its QR). Today: the review QR on the Reviews page. */
+/** Print kit & QR is hidden until Day 34 / 37-Core: off the sidebar and the Growth tools; its route stays and
+ * sends owners to Get more reviews #review-link (the review link & QR). Flip to bring it back. */
+export const PRINT_KIT_LIVE = false;
+
 export function printKitHref(businessId: string, opts?: RouteOptions): string {
+  if (!PRINT_KIT_LIVE) return getReviewsHref(businessId, { hash: "review-link", ...opts });
   return built("print-kit") ? build(`${biz(businessId)}/print-kit`, {}, opts) : build(`${biz(businessId)}/website-reviews`, {}, { hash: "get-more-reviews", ...opts });
 }
 
@@ -156,7 +161,8 @@ export function legacyRedirect(url: LegacyUrl): string | null {
     if (tab === "coupons") return `/business/${id}/offers?tab=coupons${hash ? `#${hash}` : ""}`;
     if (tab === "referral" || tab === "referrals") return `/business/${id}/offers?tab=referrals${hash ? `#${hash}` : ""}`;
     if (hash === "ways-to-grow") return `/business/${id}/growth#more`;
-    if (hash === "weekly-routine" || hash === "more-ways") return `/business/${id}/growth#this-week`;
+    // The weekly routine folds into This week's plan; "More ways to bring people in" keeps its own block (#more-ways).
+    if (hash === "weekly-routine") return `/business/${id}/growth#this-week`;
     if (hash === "weekly-plan" || hash.startsWith("task-") || params.get("open") === "howto") {
       const q = new URLSearchParams(keep(["open"])).toString();
       return `/business/${id}/fix-plan${q ? `?${q}` : ""}${hash ? `#${hash}` : ""}`;

@@ -132,8 +132,8 @@ describe("Approve all: one approval for the sitting", () => {
   });
 
   const post = (p: Partial<PostDraftState>): PostDraftState => ({ status: "ok", text: "Hi", setText: vi.fn(), ctas: [], cta: "NONE", setCta: vi.fn(), photos: [], photoName: null, setPhotoName: vi.fn(), left: null, fallback: false, publish: { canEdit: true, practice: true }, latest: null, setLatest: vi.fn(), another: vi.fn(), anotherBusy: false, anotherLimit: false, problems: [], load: vi.fn(), blockedToday: null, setBlockedToday: vi.fn(), topic: "hair", offer: null, flags: [], fixFlag: vi.fn(), keep: [], keepWord: vi.fn(), custom: vi.fn(), type: "update", setType: vi.fn(), types: ["update"], ...p });
-  const replies = (p: Partial<WeekRepliesState>): WeekRepliesState => ({ status: "ok", items: [], canPost: true, practice: true, more: 0, setText: vi.fn(), setInclude: vi.fn(), ready: [], post: vi.fn(), load: vi.fn(), ...p });
-  const answers = (p: Partial<AnswersState>): AnswersState => ({ status: "ok", data: { status: "ok", premium: true, canEdit: true, practice: true, plan: { missing: ["description", "details"], details: ["parking"], services: null, minutes: 6 }, listing: { description: "Hair salon", services: [], details: [] }, descriptionDraft: null, ownerPrices: [], facts: { name: "HX", city: null, hours: null, bookingUrl: null }, locale: "en" }, description: "", setDescription: vi.fn(), services: [], setService: vi.fn(), addService: vi.fn(), picks: {}, setPick: vi.fn(), unanswered: 0, flags: [], fixFlag: vi.fn(), keepWord: vi.fn(), payload: {}, ready: [], needsYou: [], results: null, setResults: vi.fn(), load: vi.fn(), ...p });
+  const replies = (p: Partial<WeekRepliesState>): WeekRepliesState => ({ status: "ok", items: [], canPost: true, practice: true, more: 0, setText: vi.fn(), setInclude: vi.fn(), ready: [], post: vi.fn(), load: vi.fn(), redraft: vi.fn(), reload: vi.fn(), ...p });
+  const answers = (p: Partial<AnswersState>): AnswersState => ({ status: "ok", data: { status: "ok", premium: true, canEdit: true, practice: true, plan: { missing: ["description", "details"], details: ["parking"], services: null, minutes: 6 }, listing: { description: "Hair salon", services: [], details: [] }, descriptionDraft: null, ownerPrices: [], facts: { name: "HX", city: null, hours: null, bookingUrl: null }, locale: "en", topic: null }, description: "", setDescription: vi.fn(), services: [], setService: vi.fn(), addService: vi.fn(), picks: {}, setPick: vi.fn(), unanswered: 0, flags: [], fixFlag: vi.fn(), keepWord: vi.fn(), payload: {}, ready: [], needsYou: [], results: null, setResults: vi.fn(), load: vi.fn(), ...p });
 
   test("what it includes: ready replies, this week's post, the answers — never what needs the owner", () => {
     expect(postReady(post({}))).toBe(true);
@@ -151,8 +151,8 @@ describe("Approve all: one approval for the sitting", () => {
   test("Ready / Needs you / done per item", () => {
     expect(repliesState(replies({ status: "loading" }))).toBe("loading");
     expect(repliesState(replies({ items: [] }))).toBe("done");
-    expect(repliesState(replies({ items: [{ reviewId: "r1", reviewer: null, stars: 5, comment: "Great", createTime: null, reply: "Thanks!", text: "Thanks!", include: true, sent: "draft" }], ready: ["r1"] }))).toBe("ready");
-    expect(repliesState(replies({ items: [{ reviewId: "r1", reviewer: null, stars: 5, comment: "Great", createTime: null, reply: "Thanks!", text: "Thanks!", include: true, sent: "sent" }] }))).toBe("done");
+    expect(repliesState(replies({ items: [{ reviewId: "r1", reviewer: null, stars: 5, comment: "Great", createTime: null, reply: "Thanks!", text: "Thanks!", include: true, sent: "draft", length: "medium", redrafting: false }], ready: ["r1"] }))).toBe("ready");
+    expect(repliesState(replies({ items: [{ reviewId: "r1", reviewer: null, stars: 5, comment: "Great", createTime: null, reply: "Thanks!", text: "Thanks!", include: true, sent: "sent", length: "medium", redrafting: false }] }))).toBe("done");
     expect(postState(post({}))).toBe("ready");
     expect(postState(post({ latest: { batchId: "b", state: "live", searchUrl: "u", undoUntil: null, approvedAt: "" } }))).toBe("done");
     expect(answersState(answers({ ready: ["description"] }))).toBe("ready");

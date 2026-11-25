@@ -230,9 +230,31 @@ describe("Growth step on Premium + connected", () => {
     expect(premium.match(/data-testid="fix-button"/g)).toHaveLength(1);
     expect(premium).toContain('href="/business/b1/growth?tab=google#edit-customer-details"');
     expect(premium).not.toContain("step-coming-soon");
-    // The expanded "How to fix it" is closed in static HTML; the switch is the rule:
-    const src = (await import("node:fs")).readFileSync("app/business/[id]/ActionPlanSection.tsx", "utf8");
-    expect(src).toContain('{!canUpdateOnGoogle && <>{t(locale, "dashboard.overview.actionPlan.ownerActionOnGoogle")} </>}');
-    expect(src).toContain('"dashboard.gbpEdit.howToIntro"');
+    // Who makes the change, by plan, connection and writes: the how-to (an open Fix plan row shows it).
+    const open = (value: Record<string, unknown>, locale: "en" | "es" = "en") =>
+      wrap(<GbpEditProvider value={{ undo: null, ...value } as never}><ul><TaskCard task={task} businessId="b1" context="weekly" premium={value.premium === true} fixPlan={{ priority: "high", running: 80, locked: false, compact: { open: true, outline: false } }} /></ul></GbpEditProvider>, locale);
+    const all = [
+      open({ enabled: true, premium: true, connected: true, canEdit: true }),
+      open({ enabled: true, premium: false, connected: true, canEdit: true }),
+      open({ enabled: true, premium: true, connected: false, canEdit: false }),
+      open({ enabled: true, premium: true, connected: true, canEdit: false }),
+    ];
+    for (const html of all) expect(html).not.toMatch(/can't edit your listing|make yourself, on Google/);
+    // Premium, connected, writable: PostScore drafts it, the one-click button first.
+    expect(all[0]).toContain("PostScore drafts it. You read it, change anything, and approve; it goes to Google. (Beta)");
+    expect(all[0].indexOf('data-testid="how-to-done-for-you"')).toBeLessThan(all[0].indexOf("Do this:"));
+    expect(all[0]).not.toContain('data-testid="how-to-who"');
+    // Grow: the do-it-yourself steps and "Premium does this for you in one click →".
+    expect(all[1]).toContain('data-who="self"');
+    expect(all[1]).toContain("Premium does this for you in one click");
+    // Premium, not connected: connect.
+    expect(all[2]).toContain("Connect Google and PostScore can do this for you.");
+    // Connected but writes off for this listing: read only for now.
+    expect(all[3]).toContain('data-who="read_only"');
+    expect(open({ enabled: true, premium: true, connected: false, canEdit: false }, "es")).toContain("Conecte Google y PostScore puede hacer esto por usted.");
+    // Truly manual (no editor anywhere, e.g. your own photos): "This one you do yourself, on Google."
+    const photos = { ...(task as object), checkId: "completeness.photos", title: "Add photos" } as never;
+    const manual = wrap(<GbpEditProvider value={{ enabled: true, premium: true, connected: true, canEdit: true, undo: null } as never}><ul><TaskCard task={photos} businessId="b1" context="weekly" premium fixPlan={{ priority: "high", running: 80, locked: false, compact: { open: true, outline: false } }} /></ul></GbpEditProvider>);
+    expect(manual).toMatch(/This one you do yourself, on Google\.|PostScore drafts it/);
   });
 });

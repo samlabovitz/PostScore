@@ -45,6 +45,7 @@ import { halfPoints, WebsiteScoreCompact } from "@/app/business/[id]/website/Web
 import { WebsiteVisualAnalysis } from "@/app/business/[id]/website/WebsiteVisualAnalysis";
 import type { CategoryResult, CheckResult } from "@/lib/scoring";
 import { PostStudioShowcase } from "@/app/business/[id]/website/PostStudioShowcase";
+import { starterComparison, type StarterComparison } from "@/lib/starterComparison";
 import { WebsiteGeneratorSection } from "@/app/business/[id]/website/WebsiteGeneratorSection";
 
 const wrap = (node: React.ReactNode, locale: "en" | "es" = "en") =>
@@ -175,7 +176,10 @@ describe("the Website page on Free", () => {
     const page = readFileSync("app/business/[id]/website/page.tsx", "utf8");
     const free = page.slice(page.indexOf("{free ? ("), page.indexOf("        ) : (\n          // Grow, Premium and Multi"));
     const order = (src: string, parts: string[]) => parts.map((p) => src.indexOf(p)).every((v, i, a) => v >= 0 && (i === 0 || v > a[i - 1]));
-    expect(order(free, ["{visualAnalysis}", "<WebsiteScoreCompact", "generatorSection(", "fixGuidesTitle", 'feature="recheck"'])).toBe(true);
+    // No real website: the starter site first (the main action); a real one: fix it, then the starter.
+    // Re-check sits by "Refresh screenshots" (locked on Free); the locked how-to stays with the starter section.
+    expect(order(free, ["{!realSite && generatorSection(null)}", "{visualAnalysis}", "<WebsiteScoreCompact", "{realSite && generatorSection(", "fixGuidesTitle"])).toBe(true);
+    expect(page.slice(page.indexOf("const visualAnalysis"), page.indexOf("const scoreBreakdown"))).toContain('feature="recheck"');
     expect(free).not.toContain("scoreBreakdown");
   });
 
@@ -183,7 +187,12 @@ describe("the Website page on Free", () => {
     const page = readFileSync("app/business/[id]/website/page.tsx", "utf8");
     const paid = page.slice(page.indexOf("        ) : (\n          // Grow, Premium and Multi"), page.indexOf("    </DashboardShell>"));
     const order = (src: string, parts: string[]) => parts.map((p) => src.indexOf(p)).every((v, i, a) => v >= 0 && (i === 0 || v > a[i - 1]));
-    expect(order(paid, ["{visualAnalysis}", '<div id="website-checks"', "{scoreBreakdown}", "generatorSection(", 'data-testid="checks-left"', 'href="#website-checks"', "<WebsiteRecheck"])).toBe(true);
+    expect(order(paid, ["{!realSite && generatorSection(null)}", "{visualAnalysis}", '<div id="website-checks"', "{scoreBreakdown}", "{realSite && generatorSection(null)}"])).toBe(true);
+    // "Re-check my website" beside "Refresh screenshots"; "N checks left · How to fix each check" under the score card.
+    const top = page.slice(page.indexOf("const visualAnalysis"), page.indexOf("const scoreBreakdown"));
+    expect(top).toContain("<WebsiteRecheck businessId={params.id} initialLeft={recheck.availability.left} hasWebsite={recheck.hasWebsite} compact top />");
+    const card = page.slice(page.indexOf("const scoreBreakdown"), page.indexOf("const siteUrl"));
+    expect(card).toContain('data-testid="checks-left"');
     expect(paid).not.toMatch(/WebsiteScoreCompact|LockedPreview/);
   });
 
@@ -197,7 +206,7 @@ describe("the Website page on Free", () => {
 });
 
 // The generator section as each plan sees it (the real component, real FAQ).
-const section = (over: { plan: "free" | "grow" | "premium" | "multi"; realSite: boolean; socialPlatform?: string | null }, locale: "en" | "es" = "en") =>
+const section = (over: { plan: "free" | "grow" | "premium" | "multi"; realSite: boolean; socialPlatform?: string | null; comparison?: StarterComparison | null }, locale: "en" | "es" = "en") =>
   wrap(
     <WebsiteGeneratorSection
       businessId="b1"
@@ -219,8 +228,7 @@ const section = (over: { plan: "free" | "grow" | "premium" | "multi"; realSite: 
       mapEmbed={null}
       profileId="salon"
       builderOfferReason={over.realSite ? "backup" : "no_website"}
-      faqEn={[{ question: "Is there parking?", answer: "Yes." }]}
-      faqEs={[{ question: "¿Hay estacionamiento?", answer: "Sí." }]}
+      comparison={over.comparison ?? null}
       free={over.plan === "free"}
       plan={over.plan}
       realSite={over.realSite}
@@ -266,37 +274,36 @@ describe("PostStudio on the Website page: one card, no publishing steps on Free"
     expect(t).not.toMatch(/\$\d|Coming soon|Want a full website/);
   });
 
-  test("the section, rendered: Free — A (the page's locked blocks + locked FAQ) then B (generator open, PostStudio card)", () => {
-    const html = section({ plan: "free", realSite: true });
-    const t = text(html);
-    expect(html.indexOf('data-testid="path-fix"')).toBeLessThan(html.indexOf('data-testid="path-fresh"'));
-    expect(t).toContain("Keep your current website — fix it with PostScore");
-    expect(t).toContain("Like your site? Fix every issue and aim for a perfect 100/100 — PostScore shows you exactly how, in Wix.");
-    expect(t).toContain("PATH-A-TOOLS");
-    expect(t).toContain("FAQ draft");
-    expect(t).toContain("Or start fresh with a new website");
-    expect(t).toContain("Rather replace your current site? Build a new one instead.");
-    const fresh = html.slice(html.indexOf('data-testid="path-fresh"'));
-    expect(fresh).not.toContain("Build a one-page starter site"); // open, not collapsed
-    expect(fresh.indexOf('data-testid="starter-preview-column"')).toBeLessThan(fresh.indexOf('data-testid="poststudio-showcase"'));
-    expect(fresh).toContain('data-testid="poststudio-line"');
-    expect(html).not.toContain("build-in-poststudio");
-  });
-
-  test("Grow/Premium: A (working tools, the real FAQ draft) then B (generator COLLAPSED, the PostStudio card, Coming soon, no price); Multi: Continue in PostStudio", () => {
-    for (const plan of ["grow", "premium"] as const) {
+  test("the section (every plan): 'Fix your website' then 'One-page starter site', always open; no FAQ draft, no PostStudio box — one line", () => {
+    for (const plan of ["free", "grow", "premium", "multi"] as const) {
       const html = section({ plan, realSite: true });
       const t = text(html);
-      expect(t, plan).toContain("Fix every issue and aim for a perfect 100/100 — step by step, in Wix.");
-      expect(t, plan).toContain("Is there parking?");
+      expect(html.indexOf('data-testid="path-fix"'), plan).toBeLessThan(html.indexOf('data-testid="path-fresh"'));
+      expect(t, plan).toContain("Fix your website PATH-A-TOOLS");
+      expect(t, plan).toContain("One-page starter site");
+      expect(t, plan).not.toMatch(/FAQ draft|Is there parking|Keep your current website|Or start fresh|Like your site\?/);
       const fresh = html.slice(html.indexOf('data-testid="path-fresh"'));
-      expect(fresh, plan).toContain("Build a one-page starter site →");
-      expect(fresh, plan).not.toContain('data-testid="starter-preview-column"');
-      expect(fresh, plan).toContain('data-mode="showcase"');
-      expect(text(fresh), plan).not.toMatch(/\$\d/);
-      expect(fresh, plan).not.toContain('data-testid="poststudio-line"');
+      expect(fresh, plan).toContain('data-testid="starter-preview-column"'); // open, never collapsed
+      expect(fresh, plan).not.toContain("Build a one-page starter site →");
+      expect(fresh, plan).not.toContain("poststudio-showcase");
+      expect(text(fresh), plan).toContain("Want a full website? PostStudio is coming soon.");
+      expect(text(fresh), plan).toContain("Points count once the starter site is live and linked on your Google listing.");
     }
-    expect(section({ plan: "multi", realSite: true })).toContain('data-mode="continue"');
+    expect(text(section({ plan: "grow", realSite: true }, "es"))).toContain("¿Quiere un sitio web completo? PostStudio llega pronto.");
+  });
+
+  test("the comparison, from the real scoring: Recommended + 'Build your starter site →' only when the starter scores higher", () => {
+    const rec = section({ plan: "premium", realSite: true, comparison: starterComparison({ hasWebsite: true, current: { earned: 22, of: 30 }, starter: 28 }) });
+    expect(text(rec)).toContain("Your website scores 22 / 30. A PostScore starter site would score 28 / 30.");
+    expect(rec).toContain('data-testid="starter-recommended"');
+    expect(text(rec)).toContain("Build your starter site →");
+    const keep = text(section({ plan: "premium", realSite: true, comparison: starterComparison({ hasWebsite: true, current: { earned: 29, of: 30 }, starter: 27 }) }));
+    expect(keep).toContain("Your website scores 29 / 30. A PostScore starter site would score 27 / 30. Your current site already scores higher, so keep it. The starter is here if you ever need a backup.");
+    expect(keep).not.toContain("Recommended");
+    expect(text(section({ plan: "premium", realSite: true, comparison: starterComparison({ hasWebsite: true, current: { earned: 27, of: 30 }, starter: 27 }) }))).toContain("already scores as high, so keep it");
+    expect(text(section({ plan: "grow", realSite: false, comparison: starterComparison({ hasWebsite: false, current: { earned: 0, of: 30 }, starter: 26 }) }))).toContain("A starter site would add 26 points to your score.");
+    expect(text(section({ plan: "grow", realSite: false, comparison: starterComparison({ hasWebsite: false, current: { earned: 22, of: 30 }, starter: 23 }) }))).toContain("A starter site would add 1 point to your score.");
+    expect(text(section({ plan: "grow", realSite: true, comparison: starterComparison({ hasWebsite: true, current: { earned: 22, of: 30 }, starter: 28 }) }, "es"))).toContain("Su sitio web obtiene 22 / 30. Un sitio de una página de PostScore obtendría 28 / 30.");
   });
 
   test("no website or a social page: no path A; B leads (social: 'A Facebook page isn't a website'), the generator open on every plan", () => {
@@ -304,7 +311,7 @@ describe("PostStudio on the Website page: one card, no publishing steps on Free"
       const none = section({ plan, realSite: false });
       expect(none, plan).not.toContain('data-testid="path-fix"');
       expect(none, plan).toContain('data-testid="starter-preview-column"');
-      expect(text(none), plan).not.toContain("Or start fresh");
+      expect(text(none), plan).toContain("One-page starter site");
       const social = text(section({ plan, realSite: false, socialPlatform: "Facebook" }));
       expect(social, plan).toContain("A Facebook page isn't a website — build a real one.");
     }
@@ -348,7 +355,7 @@ describe("dev plan pill", () => {
     expect(html).toContain('data-testid="dev-plan-pill"');
     expect(html).toMatch(/aria-pressed="true"[^>]*>Grow</);
     for (const p of ["Free", "Premium", "Multi"]) expect(html).toContain(p);
-    expect(readFileSync("app/layout.tsx", "utf8")).toContain("{(await canSwitchPlan()) && <DevPlanPill plan={await getPlan()} />}");
+    expect(readFileSync("app/layout.tsx", "utf8")).toContain("{(await canSwitchPlan()) && <DevPlanPill plan={await getPlan()} tier={await devTierForPill()} />}");
   });
 });
 

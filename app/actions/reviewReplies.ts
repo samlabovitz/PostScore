@@ -18,12 +18,12 @@
 // Premium and Multi: unlimited.
 
 import { createClient } from "@/lib/supabase/server";
-import { callAnthropicMessage, type AnthropicUsage } from "@/lib/anthropicClient";
+import type { AnthropicUsage } from "@/lib/anthropicClient";
 import { viewLocale } from "@/lib/viewLocale.server";
 import { getPlan } from "@/lib/premium";
 import { allowanceWindow, FREE_AI_WEEKLY } from "@/lib/freeAiAllowance";
 import { confirmFreeAiWithClient, freeAiAllowance, freeAllowanceAnchor, releaseFreeAiWithClient, reserveFreeAi } from "@/lib/freeAiUsage.server";
-import { cleanReply, cleanReviewInput, draftsLeft, replyBreaksRules, replyDraftLimit, replySystemPrompt, replyUserMessage } from "@/lib/reviewReplies";
+import { MAX_REPLY_CHARS, cleanReviewInput, draftsLeft, isReplyLength, isReplyVoice, replyDraftLimit, replyFirstName, replyOpening, type ReplyVoice } from "@/lib/reviewReplies";
 import { reviewLanguage } from "@/lib/gbpReviewInbox";
 
 export type ReplyDraftStatus =
@@ -91,7 +91,9 @@ async function growWeek(businessId: string): Promise<{ start: string; resetsAt: 
   }
 }
 
-export async function draftReviewReply(businessId: string, review: unknown, stars: unknown): Promise<DraftReplyResult> {
+/** `opts`: the reviewer's name as Google shows it (the first name opens the reply), "Short · Medium ·
+ * Long", and the current draft for "Different wording" / a new length. Each counts as a draft. */
+export async function draftReviewReply(businessId: string, review: unknown, stars: unknown, opts: { reviewer?: unknown; length?: unknown; current?: unknown; mode?: unknown } | null = null): Promise<DraftReplyResult> {
   const input = cleanReviewInput(review, stars);
   if (!input) return { status: "invalid" };
 
@@ -155,25 +157,33 @@ export async function draftReviewReply(businessId: string, review: unknown, star
 
   // 2. Draft.
   let usage: AnthropicUsage = { inputTokens: null, outputTokens: null };
-  let reply: string;
+  let reply: string | null;
   try {
-    reply = cleanReply(
-      await callAnthropicMessage({
-        // The reply matches the review's own language (EN or ES); the
-        // business's language when it can't tell.
-        system: replySystemPrompt(reviewLanguage(input.review) ?? viewLocale(business.language), shownName),
-        userMessage: replyUserMessage(input),
-        maxTokens: 300,
-        onUsage: (u) => {
-          usage = u;
-        },
-      })
+    const { draftReplyText, loadReplyVoice } = await import("@/lib/reviewReplyDraft.server");
+    const firstName = replyFirstName(typeof opts?.reviewer === "string" ? opts.reviewer : null);
+    const current = typeof opts?.current === "string" && opts.current.trim() ? opts.current.trim().slice(0, MAX_REPLY_CHARS) : null;
+    const mode = opts?.mode === "different" ? "different" : "length";
+    reply = await draftReplyText(
+      input,
+      // The reply matches the review's own language (EN or ES); the business's language when it can't tell.
+      reviewLanguage(input.review) ?? viewLocale(business.language),
+      shownName,
+      {
+        voice: await loadReplyVoice(supabase, businessId),
+        firstName,
+        length: isReplyLength(opts?.length) ? opts.length : "medium",
+        avoidOpenings: mode === "different" && current ? [replyOpening(current, firstName)] : [],
+        previous: current ? { text: current, mode } : null,
+      },
+      (u) => {
+        usage = u;
+      }
     );
   } catch {
     await release();
     return { status: "unavailable" };
   }
-  if (!reply || replyBreaksRules(reply)) {
+  if (!reply) {
     await release();
     return { status: "error" };
   }
@@ -185,4 +195,26 @@ export async function draftReviewReply(businessId: string, review: unknown, star
     return { status: "ok", reply, left: free.left, resetsAt: free.resetsAt };
   }
   return { status: "ok", reply, left: draftsLeft(plan, used), ...(week ? { resetsAt: week.resetsAt } : {}) };
+}
+
+/** "Replies are written as": the owner's choice (default "me"). */
+export async function getReplyVoice(businessId: string): Promise<ReplyVoice> {
+  const supabase = createClient();
+  const { loadReplyVoice } = await import("@/lib/reviewReplyDraft.server");
+  return loadReplyVoice(supabase, businessId);
+}
+
+/** Saves "Me (I)" / "My team (we)" for the signed-in owner (RLS). "not_ready": supabase/reply-voice.sql isn't run yet. */
+export async function setReplyVoice(businessId: string, voice: unknown): Promise<{ status: "ok" | "invalid" | "not_ready" | "unauthenticated" }> {
+  if (!isReplyVoice(voice)) return { status: "invalid" };
+  const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { status: "unauthenticated" };
+  const { data, error } = await supabase.from("businesses").update({ reply_voice: voice }).eq("id", businessId).select("id");
+  if (error || !data?.length) return { status: "not_ready" };
+  // The drafts are written again in the new voice, in the background.
+  (await import("@/lib/replyBatch.server")).writeReplyDraftsSoon(businessId);
+  return { status: "ok" };
 }

@@ -74,7 +74,7 @@ export function useOpenTab(): NavTab {
 export function tabValueText(tab: NavTab, shell: ShellData | null, locale: Locale): string {
   if (tab === "presence") return shell?.presence ? `${shell.presence.score} ${shell.presence.grade}` : "—";
   if (shell?.plan === "free") return t(locale, "dashboard.free.lockedLabel");
-  return t(locale, "dashboard.nav.tierShort", { n: 1 });
+  return shell?.growth ? t(locale, "dashboard.nav.tierShort", { n: shell.growth.tier }) : "—";
 }
 
 /** The Presence/Growth switch: one outlined control, two equal halves at a
@@ -121,9 +121,9 @@ function TabSwitch({ open, businessId, shell, onNavigate }: { open: NavTab; busi
   );
 }
 
-/** The Growth pages' header line (new design): "Growth · Tier 1 Starting out"
- * and the dev "Test account" tag; Free: "Growth · ? Locked". Everyone shows
- * Tier 1 until the tiers arrive (step 6). */
+/** The Growth pages' header line (new design): "Growth · Tier 2 Building"
+ * (the real tier, lib/growthPlan.server.ts) and the dev "Test account" tag;
+ * Free: "Growth · ? Locked". */
 export function GrowthTierLine({ shell }: { shell: ShellData | null }) {
   const locale = useLocale();
   const free = shell?.plan === "free";
@@ -136,10 +136,12 @@ export function GrowthTierLine({ shell }: { shell: ShellData | null }) {
           <IconLock size={12} aria-hidden className="text-brass" />
           {t(locale, "dashboard.overview.growthLine.locked")}
         </span>
-      ) : (
-        <span className="font-semibold text-ink">{t(locale, "dashboard.overview.growthLine.tier", { n: 1, name: t(locale, TIER_NAME_KEYS[0]) })}</span>
-      )}
-      {shell?.testAccount && (
+      ) : shell?.growth ? (
+        <span className="font-semibold text-ink" data-testid="growth-tier-name">
+          {t(locale, "dashboard.overview.growthLine.tier", { n: shell.growth.tier, name: t(locale, TIER_NAME_KEYS[shell.growth.tier - 1]) })}
+        </span>
+      ) : null}
+      {shell?.testAccount && !free && (
         <span data-testid="nav-test-account" className="whitespace-nowrap rounded-full bg-[color:color-mix(in_srgb,var(--color-brass)_22%,white)] px-2 py-0.5 text-[11px] font-semibold text-ink">
           {t(locale, "dashboard.nav.testAccount")}
         </span>

@@ -1,6 +1,6 @@
 "use client";
 
-import { campaignsPageHref } from "@/lib/routes";
+import { campaignsPageHref, NEW_PAGES_LIVE } from "@/lib/routes";
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -105,10 +105,13 @@ export function CampaignsView({
   return (
     <div className="flex flex-col gap-6 nav:gap-8">
       <div>
-        <Link href={`/business/${businessId}`} className="inline-flex items-center gap-1.5 text-[13px] font-medium text-ink-soft hover:text-ink">
-          <IconArrowLeft size={15} />
-          {t(locale, "dashboard.common.backTo", { name })}
-        </Link>
+        {/* New design: the sidebar handles navigation. */}
+        {!NEW_PAGES_LIVE && (
+          <Link href={`/business/${businessId}`} className="inline-flex items-center gap-1.5 text-[13px] font-medium text-ink-soft hover:text-ink">
+            <IconArrowLeft size={15} />
+            {t(locale, "dashboard.common.backTo", { name })}
+          </Link>
+        )}
         <h1 className="mt-2 font-serif text-2xl font-semibold text-ink nav:text-[27px]">{t(locale, "dashboard.campaigns.title")}</h1>
         <p className="mt-1 max-w-2xl text-sm text-ink-soft">{t(locale, "dashboard.campaigns.subtitle")}</p>
       </div>

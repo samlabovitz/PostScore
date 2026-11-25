@@ -21,7 +21,13 @@ function switchHref(plan: Plan): string {
   return `/api/dev/plan?plan=${plan}&back=${encodeURIComponent(back)}`;
 }
 
-export function DevPlanPill({ plan }: { plan: Plan }) {
+function tierHref(tier: number | "real"): string {
+  const back = typeof window === "undefined" ? "/" : `${window.location.pathname}${window.location.search}${window.location.hash}`;
+  return `/api/dev/tier?tier=${tier}&back=${encodeURIComponent(back)}`;
+}
+
+/** `tier`: the dev test login only (lib/devTier.ts) — the preview tier, "real" when none; undefined hides the switch. */
+export function DevPlanPill({ plan, tier }: { plan: Plan; tier?: number | "real" }) {
   const [collapsed, setCollapsed] = useState(false);
   useEffect(() => {
     try {
@@ -68,6 +74,22 @@ export function DevPlanPill({ plan }: { plan: Plan }) {
           {LABEL[p]}
         </button>
       ))}
+      {tier !== undefined && (
+        <span data-testid="dev-tier-switch" className="ml-1 flex items-center gap-0.5 border-l border-white/20 pl-2">
+          <span className="mr-0.5">Tier:</span>
+          {(["real", 1, 2, 3, 4, 5] as const).map((t) => (
+            <button
+              key={t}
+              type="button"
+              aria-pressed={t === tier}
+              onClick={() => window.location.assign(tierHref(t))}
+              className={cn("rounded-full px-1.5 py-0.5", t === tier ? "bg-brass font-semibold text-ink" : "hover:bg-white/10 hover:text-white")}
+            >
+              {t === "real" ? "Real" : t}
+            </button>
+          ))}
+        </span>
+      )}
       <button type="button" onClick={() => setAndRemember(true)} aria-label="Hide the plan switcher" className="ml-0.5 rounded-full p-1 hover:bg-white/10">
         <IconX size={12} aria-hidden />
       </button>

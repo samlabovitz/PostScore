@@ -95,14 +95,14 @@ describe("recheckWebsiteWithClient", () => {
       websiteAfter: 40,
       tasksConfirmed: 1,
       changes: [{ checkId: "website.https", from: "needs_work", to: "done", points: 4 }],
-      availability: { used: 2, left: 1 },
+      availability: { used: 2, left: 0 },
     });
   });
 
-  test("the 4th re-check today is refused before any PageSpeed or site call", async () => {
+  test("the 3rd re-check today (2 a day) is refused before any PageSpeed or site call", async () => {
     const analyze = vi.fn();
-    const { db } = fakeDb({ business: BUSINESS, recheckDates: ["2026-10-19T13:00:00Z", "2026-10-19T13:30:00Z", "2026-10-19T14:00:00Z"], before: null, after: null });
-    expect(await recheckWebsiteWithClient(db, "b1", { analyze, now: () => NOW })).toEqual({ status: "limit_reached", availability: { used: 3, left: 0, allowed: false } });
+    const { db } = fakeDb({ business: BUSINESS, recheckDates: ["2026-10-19T13:00:00Z", "2026-10-19T13:30:00Z"], before: null, after: null });
+    expect(await recheckWebsiteWithClient(db, "b1", { analyze, now: () => NOW })).toEqual({ status: "limit_reached", availability: { used: 2, left: 0, allowed: false } });
     expect(analyze).not.toHaveBeenCalled();
   });
 

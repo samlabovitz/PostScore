@@ -6,7 +6,7 @@
 
 import type { MessageKey } from "@/lib/i18n";
 import type { Plan } from "@/lib/plan";
-import { campaignsPageHref, fixPlanHref, getReviewsHref, googleListingHref, googleResultsHref, growthPlanHref, localEventsHref, offersHref, printKitHref, reviewsHref } from "@/lib/routes";
+import { campaignsPageHref, fixPlanHref, getReviewsHref, googleListingHref, googleResultsHref, growthPlanHref, localEventsHref, offersHref, PRINT_KIT_LIVE, printKitHref, reviewsHref } from "@/lib/routes";
 
 export type NavTab = "presence" | "growth";
 
@@ -54,7 +54,8 @@ export const GROWTH_ITEMS: NavItem[] = [
   { id: "getReviews", labelKey: "dashboard.nav.getReviews", href: (id) => getReviewsHref(id) },
   { id: "offers", labelKey: "dashboard.nav.offers", href: (id) => offersHref(id) },
   { id: "campaigns", labelKey: "dashboard.nav.campaigns", href: (id) => campaignsPageHref(id) },
-  { id: "printKit", labelKey: "dashboard.nav.printKit", href: (id) => printKitHref(id) },
+  // Hidden until Day 34 / 37-Core (lib/routes.ts PRINT_KIT_LIVE).
+  ...(PRINT_KIT_LIVE ? [{ id: "printKit" as const, labelKey: "dashboard.nav.printKit" as const, href: (id: string) => printKitHref(id) }] : []),
   { id: "localEvents", labelKey: "dashboard.nav.localEvents", href: (id) => localEventsHref(id), comingSoon: true },
 ];
 

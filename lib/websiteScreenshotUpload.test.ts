@@ -30,7 +30,7 @@ describe("uploadWebsiteScreenshots — Day 4 Part 2d: a storage failure must nev
       additionalPages: [],
     });
 
-    expect(result).toEqual({ screenshotUrl: null, additionalPages: [] });
+    expect(result).toEqual({ screenshotUrl: null, mobileScreenshotUrl: null, additionalPages: [] });
   });
 
   test("a reported (non-thrown) storage error also degrades to screenshotUrl: null", async () => {
@@ -41,7 +41,7 @@ describe("uploadWebsiteScreenshots — Day 4 Part 2d: a storage failure must nev
       additionalPages: [],
     });
 
-    expect(result).toEqual({ screenshotUrl: null, additionalPages: [] });
+    expect(result).toEqual({ screenshotUrl: null, mobileScreenshotUrl: null, additionalPages: [] });
   });
 
   test("a thrown error on one additional page never blocks the others or the homepage", async () => {

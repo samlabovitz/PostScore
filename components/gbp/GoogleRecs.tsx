@@ -11,6 +11,7 @@
 //     plus "Premium does this for you in one click →" where Premium does.
 //     Day 23E, Grow: the post's and the answers' drafts to copy, with the steps.
 
+import { DidThisButton, TierLineNote } from "@/components/growth/TierPlanContext";
 import { reviewsHref } from "@/lib/routes";
 import Link from "next/link";
 import { useState } from "react";
@@ -196,8 +197,10 @@ export function RecItem({ rec, businessId, premium, canEdit, type, drafts = fals
       <div className="min-w-0">
         <p className="text-[15px] font-medium leading-snug text-ink">{x.text}</p>
         {x.sub && <p className="mt-0.5 text-[13px] leading-snug text-ink-mute">{x.sub}</p>}
+        <TierLineNote kind={rec.kind} />
       </div>
       {premium ? <RecPremiumButton rec={rec} businessId={businessId} canEdit={canEdit} /> : <RecSteps rec={rec} businessId={businessId} drafts={drafts} />}
+      {!premium && <DidThisButton kind={rec.kind} />}
     </li>
   );
 }

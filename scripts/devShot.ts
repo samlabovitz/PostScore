@@ -30,7 +30,7 @@ function arg(name: string): string | null {
 async function main() {
   const paths = process.argv.slice(2).filter((a) => !a.startsWith("--"));
   if (paths.length === 0 || !paths.every((p) => p.startsWith("/"))) {
-    console.error("usage: devShot.ts </path> [</path>…] [--lang=en|es] [--plan=free|grow|premium|multi] [--width=390] [--out=<dir>] [--scroll=N]");
+    console.error("usage: devShot.ts </path> [</path>…] [--lang=en|es] [--plan=free|grow|premium|multi] [--width=390] [--out=<dir>] [--scroll=N] [--tier=1..5[-set|-due|-quiet|-closed]] [--click=<data-testid>[,…]] [--wait=ms]");
     process.exit(1);
   }
   const lang = arg("lang");
@@ -49,6 +49,12 @@ async function main() {
       const set = await page.goto(`${BASE}/api/dev/plan?plan=${encodeURIComponent(plan)}&back=/`);
       if (!set || set.status() >= 400) throw new Error(`plan switch refused (${set?.status()})`);
     }
+    // --tier=1..5: the dev-only preview tier (lib/devTier.ts), this browser only.
+    const tier = arg("tier");
+    if (tier) {
+      const set = await page.goto(`${BASE}/api/dev/tier?tier=${encodeURIComponent(tier)}&back=/`);
+      if (!set || set.status() >= 400) throw new Error(`tier preview refused (${set?.status()})`);
+    }
     // --lang: this browser only (a dev cookie, /api/dev/locale) — never a real business's saved language.
     const lc = await page.goto(`${BASE}/api/dev/locale?lang=${lang ?? "clear"}&back=/`);
     if (lang && (!lc || lc.status() >= 400)) throw new Error(`language override refused (${lc?.status()})`);
@@ -60,7 +66,20 @@ async function main() {
         .waitForFunction(() => document.styleSheets.length > 0 && !document.querySelector('[role="status"][aria-busy="true"]'), null, { timeout: 60_000 })
         .then(() => true, () => false);
       if (!ready) console.warn(`${p}: still loading after 60s — the screenshot may show the loading screen`);
-      const file = path.join(out, `${p.replace(/[^a-z0-9]+/gi, "_").replace(/^_|_$/g, "") || "home"}${lang ? `.${lang}` : ""}${plan ? `.${plan}` : ""}.${width}.png`);
+      // --click=a,b: open things first (an editor's "Preview / edit"), by data-testid, in order; --wait: then wait (ms).
+      const clicks = (arg("click") ?? "").split(",").filter(Boolean);
+      for (const id of clicks) {
+        const target = page.locator(`[data-testid="${id}"]`).first();
+        if ((await target.count()) === 0) {
+          console.warn(`${p}: nothing to click for data-testid="${id}"`);
+          continue;
+        }
+        await target.scrollIntoViewIfNeeded();
+        await target.click();
+        await page.waitForLoadState("networkidle").catch(() => undefined);
+      }
+      if (arg("wait")) await page.waitForTimeout(Number(arg("wait")));
+      const file = path.join(out, `${p.replace(/[^a-z0-9]+/gi, "_").replace(/^_|_$/g, "") || "home"}${lang ? `.${lang}` : ""}${plan ? `.${plan}` : ""}${tier ? `.tier${tier}` : ""}${clicks.length ? `.${clicks.join("+")}` : ""}.${width}.png`);
       const steps = Number(arg("scroll") ?? 0);
       if (steps > 0) {
         // --scroll=N: what the owner sees while scrolling — one screen per step,

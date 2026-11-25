@@ -1887,7 +1887,9 @@ export interface ScreenshotResult {
 export async function captureScreenshot(
   website: string,
   apiKey: string | undefined,
-  fetchImpl: typeof fetch = fetch
+  fetchImpl: typeof fetch = fetch,
+  /** Desktop by default; the Website page's phone thumbnail is captured at a phone's size. */
+  viewport: { width: number; height: number } = { width: 1440, height: 900 }
 ): Promise<ScreenshotResult> {
   if (!website || website.trim().length === 0 || !apiKey) return { bytes: null, httpStatus: null, attempted: false };
 
@@ -1895,7 +1897,7 @@ export async function captureScreenshot(
   const url =
     "https://api.screenshotone.com/take" +
     `?access_key=${encodeURIComponent(apiKey)}&url=${encodeURIComponent(target)}` +
-    "&viewport_width=1440&viewport_height=900&format=png&full_page=false" +
+    `&viewport_width=${viewport.width}&viewport_height=${viewport.height}&format=png&full_page=false` +
     "&block_ads=true&block_cookie_banners=true&cache=false" +
     "&metadata_http_response_status_code=true";
 
@@ -1921,6 +1923,8 @@ export async function captureScreenshot(
 
 export interface WebsiteScreenshotCapture {
   screenshotBytes: Buffer | null;
+  /** The homepage at a phone's size (390 × 844), for the Website page's phone thumbnail. */
+  mobileScreenshotBytes?: Buffer | null;
   /** The homepage's own HTTP status as ScreenshotOne saw it — see
    * ScreenshotResult.httpStatus. */
   screenshotHttpStatus?: number | null;
@@ -1950,22 +1954,25 @@ export async function captureWebsiteScreenshots(
   screenshotApiKey: string | undefined,
   fetchImpl: typeof fetch = fetch
 ): Promise<WebsiteScreenshotCapture> {
-  const [screenshotResult, additionalPagesResult] = await Promise.allSettled([
+  const [screenshotResult, additionalPagesResult, mobileResult] = await Promise.allSettled([
     captureScreenshot(website, screenshotApiKey, fetchImpl),
     discoverKeyPages(website, homepageHtml, fetchImpl).then((pages) =>
       captureAdditionalPageScreenshots(pages, screenshotApiKey, fetchImpl)
     ),
+    // The homepage at a phone's size: one more billed call, counted below.
+    captureScreenshot(website, screenshotApiKey, fetchImpl, { width: 390, height: 844 }),
   ]);
 
   const homepage = screenshotResult.status === "fulfilled" ? screenshotResult.value : null;
   const additionalPages = additionalPagesResult.status === "fulfilled" ? additionalPagesResult.value : [];
   return {
     screenshotBytes: homepage?.bytes ?? null,
+    mobileScreenshotBytes: mobileResult.status === "fulfilled" ? mobileResult.value.bytes : null,
     screenshotHttpStatus: homepage?.httpStatus ?? null,
     additionalPages,
     // Every request made counts, successful or not (a failed capture is
     // still a billed call). Without an API key nothing was called.
-    calls: screenshotApiKey ? 1 + additionalPages.length : 0,
+    calls: screenshotApiKey ? 2 + additionalPages.length : 0,
   };
 }
 
@@ -1978,6 +1985,8 @@ export interface WebsiteAnalysisCollection {
    * doc (lib/scoring.ts). */
   mobilePerformanceFailureReason: MobilePerformanceFailure | null;
   screenshotBytes: Buffer | null;
+  /** See WebsiteScreenshotCapture.mobileScreenshotBytes. */
+  mobileScreenshotBytes?: Buffer | null;
   /** See WebsiteScreenshotCapture.screenshotHttpStatus — null when no
    * capture ran. */
   screenshotHttpStatus: number | null;
@@ -2310,6 +2319,7 @@ export async function collectWebsiteAnalysis(
     mobilePerformance: pageSpeed.measurement,
     mobilePerformanceFailureReason: pageSpeed.measurement ? null : pageSpeed.failureReason,
     screenshotBytes: screenshots.screenshotBytes,
+    mobileScreenshotBytes: screenshots.mobileScreenshotBytes ?? null,
     screenshotHttpStatus: screenshots.screenshotHttpStatus ?? null,
     screenshotCalls: screenshots.calls ?? 0,
     pageSpeedSoftNotFoundUrl: pageSpeed.softNotFoundUrl ?? null,

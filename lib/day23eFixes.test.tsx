@@ -241,6 +241,7 @@ describe("11–12. the customer-details choices and 'Apply to Google'", () => {
       ownerPrices: [],
       facts: { name: "HX", city: null, hours: null, bookingUrl: null },
       locale: "en",
+      topic: null,
     },
     description: "x".repeat(300),
     setDescription: vi.fn(),

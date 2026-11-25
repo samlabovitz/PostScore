@@ -124,10 +124,10 @@ describe("Score breakdown: “As of your last scan”, and on Free a collapsed c
 
   test("Growth and Google Profile steps that change something on Google remind the owner to re-scan", () => {
     const plan = readFileSync("app/business/[id]/ActionPlanSection.tsx", "utf8");
-    const block = plan.indexOf("{task.ownerActionOnGoogle && (");
+    const block = plan.indexOf("{task.ownerActionOnGoogle && !canDo && (");
     expect(block).toBeGreaterThan(-1);
     expect(plan.indexOf('t(locale, "dashboard.rescan.afterGoogleChange")', block)).toBeGreaterThan(block);
-    expect(plan.indexOf('t(locale, "dashboard.rescan.afterGoogleChange")', block) - block).toBeLessThan(700);
+    expect(plan.indexOf('t(locale, "dashboard.rescan.afterGoogleChange")', block) - block).toBeLessThan(1600);
     expect(readFileSync("components/gbp/GoogleProfilePanel.tsx", "utf8")).toContain('t(locale, "dashboard.rescan.afterGoogleChange")');
   });
 });

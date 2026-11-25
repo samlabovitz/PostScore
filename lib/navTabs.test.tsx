@@ -18,7 +18,7 @@ import { reportDotVisible } from "@/lib/reportDot";
 vi.mock("server-only", () => ({}));
 
 const text = (html: string) => html.replace(/<[^>]+>/g, " ").replace(/&amp;/g, "&").replace(/&#x27;/g, "'").replace(/\s+/g, " ").trim();
-const PAID: ShellData = { presence: { score: 78, grade: "C" }, plan: "premium", testAccount: true };
+const PAID: ShellData = { presence: { score: 78, grade: "C" }, plan: "premium", testAccount: true, growth: { tier: 2, warning: false, preview: false } };
 const FREE: ShellData = { presence: { score: 78, grade: "C" }, plan: "free", testAccount: false };
 describe("the preview switch", () => {
   test("on only for the new-design preview, never in production; off on :3000 and in tests", () => {
@@ -39,7 +39,7 @@ describe("the preview switch", () => {
     expect(redirectToBuilt("/business/b1/fix-plan#weekly-plan")).toBe("/business/b1/fix-plan#weekly-plan");
     expect(redirectToBuilt("/business/b1/offers?tab=coupons")).toBe("/business/b1/offers?tab=coupons");
     expect(redirectToBuilt("/business/b1/get-reviews#get-more-reviews")).toBe("/business/b1/get-reviews#get-more-reviews");
-    expect(redirectToBuilt("/business/b1/growth#this-week")).toBeNull();
+    expect(redirectToBuilt("/business/b1/growth#this-week")).toBe("/business/b1/growth#this-week");
     expect(redirectToBuilt(null)).toBeNull();
   });
   test("the 'Test account' tag: only the dev test login, only under next dev", () => {
@@ -57,9 +57,12 @@ describe("the preview switch", () => {
 describe("Overview on the preview", () => {
   const line = (shell: ShellData, locale: Locale = "en") => renderToStaticMarkup(<LocaleProvider locale={locale}><ShellDataProvider value={shell}><GrowthLine businessId="b1" /></ShellDataProvider></LocaleProvider>);
   test("the Growth line in place of 'Start here', to the Growth plan (EN + ES); Free: '? Locked'", () => {
-    expect(text(line(PAID))).toBe("Growth · Tier 1 Starting out · Open your Growth plan");
+    // The real tier (Day 25B step 6), the dev "Test account" tag; Free never a tier.
+    expect(text(line(PAID))).toBe("Growth · Tier 2 Building Test account · Open your Growth plan");
+    expect(text(line({ ...PAID, testAccount: false, growth: { tier: 3, warning: true, preview: false } }))).toBe("Growth · Tier 3 Growing · Open your Growth plan Last week was quiet. One task by Sunday keeps Growing; two quiet weeks in a row drop you to Building.");
+    expect(text(line({ ...PAID, growth: null }))).toBe("Growth Test account · Open your Growth plan");
     expect(line(PAID)).toContain('href="/business/b1/growth"');
-    expect(text(line(PAID, "es"))).toBe("Crecimiento · Nivel 1 Comenzando · Abra su plan de crecimiento");
+    expect(text(line(PAID, "es"))).toBe("Crecimiento · Nivel 2 Construyendo Cuenta de prueba · Abra su plan de crecimiento");
     expect(text(line(FREE))).toBe("Growth · ? Locked · See what your Growth score would measure");
     expect(text(line(FREE, "es"))).toBe("Crecimiento · ? Bloqueado · Vea lo que mediría su puntuación de crecimiento");
   });

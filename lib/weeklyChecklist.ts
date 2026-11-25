@@ -13,7 +13,9 @@ export type WeeklyChecklistItemId =
   | "reply_reviews"
   | "share_review_link"
   | "add_photo"
-  | "check_hours";
+  | "check_hours"
+  // Day 25B step 6: the Growth plan's "I did this" on the answers task (never one of the five routine items).
+  | "answer_questions";
 
 export const WEEKLY_CHECKLIST_ITEM_IDS: readonly WeeklyChecklistItemId[] = [
   "post_update",
@@ -49,6 +51,10 @@ const ITEM_MESSAGE_KEYS: Record<WeeklyChecklistItemId, { title: MessageKey; howT
   check_hours: {
     title: "dashboard.growth.checklist.items.checkHours.title",
     howTo: "dashboard.growth.checklist.items.checkHours.howTo",
+  },
+  answer_questions: {
+    title: "dashboard.growth.checklist.items.answerQuestions.title",
+    howTo: "dashboard.growth.checklist.items.answerQuestions.howTo",
   },
 };
 

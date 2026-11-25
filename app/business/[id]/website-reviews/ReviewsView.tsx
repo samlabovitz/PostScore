@@ -28,7 +28,7 @@ import { googleWritesCopy } from "@/lib/googleWritesLaunch";
 import { useScrollToHash } from "@/lib/useScrollToHash";
 import { ReviewReplyDrafter } from "@/components/reviews/ReviewReplyDrafter";
 import type { reviewsFixSummary } from "@/lib/fixPlan";
-import { fixPlanHref, getReviewsHref } from "@/lib/routes";
+import { fixPlanHref, getReviewsHref, NEW_PAGES_LIVE } from "@/lib/routes";
 import { IconArrowRight } from "@tabler/icons-react";
 import { GoogleReviewsInbox } from "@/components/reviews/GoogleReviewsInbox";
 import { LockedPreview } from "@/components/plan/LockedPreview";
@@ -44,6 +44,7 @@ function StatCard({
   percent,
   target,
   caption,
+  action = null,
 }: {
   icon: typeof IconStar;
   label: string;
@@ -52,6 +53,8 @@ function StatCard({
   /** Shown at the bar's right end, e.g. "4.5★ of 5" / "15 of 150". */
   target: string | null;
   caption: string;
+  /** Under the caption (the new design's "Get more reviews (in Growth) →"). */
+  action?: React.ReactNode;
 }) {
   return (
     <Card className="flex flex-col gap-2 p-4 sm:p-5">
@@ -65,16 +68,31 @@ function StatCard({
         {target && <span className="shrink-0 text-[12px] font-medium tabular-nums text-ink-soft">{target}</span>}
       </div>
       <p className="text-[12.5px] leading-snug text-ink-mute">{caption}</p>
+      {action}
     </Card>
+  );
+}
+
+/** The new design's one way into Growth from Reviews: a gold primary button to the review link & QR. */
+function GetMoreReviewsButton({ businessId, testId }: { businessId: string; testId: string }) {
+  const locale = useLocale();
+  return (
+    <Link href={getReviewsHref(businessId, { hash: "review-link" })} data-testid={testId} className="inline-flex w-fit max-w-full shrink-0 items-center gap-1 rounded-lg bg-brass px-3.5 py-2 text-[13.5px] font-semibold text-ink transition-colors hover:bg-[color:color-mix(in_srgb,var(--color-brass)_85%,white)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink">
+      {t(locale, "dashboard.reviewsSplit.getMore")}
+      <IconArrowRight size={14} aria-hidden />
+    </Link>
   );
 }
 
 function ReviewSocialProof({
   rating,
   reviewCount,
+  getMore = null,
 }: {
   rating: number | null;
   reviewCount: number | null;
+  /** The new design: "Get more reviews (in Growth) →" in the Review volume card. */
+  getMore?: string | null;
 }) {
   const locale = useLocale();
   return (
@@ -103,6 +121,7 @@ function ReviewSocialProof({
               : null
           }
           caption={reviewCountCaption(reviewCount, locale)}
+          action={getMore ? <GetMoreReviewsButton businessId={getMore} testId="reviews-get-more-volume" /> : null}
         />
       </div>
       <GoogleMapsAttribution />
@@ -205,17 +224,26 @@ export function ReviewsView({
   return (
     <div className="flex flex-col gap-8 nav:gap-10">
       <div>
-        <Link
-          href={`/business/${businessId}`}
-          className="inline-flex items-center gap-1.5 text-[13px] font-medium text-ink-soft hover:text-ink"
-        >
-          <IconArrowLeft size={15} />
-          {t(locale, "dashboard.websiteReviews.backTo", {
-            name: reviews.businessName ?? t(locale, "dashboard.websiteReviews.businessFallback"),
-          })}
-        </Link>
-        <h1 className="mt-1.5 font-serif text-2xl font-semibold text-ink nav:text-[27px]">
+        {/* New design: the sidebar handles navigation. */}
+        {!NEW_PAGES_LIVE && (
+          <Link
+            href={`/business/${businessId}`}
+            className="inline-flex items-center gap-1.5 text-[13px] font-medium text-ink-soft hover:text-ink"
+          >
+            <IconArrowLeft size={15} />
+            {t(locale, "dashboard.websiteReviews.backTo", {
+              name: reviews.businessName ?? t(locale, "dashboard.websiteReviews.businessFallback"),
+            })}
+          </Link>
+        )}
+        <h1 className="flex flex-wrap items-baseline gap-x-3 mt-1.5 font-serif text-2xl font-semibold text-ink nav:text-[27px]">
           {t(locale, "dashboard.websiteReviews.pageTitle")}
+          {/* Visibility & Reputation's whole points from the saved scan, as the Overview's breakdown shows them. */}
+          {reviews.categoryPoints && (
+            <span className="font-sans text-[15px] font-semibold text-ink-soft" data-testid="reviews-pts">
+              {t(locale, "dashboard.googlePages.listing.pts", { earned: reviews.categoryPoints.earned, of: reviews.categoryPoints.of })}
+            </span>
+          )}
         </h1>
         <p className="mt-1 text-sm text-ink-soft">{t(locale, split ? "dashboard.reviewsSplit.subtitle" : "dashboard.websiteReviews.subtitle")}</p>
       </div>
@@ -244,7 +272,7 @@ export function ReviewsView({
 
       <div>
         {reviews.liveUnavailable && <LiveUnavailableNote />}
-        <ReviewSocialProof rating={reviews.rating} reviewCount={reviews.reviewCount} />
+        <ReviewSocialProof rating={reviews.rating} reviewCount={reviews.reviewCount} getMore={split ? businessId : null} />
         <ReviewGapLine goal={nearby?.goal ?? null} group={nearby?.group ?? null} />
       </div>
 
@@ -335,13 +363,13 @@ export function ReviewsView({
 
 /** Presence → Reviews (new design): the review fixes' line — "Fix these 2 and
  * Visibility & Reputation goes 21 → 32 pts (score 78 → 89)", the rest as
- * reviews grow — and the one link into Growth, "Get more reviews (in Growth) →". */
+ * reviews grow — and the way into Growth, the gold "Get more reviews (in Growth) →" (also in the Review volume card). */
 function ReviewsFixLine({ businessId, fixLine }: { businessId: string; fixLine: ReturnType<typeof reviewsFixSummary> }) {
   const locale = useLocale();
   return (
-    <div className="-mt-3 flex flex-col gap-2 rounded-xl border border-paper-deep bg-white px-4 py-3 text-[13.5px] text-ink" data-testid="reviews-fix-line">
+    <div className="-mt-3 flex flex-col gap-3 rounded-xl border border-paper-deep bg-white px-4 py-3 text-[13.5px] text-ink sm:flex-row sm:items-center sm:justify-between" data-testid="reviews-fix-line">
       {fixLine && (
-        <p>
+        <p className="min-w-0">
           <b>{tPlural(locale, "dashboard.reviewsSplit.fixLine", fixLine.count, { count: fixLine.count, from: fixLine.from, to: fixLine.to, score: fixLine.score, after: fixLine.after })}</b>
           {fixLine.later && <span className="text-ink-soft"> {t(locale, "dashboard.reviewsSplit.later")}</span>}{" "}
           <Link href={fixPlanHref(businessId)} className="font-semibold underline decoration-brass underline-offset-2 hover:decoration-ink">
@@ -349,10 +377,7 @@ function ReviewsFixLine({ businessId, fixLine }: { businessId: string; fixLine: 
           </Link>
         </p>
       )}
-      <Link href={getReviewsHref(businessId)} data-testid="reviews-get-more" className="inline-flex w-fit items-center gap-1 font-semibold text-ink hover:text-brass">
-        {t(locale, "dashboard.reviewsSplit.getMore")}
-        <IconArrowRight size={14} aria-hidden />
-      </Link>
+      <GetMoreReviewsButton businessId={businessId} testId="reviews-get-more" />
     </div>
   );
 }

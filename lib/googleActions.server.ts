@@ -68,14 +68,14 @@ export function groupActions(
   return Array.from(events.values()).sort((a, b) => a.date.localeCompare(b.date) || a.kind.localeCompare(b.kind));
 }
 
-export async function loadActionEvents(db: SupabaseClient, businessId: string, opts: { timeZone: string; practice: boolean; now?: Date }): Promise<ActionEvent[]> {
+export async function loadActionEvents(db: SupabaseClient, businessId: string, opts: { timeZone: string; practice: boolean; now?: Date; includeTestOffers?: boolean }): Promise<ActionEvent[]> {
   const since = new Date((opts.now ?? new Date()).getTime() - SINCE_DAYS * 86_400_000).toISOString();
   const changeCols = "batch_id, kind, field, status, approved_at, undone_at, undo_of, location_name";
   const [replies, withOrigin, promos, referrals] = await Promise.all([
     db.from("gbp_review_reply_log").select("action, status, created_at").eq("business_id", businessId).gte("created_at", since).limit(2000),
     db.from("gbp_changes").select(`${changeCols}, practice, origin`).eq("business_id", businessId).gte("approved_at", since).limit(1000),
-    db.from("promos").select("created_at").eq("business_id", businessId).gte("created_at", since).limit(500),
-    db.from("referrals").select("created_at").eq("business_id", businessId).gte("created_at", since).limit(500),
+    db.from("promos").select("created_at, is_test").eq("business_id", businessId).gte("created_at", since).limit(500),
+    db.from("referrals").select("created_at, is_test").eq("business_id", businessId).gte("created_at", since).limit(500),
   ]);
   // Before supabase/day23e-posts-answers.sql: no origin; before
   // supabase/gbp-changes-practice.sql: the old practice markers.
@@ -86,8 +86,9 @@ export async function loadActionEvents(db: SupabaseClient, businessId: string, o
     {
       replies: list(replies),
       changes: list<ChangeRow>(changes),
-      promos: list(promos),
-      referrals: list(referrals),
+      // Test offers (spec §6.2) never show for a real owner; the dev test login sees its own.
+      promos: list<{ created_at: string; is_test?: boolean | null }>(promos).filter((p) => opts.includeTestOffers || !p.is_test),
+      referrals: list<{ created_at: string; is_test?: boolean | null }>(referrals).filter((p) => opts.includeTestOffers || !p.is_test),
     },
     opts
   );

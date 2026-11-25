@@ -51,7 +51,9 @@ describe("paid plans keep their pre-batch layout, page by page", () => {
     const view = read("app/business/[id]/website-reviews/ReviewsView.tsx");
     expect(without(tags(view), ["ReviewGapLine"])).toEqual([
       // Day 25B step 5: the new design (split) shows ReviewsFixLine in place of the asking parts (two Links in it).
-      "Card", "ProgressBar", "SectionHeading", "StatCard", "StatCard", "Pill", "Pill", "Card", "Link", "ReviewsFixLine", "GetMoreReviews", "ReviewGuide", "CounterTools", "LiveUnavailableNote", "ReviewSocialProof", "SectionHeading", "CategoryCard", "GbpReplyCheckConnect", "GoogleReviewsInbox", "ReviewReplyDrafter", "ReviewReplyDrafter", "LockedPreview", "ConnectToUnlockCard", "ComingSoonCard", "Link", "Link",
+      // New design only: the gold "Get more reviews (in Growth) →" (GetMoreReviewsButton) in the fix line and the
+      // Review volume card; "Back to…" hidden (the sidebar navigates). localhost:3000 renders as before.
+      "Card", "ProgressBar", "Link", "SectionHeading", "StatCard", "StatCard", "GetMoreReviewsButton", "Pill", "Pill", "Card", "Link", "ReviewsFixLine", "GetMoreReviews", "ReviewGuide", "CounterTools", "LiveUnavailableNote", "ReviewSocialProof", "SectionHeading", "CategoryCard", "GbpReplyCheckConnect", "GoogleReviewsInbox", "ReviewReplyDrafter", "ReviewReplyDrafter", "LockedPreview", "ConnectToUnlockCard", "ComingSoonCard", "Link", "GetMoreReviewsButton",
     ]);
     // Premium/Multi: the replies line (unlimited drafts; with Google connected, replying from here).
     expect(view).toContain('{isPremiumPlan(plan) && (\n          <p data-testid="ai-replies-soon"');

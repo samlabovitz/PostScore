@@ -1,7 +1,7 @@
 // "Re-check my website": how many website-only re-checks a business has
 // left today, and what one changed. Pure.
 //
-// - 3 per business per calendar day in the business's own time zone,
+// - 2 per business per calendar day in the business's own time zone (3 until Nov 24),
 //   separate from the 1 full re-scan a day (lib/rescanPolicy.ts). A
 //   re-check is PageSpeed + Safe Browsing + the site read — no Google
 //   Places call.
@@ -12,7 +12,7 @@
 import { checkLabelKey, type CheckResult, type ScoreBreakdown } from "@/lib/scoring";
 import { zonedDayKey } from "@/lib/i18n/format";
 
-export const WEBSITE_RECHECKS_PER_DAY = 3;
+export const WEBSITE_RECHECKS_PER_DAY = 2;
 export const WEBSITE_RECHECK_KIND = "website_recheck" as const;
 /** A re-score of the saved data with new scoring code (scripts/rescore-all.ts). */
 export const SCORING_UPDATE_KIND = "scoring_update" as const;

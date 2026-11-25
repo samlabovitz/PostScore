@@ -12,6 +12,7 @@ import "server-only";
 // may open them; everyone else is sent to the old tab.
 
 import { NEW_PAGES_LIVE } from "@/lib/routes";
+import { isDevTestLoginEmail } from "@/lib/offerTesting";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getBusinessSummary } from "@/app/actions/businesses";
@@ -159,7 +160,7 @@ export async function loadGoogleResults(businessId: string, gbpParam?: string): 
     gbpConnected ? listingExtras(createAdminClient(), businessId).catch(() => null) : Promise.resolve(null),
     gbpConnected ? loadAverageVisit(db, businessId) : Promise.resolve(null),
     gbpConnected ? loadVisitShare(db, businessId) : Promise.resolve(null),
-    (await import("@/lib/googleActions.server")).loadActionEvents(db, businessId, { timeZone, practice }).catch(() => []),
+    (await import("@/lib/googleActions.server")).loadActionEvents(db, businessId, { timeZone, practice, includeTestOffers: await viewerIsDevTestLogin() }).catch(() => []),
     websiteHoursFor(scored.business),
   ]);
   return {
@@ -258,4 +259,10 @@ export async function loadGoogleListing(businessId: string, gbpParam?: string): 
       nowMatch,
     },
   };
+}
+
+/** The dev test login sees its own test offers in "Since you did this" (spec §6.2 exception); real owners never. */
+async function viewerIsDevTestLogin(): Promise<boolean> {
+  const { data } = await createClient().auth.getUser();
+  return isDevTestLoginEmail(data.user?.email);
 }

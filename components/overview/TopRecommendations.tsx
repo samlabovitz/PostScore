@@ -101,8 +101,11 @@ export function TopRecommendations({
   hoursCheck = null,
   limit = Infinity,
   lastScanAt = null,
+  growthCount = null,
 }: {
   businessId: string;
+  /** New design: this week's plan size for the Growth line ("4 tasks this week"). */
+  growthCount?: number | null;
   recommendations: Recommendation[] | null;
   /** How many to show (after the merged details task moves first). */
   limit?: number;
@@ -144,7 +147,7 @@ export function TopRecommendations({
       </div>
 
       {NEW_PAGES_LIVE ? (
-        <GrowthLine businessId={businessId} />
+        <GrowthLine businessId={businessId} count={growthCount} />
       ) : (
       <Link
         href={fixPlanHref(businessId, { hash: "weekly-plan" })}
@@ -248,10 +251,12 @@ export function TopRecommendations({
  * "Growth · Tier 1 Starting out · Open your Growth plan →"; Free:
  * "Growth · ? Locked · See what your Growth score would measure →". Every
  * paid owner shows Tier 1 until the tiers arrive (step 6). */
-export function GrowthLine({ businessId }: { businessId: string }) {
+export function GrowthLine({ businessId, count = null }: { businessId: string; count?: number | null }) {
   const locale = useLocale();
   const shell = useShellData();
   const free = shell?.plan === "free";
+  const growth = shell?.growth ?? null;
+  const name = growth ? t(locale, TIER_NAME_KEYS[growth.tier - 1]) : null;
   return (
     <Link
       href={growthPlanHref(businessId)}
@@ -259,12 +264,31 @@ export function GrowthLine({ businessId }: { businessId: string }) {
       data-locked={free || undefined}
       className="mt-3 flex items-center justify-between gap-3 rounded-xl bg-ink px-4 py-3 text-paper transition-colors hover:bg-[color:color-mix(in_srgb,var(--color-ink)_90%,transparent)]"
     >
-      <span className="text-[13.5px] font-semibold">
-        <span className="text-brass">{t(locale, "dashboard.overview.growthLine.label")}</span>
-        {" · "}
-        {free ? t(locale, "dashboard.overview.growthLine.locked") : t(locale, "dashboard.overview.growthLine.tier", { n: 1, name: t(locale, TIER_NAME_KEYS[0]) })}
-        {" · "}
-        <span className="font-medium">{free ? t(locale, "dashboard.overview.growthLine.freeLink") : t(locale, "dashboard.overview.growthLine.open")}</span>
+      <span className="flex flex-col gap-0.5">
+        <span className="text-[13.5px] font-semibold">
+          <span className="text-brass">{t(locale, "dashboard.overview.growthLine.label")}</span>
+          {(free || growth) && " · "}
+          {free ? t(locale, "dashboard.overview.growthLine.locked") : growth ? t(locale, "dashboard.overview.growthLine.tier", { n: growth.tier, name: name! }) : null}
+          {shell?.testAccount && !free && (
+            <span data-testid="growth-line-test" className="ml-1.5 rounded-full bg-white/15 px-1.5 py-px text-[10.5px] font-semibold text-paper">
+              {t(locale, "dashboard.nav.testAccount")}
+            </span>
+          )}
+          {!free && count !== null && count > 0 && (
+            <>
+              {" · "}
+              {tPlural(locale, shell?.plan === "premium" || shell?.plan === "multi" ? "dashboard.growthPlan.tasksThisWeek" : "dashboard.growthPlan.stepsThisWeek", count, { count })}
+            </>
+          )}
+          {" · "}
+          <span className="font-medium">{free ? t(locale, "dashboard.overview.growthLine.freeLink") : t(locale, "dashboard.overview.growthLine.open")}</span>
+        </span>
+        {/* One quiet week ("Keep your tier" amber): never a surprise drop (spec §6.4). */}
+        {!free && growth?.warning && name && (
+          <span data-testid="growth-line-warning" className="text-[12.5px] font-medium text-[color:color-mix(in_srgb,var(--color-brass)_80%,white)]">
+            {growth.tier > 1 ? t(locale, "dashboard.growthPlan.keep.quiet", { tier: name, lower: t(locale, TIER_NAME_KEYS[growth.tier - 2]) }) : t(locale, "dashboard.growthPlan.keep.start")}
+          </span>
+        )}
       </span>
       <IconArrowRight size={16} className="shrink-0 text-brass" aria-hidden />
     </Link>

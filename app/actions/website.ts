@@ -1,5 +1,6 @@
 "use server";
 
+import { websiteWholePoints } from "@/lib/categoryPoints";
 import { viewLocale } from "@/lib/viewLocale.server";
 import { loadOwnerDetails, withOwnerDetailsFor } from "@/lib/ownerDetails.server";
 import { gradedWebsite, listingLinkBroken } from "@/lib/businessWebsite";
@@ -74,6 +75,8 @@ export interface WebsitePageData {
    * gradedWebsite — owner-confirmed, verified, or the listing's link), and
    * whether the listing's own link is parked or broken. */
   gradedSite: { url: string; source: import("@/lib/businessWebsite").WebsiteSource; listingBroken: boolean } | null;
+  /** The listing was read live and has no website link, though the last scan graded one. */
+  notOnListing?: boolean;
   /** Non-null only the first scan to SUSPECT Google's listing lost its
    * website (one lookup + one retry, both empty, despite one kept on
    * file for scoring) — see resolveListingWebsite in
@@ -103,6 +106,9 @@ export interface WebsitePageData {
    * analysis section's itemized findings — the exact same CheckResults
    * scoreBusiness() produces everywhere else, never a parallel copy. */
   websiteCategory: CategoryResult | null;
+  /** The title's "29 / 30 pts" from the saved scan, rounded as the Overview's breakdown (lib/categoryPoints.ts);
+   * `speedPending`: mobile speed isn't scored yet. */
+  categoryPoints?: { earned: number; of: number; speedPending: boolean } | null;
   /** v1.10.0: scoreBasisPoints(all categories) — see lib/scoring.ts. */
   scoreBasis: number;
   /** The business's own time zone (lib/businessTimeZone.ts). */
@@ -155,6 +161,8 @@ export interface BuilderOffer {
    * theoretical case where the template itself has no determinable
    * website checks (never happens in practice). */
   templateWebsiteScore: number | null;
+  /** The starter template's Website points (whole, out of 30), from the same scoring — the page's comparison. */
+  templatePoints: number | null;
 }
 
 export type GetWebsitePageDataResult =
@@ -188,28 +196,29 @@ function estimateTemplateWebsiteScore(
   business: BusinessScoringRow,
   data: StarterSiteTemplateData,
   locale: Locale
-): number | null {
+): { relative: number | null; points: number | null } {
   const templateInput = buildTemplateScoringInput(business, data, locale, TEMPLATE_HOSTING_UNKNOWN);
   const templateBreakdown = scoreBusiness(templateInput, locale);
-  return templateBreakdown.categories.find((c) => c.id === "website")?.relativeScore ?? null;
+  return { relative: templateBreakdown.categories.find((c) => c.id === "website")?.relativeScore ?? null, points: websiteWholePoints(templateBreakdown.categories)?.earned ?? null };
 }
 
 function buildBuilderOffer(
   hasWebsite: boolean,
   realWebsiteScore: number | null,
-  templateWebsiteScore: number | null
+  templateWebsiteScore: number | null,
+  templatePoints: number | null = null
 ): BuilderOffer {
   if (!hasWebsite) {
-    return { reason: "no_website", realWebsiteScore, templateWebsiteScore };
+    return { reason: "no_website", realWebsiteScore, templateWebsiteScore, templatePoints };
   }
   if (
     realWebsiteScore !== null &&
     templateWebsiteScore !== null &&
     templateWebsiteScore - realWebsiteScore >= UNDERPERFORMING_MARGIN
   ) {
-    return { reason: "underperforming", realWebsiteScore, templateWebsiteScore };
+    return { reason: "underperforming", realWebsiteScore, templateWebsiteScore, templatePoints };
   }
-  return { reason: "backup", realWebsiteScore, templateWebsiteScore };
+  return { reason: "backup", realWebsiteScore, templateWebsiteScore, templatePoints };
 }
 
 /**
@@ -268,11 +277,22 @@ export async function getWebsitePageData(businessId: string): Promise<GetWebsite
   // A real site, on the listing OR verified elsewhere (the real Bánh Mì
   // Boy case) — same definition website.has_website scores, so the page
   // never pitches "build a website" to a business that already has one.
-  const hasWebsite = (!!data.website && data.website.trim().length > 0) || !!verifiedWebsiteUrl;
   const { readOwnerWebsite } = await import("@/lib/ownerWebsite.server");
   const ownerWebsite = await readOwnerWebsite(supabase, businessId);
   const siteRow = { website: data.website, verified_website_url: verifiedWebsiteUrl, owner_website_url: ownerWebsite?.url ?? null, website_analysis_json: data.website_analysis_json };
-  const graded = gradedWebsite(siteRow);
+  // The site the last scan graded (our own result). When the listing can't be read live right now (a failed
+  // read, the monthly cap, a dev run), the page uses it — the same site the score is from, never "no website".
+  const { gradedSiteUrl } = await import("@/lib/gradedSite");
+  const { socialPagePlatform } = await import("@/lib/websiteTrust");
+  const scanned = gradedSiteUrl(data.website_analysis_json);
+  const scanSite = scanned && socialPagePlatform(scanned) === null ? scanned : null;
+  const fromRow = gradedWebsite(siteRow);
+  // The listing couldn't be read live: a "listing" link here is the scan's own (ownerListing.server.ts), so say "From your last scan".
+  const fromRowShown = fromRow && fromRow.source === "listing" && data.live_unavailable === true ? { ...fromRow, source: "scan" as const } : fromRow;
+  const graded: { url: string; source: import("@/lib/businessWebsite").WebsiteSource } | null = fromRowShown ?? (scanSite ? { url: scanSite, source: "scan" } : null);
+  const hasWebsite = (!!data.website && data.website.trim().length > 0) || !!verifiedWebsiteUrl || graded !== null;
+  // The listing was read and has no link, yet the scan graded a site: "Your website isn't on your Google listing yet".
+  const notOnListing = !fromRow && !!scanSite && data.live_unavailable !== true;
   const gradedSite = graded ? { ...graded, listingBroken: listingLinkBroken(siteRow) } : null;
   const locale = viewLocale(data.language);
   const profile = resolveBizProfile(
@@ -298,7 +318,7 @@ export async function getWebsitePageData(businessId: string): Promise<GetWebsite
   const realWebsiteScore =
     hasWebsite && realInput.websiteAnalysis?.content ? websiteCategory?.relativeScore ?? null : null;
 
-  const templateWebsiteScore = estimateTemplateWebsiteScore(
+  const template = estimateTemplateWebsiteScore(
     businessRow,
     {
       businessName: data.name ?? "Your business",
@@ -311,7 +331,7 @@ export async function getWebsitePageData(businessId: string): Promise<GetWebsite
     locale
   );
 
-  const builderOffer = buildBuilderOffer(hasWebsite, realWebsiteScore, templateWebsiteScore);
+  const builderOffer = buildBuilderOffer(hasWebsite, realWebsiteScore, template.relative, template.points);
   // Day 23 2d-2: Google's values shown here are read now (lib/ownerListing.ts).
   const live = data;
   // Day 23 2d-3: the owner's confirmed details (lib/ownerDetails.ts).
@@ -339,12 +359,19 @@ export async function getWebsitePageData(businessId: string): Promise<GetWebsite
       website: data.website,
       verifiedWebsiteUrl,
       gradedSite,
+      notOnListing,
       googleListingMissingWebsiteSince: data.google_listing_missing_website_since,
       googleListingWebsiteRemovedSince: data.google_listing_website_removed_since,
       googleListingLastKnownWebsiteAt: data.google_listing_last_known_website_at,
       googleMapsUri: live.google_maps_uri ?? null,
       websiteAnalysis: realInput.websiteAnalysis,
       websiteCategory,
+      categoryPoints: (() => {
+        const w = websiteWholePoints(realBreakdown.categories);
+        if (!w) return null;
+        const speed = websiteCategory?.checks.find((c) => c.id === "website.performance_mobile");
+        return { ...w, speedPending: !!speed && speed.earnedPoints === null };
+      })(),
       scoreBasis: scoreBasisPoints(realBreakdown.categories),
       timeZone,
       websiteSuggestions,

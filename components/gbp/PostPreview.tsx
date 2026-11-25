@@ -5,16 +5,16 @@
 // - usePostDraft: the week's draft (app/actions/gbpPosts.ts openPostDraft),
 //   the owner's edits, the button and photo, and the latest post's state.
 // - PostPreview (Premium): edit the text, choose the photo and the button,
-//   "Write another", "Publish to Google" → "Waiting for Google" → "Live on
+//   "Draft another with PostAI", "Publish to Google" → "Waiting for Google" → "Live on
 //   Google ✓ · View post ↗" (or "Google didn't accept this post"), and
 //   "Remove from Google" for 7 days. Approve all publishes the same state.
-// - PostDraftCopy (Grow): the same draft to copy (+ "Write another", 3 a week).
+// - PostDraftCopy (Grow): the same draft to copy (+ "Draft another with PostAI", 3 a week).
 // Nothing is sent to Google except from "Publish to Google" or Approve all.
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { CopyBlock } from "@/components/ui/CopyBlock";
 import { openPostDraft, postStatusAction, publishPostAction, undoPostAction, writeAnotherPost, type LatestPost, type OpenPostDraftResult } from "@/app/actions/gbpPosts";
-import { POST_MAX, STORY_TOPICS, postProblems, type PostCta, type PostKind, type PostOffer, type PostPhoto, type PostProblem, type PostTopic, type PostType } from "@/lib/gbpPosts";
+import { GROW_POST_REDRAFTS, POST_MAX, STORY_TOPICS, postProblems, type PostCta, type PostKind, type PostOffer, type PostPhoto, type PostProblem, type PostTopic, type PostType } from "@/lib/gbpPosts";
 import { applySpellingFix, spellingFlags, type SpellingFlag } from "@/lib/serviceSpelling";
 import { formatShortDate, t, type MessageKey, useLocale, useTimeZone } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
@@ -24,6 +24,25 @@ const W = (key: string) => `dashboard.googleTab.w.${key}` as MessageKey;
 /** Buttons, 14px text: 44px tall on phones (tap targets); on desktop a primary is 40px, a secondary 36px. */
 export const W_BUTTON = "inline-flex min-h-[44px] shrink-0 items-center justify-center whitespace-nowrap rounded-lg border border-ink bg-ink px-4 text-[14px] font-semibold text-paper disabled:opacity-60 lg:min-h-[40px] lg:px-3.5";
 export const W_BUTTON_SOFT = "inline-flex min-h-[44px] shrink-0 items-center justify-center whitespace-nowrap rounded-lg border border-paper-line bg-white px-4 text-[14px] font-semibold text-ink hover:border-ink disabled:opacity-60 lg:min-h-[36px] lg:px-3";
+
+/** Grow's new drafts left this week, shared by every editor of one business (the post and the
+ * description draw on the same 3); null: unlimited (Premium) or not known yet. */
+const leftStore = new Map<string, number | null>();
+const leftListeners = new Set<() => void>();
+export function setDraftsLeft(businessId: string, left: number | null) {
+  leftStore.set(businessId, left);
+  leftListeners.forEach((l) => l());
+}
+export function useDraftsLeft(businessId: string): number | null {
+  return useSyncExternalStore(
+    (l) => {
+      leftListeners.add(l);
+      return () => leftListeners.delete(l);
+    },
+    () => leftStore.get(businessId) ?? null,
+    () => null,
+  );
+}
 
 export interface PostDraftState {
   status: "idle" | "loading" | "ok" | "failed";
@@ -35,7 +54,7 @@ export interface PostDraftState {
   photos: PostPhoto[];
   photoName: string | null;
   setPhotoName: (v: string | null) => void;
-  /** Grow: "Write another" left this week; null: unlimited. */
+  /** Grow: new drafts left this week; null: unlimited. */
   left: number | null;
   fallback: boolean;
   /** Premium on a connected listing (or practice mode). */
@@ -51,8 +70,8 @@ export interface PostDraftState {
   fixFlag: (flag: SpellingFlag) => void;
   keep: string[];
   keepWord: (word: string) => void;
-  /** "Tell PostScore what you want": a new draft of this type from the owner's request (same rules). */
-  custom: (request: string) => Promise<void>;
+  /** "Draft another with PostAI": a fresh draft of this type, or one on the owner's theme (same rules). */
+  custom: (request: string | null) => Promise<void>;
   /** The post's type: Update, Q&A ("Your questions, answered") or Offer (the running coupon). */
   type: PostType;
   setType: (t: PostType) => void;
@@ -79,7 +98,8 @@ export function usePostDraft(businessId: string, opts: { day: string | null; aut
   const [cta, setCta] = useState<PostCta>("NONE");
   const [photoName, setPhotoName] = useState<string | null>(null);
   const [latest, setLatest] = useState<LatestPost | null>(null);
-  const [left, setLeft] = useState<number | null>(null);
+  const left = useDraftsLeft(businessId);
+  const setLeft = useCallback((v: number | null) => setDraftsLeft(businessId, v), [businessId]);
   const [fallback, setFallback] = useState(false);
   const [anotherBusy, setAnotherBusy] = useState(false);
   const [anotherLimit, setAnotherLimit] = useState(false);
@@ -106,7 +126,7 @@ export function usePostDraft(businessId: string, opts: { day: string | null; aut
         setStatus("ok");
       })
       .catch(() => setStatus("failed"));
-  }, [businessId, timeZone, opts.day, opts.initialText, opts.initialType, opts.promoId]);
+  }, [businessId, timeZone, opts.day, opts.initialText, opts.initialType, opts.promoId, setLeft]);
 
   useEffect(() => {
     if (opts.auto) load();
@@ -127,7 +147,7 @@ export function usePostDraft(businessId: string, opts: { day: string | null; aut
     } finally {
       setAnotherBusy(false);
     }
-  }, [businessId, timeZone, opts.day, opts.promoId, type, setText]);
+  }, [businessId, timeZone, opts.day, opts.promoId, type, setText, setLeft]);
   const another = useCallback(() => write(null), [write]);
   const types: PostType[] = data ? (["update", ...(data.drafts.qa ? ["qa"] : []), ...(data.drafts.offer ? ["offer"] : [])] as PostType[]) : [type];
   const flags = spellingFlags(text, { services: data?.serviceNames ?? [], keep, prose: true, ownerTerms: data?.priceNames ?? [] });
@@ -153,7 +173,7 @@ export function usePostDraft(businessId: string, opts: { day: string | null; aut
     fixFlag: (flag) => setText((x) => applySpellingFix(x, flag)),
     keep,
     keepWord: (word) => setKeep((k) => (k.includes(word) ? k : [...k, word])),
-    custom: (request) => write(request),
+    custom: (request) => write(request?.trim() ? request : null),
     type,
     setType,
     types,
@@ -250,16 +270,6 @@ function ProblemLines({ problems }: { problems: PostProblem[] }) {
   );
 }
 
-function AnotherButton({ state }: { state: PostDraftState }) {
-  const locale = useLocale();
-  if (state.left === 0 || state.anotherLimit) return <p className="text-[13px] text-ink-mute">{t(locale, W("post.limit"))}</p>;
-  return (
-    <button type="button" onClick={() => void state.another()} disabled={state.anotherBusy} className={cn(W_BUTTON_SOFT, "w-fit")} data-testid="post-another">
-      {state.anotherBusy ? t(locale, W("post.writing")) : state.left === null ? t(locale, W("post.another")) : t(locale, W("post.anotherLeft"), { count: state.left })}
-    </button>
-  );
-}
-
 /** Premium: the editable preview with "Publish to Google". */
 /** `showBlocked`: say "Posted today · next post tomorrow" here (off when the row above already says it). */
 export function PostPreview({ businessId, state, kind = "week", standalonePublish = true, showBlocked = true }: { businessId: string; state: PostDraftState; kind?: PostKind; standalonePublish?: boolean; showBlocked?: boolean }) {
@@ -353,10 +363,11 @@ export function PostPreview({ businessId, state, kind = "week", standalonePublis
         </label>
       )}
       <PostStatusLine businessId={businessId} state={state} />
-      {/* 4. Write another · Publish */}
+      {/* 4. Draft another with PostAI (optionally on a theme) */}
+      {!live && <PostSteer state={state} />}
+      {/* 5. Publish */}
       {!live && (
         <div className="flex flex-wrap items-center gap-2.5">
-          <AnotherButton state={state} />
           {standalonePublish && state.publish && !state.blockedToday && (
             <button type="button" onClick={publish} disabled={!canEdit || publishing || state.problems.length > 0 || state.flags.length > 0} className={W_BUTTON} data-testid="post-publish">
               {publishing ? t(locale, W("post.publishing")) : t(locale, W("post.publish"))}
@@ -369,14 +380,13 @@ export function PostPreview({ businessId, state, kind = "week", standalonePublis
           )}
         </div>
       )}
-      {!live && <PostRequest state={state} />}
       {state.publish && !canEdit && <p className="text-[13px] text-ink-mute" data-testid="post-read-only">{t(locale, W("readOnly"))}</p>}
       {error && <p className="text-[13px] text-red" data-testid="post-error">{error}</p>}
     </div>
   );
 }
 
-/** Grow: the same draft to copy, plus "Write another" (3 a week). */
+/** Grow: the same draft to copy, plus "Draft another with PostAI" (3 a week). */
 export function PostDraftCopy({ state }: { state: PostDraftState }) {
   const locale = useLocale();
   const { load } = state;
@@ -391,8 +401,7 @@ export function PostDraftCopy({ state }: { state: PostDraftState }) {
       {/* A likely typo is fixed or kept before the text can be copied. */}
       <PostSpelling state={state} />
       {state.flags.length === 0 ? <CopyBlock text={state.text} rows={5} /> : <p className="whitespace-pre-wrap rounded-lg border border-paper-line bg-paper px-3 py-2 text-[13px]">{state.text}</p>}
-      <AnotherButton state={state} />
-      <PostRequest state={state} />
+      <PostSteer state={state} />
     </div>
   );
 }
@@ -418,54 +427,69 @@ function PostSpelling({ state }: { state: PostDraftState }) {
   );
 }
 
-/** A post about something real: the owner's 1–2 facts, and PostAI writes only from those. */
-/** "Tell PostScore what you want": a short request with example chips (tap one to start from it).
- * Same rules as every draft — no invented events, prices or results (a real story only from facts typed
- * here), Google's rules, spelling. Grow: 3 custom drafts a week; Premium: unlimited. Shared by the post,
- * the Q&A post and the description (components/gbp/AnswersPreview.tsx). */
-export function RequestBox({ chips, onWrite, busy, limited, testId, openLabel }: { chips: string[]; onWrite: (request: string) => void | Promise<void>; busy: boolean; limited: boolean; testId: string; openLabel?: string }) {
+/** The gold PostAI button (the same style as "Get your review link & QR"). */
+export const W_BUTTON_AI = "inline-flex min-h-[44px] shrink-0 items-center justify-center whitespace-nowrap rounded-lg bg-brass px-4 text-[14px] font-semibold text-ink transition-colors hover:bg-[color:color-mix(in_srgb,var(--color-brass)_85%,white)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink disabled:opacity-60 lg:min-h-[40px] lg:px-3.5";
+
+/** One way to steer a draft: an optional theme and "Draft another with PostAI". Empty: a fresh draft;
+ * with text: a draft on that theme. Same rules as every draft — no invented facts, stories or results
+ * (a real story only from facts typed here), Google's rules, spelling. Grow: 3 new drafts a week,
+ * shared with the description ("2 of 3 drafts left this week"); Premium: unlimited. Shared by the post,
+ * the Q&A and offer posts, and the description (components/gbp/AnswersPreview.tsx). */
+export function DraftSteer({ label, placeholder, onDraft, busy, left, limited, testId }: { label: string; placeholder: string; onDraft: (request: string | null) => void | Promise<void>; busy: boolean; left: number | null; limited: boolean; testId: string }) {
   const locale = useLocale();
   const [request, setRequest] = useState("");
-  const [open, setOpen] = useState(false);
-  if (limited) return null;
+  if (limited || left === 0) return <p className="text-[13px] text-ink-mute" data-testid={`${testId}-limit`}>{t(locale, W("post.limit"))}</p>;
+  const go = () => void onDraft(request.trim() ? request.trim() : null);
   return (
     <div className="flex flex-col gap-2" data-testid={testId}>
-      {!open ? (
-        <button type="button" onClick={() => setOpen(true)} className="inline-flex min-h-[44px] w-fit items-center text-left text-[13px] font-semibold text-ink underline underline-offset-2" data-testid={`${testId}-open`}>
-          {openLabel ?? t(locale, W("req.open"))}
+      <label className="flex flex-col gap-1.5">
+        <span className="text-[13px] font-semibold text-ink-soft">{label}</span>
+        <input
+          type="text"
+          value={request}
+          onChange={(e) => setRequest(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && !busy) {
+              e.preventDefault();
+              go();
+            }
+          }}
+          maxLength={300}
+          placeholder={placeholder}
+          className="min-h-[44px] w-full rounded-lg border border-paper-line bg-white px-3.5 text-[14px] outline-none focus:border-ink"
+          data-testid={`${testId}-text`}
+        />
+      </label>
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
+        <button type="button" onClick={go} disabled={busy} className={W_BUTTON_AI} data-testid={`${testId}-write`}>
+          {busy ? t(locale, W("post.writing")) : t(locale, W("steer.button"))}
         </button>
-      ) : (
-        <>
-          <p className="text-[13px] font-semibold text-ink-soft">{t(locale, W("req.title"))}</p>
-          <div className="flex flex-wrap gap-2">
-            {chips.map((c) => (
-              <button key={c} type="button" onClick={() => setRequest(c)} className="inline-flex min-h-[44px] items-center rounded-full border border-paper-line bg-white px-3.5 text-[13px] text-ink hover:border-ink" data-testid={`${testId}-chip`}>
-                {c}
-              </button>
-            ))}
-          </div>
-          <textarea value={request} onChange={(e) => setRequest(e.target.value)} rows={2} maxLength={300} placeholder={t(locale, W("req.placeholder"))} className="w-full rounded-lg border border-paper-line bg-white px-3.5 py-2.5 text-[14px] outline-none focus:border-ink" data-testid={`${testId}-text`} />
-          <p className="text-[13px] text-ink-mute">{t(locale, W("req.note"))}</p>
-          <button type="button" onClick={() => void onWrite(request)} disabled={busy || request.trim().length < 3} className={cn(W_BUTTON_SOFT, "w-fit")} data-testid={`${testId}-write`}>
-            {busy ? t(locale, W("post.writing")) : t(locale, W("req.write"))}
-          </button>
-        </>
-      )}
+        {left !== null && (
+          <span className="text-[13px] text-ink-mute" data-testid={`${testId}-left`}>
+            {t(locale, W("steer.left"), { count: left, of: GROW_POST_REDRAFTS })}
+          </span>
+        )}
+      </div>
+      <p className="text-[12.5px] text-ink-mute">{t(locale, W("req.note"))}</p>
     </div>
   );
 }
 
-/** The post's request box: chips for the type shown (an update's chips include a real before-and-after, written only from facts the owner types). */
-function PostRequest({ state }: { state: PostDraftState }) {
+/** The post's control: the example follows the business's kind ("our new stylist" for a salon). */
+function PostSteer({ state }: { state: PostDraftState }) {
   const locale = useLocale();
   const story = state.topic !== null && STORY_TOPICS.includes(state.topic) ? state.topic : "default";
-  const chips =
-    state.type === "qa"
-      ? [t(locale, W("req.chip.qa.prices")), t(locale, W("req.chip.qa.visit")), t(locale, W("req.chip.shorter"))]
-      : state.type === "offer"
-        ? [t(locale, W("req.chip.offer.urgent")), t(locale, W("req.chip.shorter")), t(locale, W("req.chip.friendlier"))]
-        : [t(locale, W(`req.chip.story.${story}`)), t(locale, W("req.chip.booking")), t(locale, W("req.chip.shorter")), t(locale, W("req.chip.friendlier"))];
-  return <RequestBox chips={chips} onWrite={state.custom} busy={state.anotherBusy} limited={state.left === 0 || state.anotherLimit} testId="post-request" openLabel={state.type === "update" ? t(locale, W(story === "default" ? "post.facts.open.default" : `post.facts.open.${story}`)) : undefined} />;
+  return (
+    <DraftSteer
+      label={t(locale, W("steer.post.label"))}
+      placeholder={t(locale, W(`steer.post.placeholder.${story}`))}
+      onDraft={state.custom}
+      busy={state.anotherBusy}
+      left={state.left}
+      limited={state.anotherLimit}
+      testId="post-steer"
+    />
+  );
 }
 
 /** Update · Q&A · Offer — the types this business has. */

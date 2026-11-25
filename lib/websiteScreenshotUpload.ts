@@ -35,6 +35,8 @@ function slugifyPageLabel(label: string): string {
 
 export interface UploadedWebsiteScreenshots {
   screenshotUrl: string | null;
+  /** The homepage at a phone's size (the Website page's phone thumbnail). */
+  mobileScreenshotUrl?: string | null;
   additionalPages: WebsiteAnalysisPage[];
 }
 
@@ -80,13 +82,14 @@ async function uploadOne(
  */
 export async function uploadWebsiteScreenshots(
   businessId: string,
-  capture: WebsiteScreenshotCapture | { screenshotBytes: Buffer | null; additionalPages: AdditionalPageCapture[] }
+  capture: WebsiteScreenshotCapture | { screenshotBytes: Buffer | null; mobileScreenshotBytes?: Buffer | null; additionalPages: AdditionalPageCapture[] }
 ): Promise<UploadedWebsiteScreenshots> {
   const admin = createAdminClient();
 
   const screenshotUrl = capture.screenshotBytes
     ? await uploadOne(admin, `${businessId}.png`, capture.screenshotBytes, "homepage")
     : null;
+  const mobileScreenshotUrl = capture.mobileScreenshotBytes ? await uploadOne(admin, `${businessId}/phone.png`, capture.mobileScreenshotBytes, "homepage (phone)") : null;
 
   const usedSlugs = new Set<string>();
   const additionalPages: WebsiteAnalysisPage[] = [];
@@ -104,7 +107,7 @@ export async function uploadWebsiteScreenshots(
   // Pages the new capture no longer has: their old files go.
   if (screenshotUrl || additionalPages.length > 0) {
     const { removeReplacedScreenshots } = await import("@/lib/screenshotStorage.server");
-    await removeReplacedScreenshots(admin, businessId, [screenshotUrl, ...additionalPages.map((p) => p.screenshotUrl)].filter((p): p is string => !!p));
+    await removeReplacedScreenshots(admin, businessId, [screenshotUrl, mobileScreenshotUrl, ...additionalPages.map((p) => p.screenshotUrl)].filter((p): p is string => !!p));
   }
-  return { screenshotUrl, additionalPages };
+  return { screenshotUrl, mobileScreenshotUrl, additionalPages };
 }

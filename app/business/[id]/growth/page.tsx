@@ -1,5 +1,7 @@
 import { GOOGLE_MISMATCH_CHECK_ID } from "@/lib/actionPlan";
 import { loadHoursCheck } from "@/lib/hoursCheck.server";
+import { NEW_PAGES_LIVE } from "@/lib/routes";
+import { GrowthPlanPage } from "./GrowthPlanPage";
 import { withHoursWhen } from "@/lib/hoursCheck";
 import { loadDetailsMismatches, loadNowMatchPrompts } from "@/lib/detailsMismatch.server";
 import { googleWritesAllowed } from "@/lib/gbpReviewPractice";
@@ -54,6 +56,8 @@ export default async function GrowthPage({ params, searchParams = {} }: { params
   // Growth's ?tab=coupons / ?tab=referral land on the matching tab there.
   if (searchParams.tab === "coupons") redirect(campaignsHref(params.id, "coupons"));
   if (searchParams.tab === "referral" || searchParams.tab === "referrals") redirect(campaignsHref(params.id, "referrals"));
+  // Day 25B step 6 (new-design preview): the Growth plan — tier, this week's plan, more ways, more customers.
+  if (NEW_PAGES_LIVE) return <GrowthPlanPage businessId={params.id} gbp={searchParams.gbp} />;
   // Free: this tab is locked — its showroom, before any of its own data loads.
   const showroom = await freeShowroom(params.id, "growth");
   if (showroom) return showroom;

@@ -30,7 +30,8 @@ import { qaPostText } from "@/lib/gbpPosts";
 import { redraftDescription } from "@/app/actions/gbpPosts";
 import { DESCRIPTION_TARGET } from "@/lib/googleRecommendations";
 import { t, type MessageKey, useLocale, useTimeZone } from "@/lib/i18n";
-import { PostPreview, RequestBox, usePostDraft, W_BUTTON, W_BUTTON_SOFT, failedText } from "@/components/gbp/PostPreview";
+import { DraftSteer, PostPreview, setDraftsLeft, useDraftsLeft, usePostDraft, W_BUTTON, W_BUTTON_SOFT, failedText } from "@/components/gbp/PostPreview";
+import { draftsLeftAction } from "@/app/actions/gbpPosts";
 import { cn } from "@/lib/utils";
 
 const W = (key: string) => `dashboard.googleTab.w.${key}` as MessageKey;
@@ -263,7 +264,7 @@ export function AnswersPreview({ businessId, state, standaloneApply = true }: { 
   const [error, setError] = useState<string | null>(null);
   const [showAll, setShowAll] = useState(false);
   if (state.status === "idle" || state.status === "loading") return <p className="text-[13px] text-ink-mute" data-testid="answers-loading">{t(locale, W("ans.loading"))}</p>;
-  if (state.status === "failed" || !state.data) return <p className="text-[13px] text-ink-mute" data-testid="answers-failed">{t(locale, W("ans.failed"))}</p>;
+  if (state.status === "failed" || !state.data) return <p className="text-[13px] text-ink-mute" data-testid="answers-failed">{t(locale, W("ans.failedGoogle"))}</p>;
   const d = state.data;
   const missing = d.plan?.missing ?? [];
   if (missing.length === 0) return <p className="text-[15px] text-ink-soft" data-testid="answers-none">{t(locale, W("ans.none"))}</p>;
@@ -286,15 +287,18 @@ export function AnswersPreview({ businessId, state, standaloneApply = true }: { 
       <div className="flex flex-col gap-4" data-testid="answers-preview">
         <p className="text-[13px] text-ink-mute">{t(locale, W("ans.why"))}</p>
         <Step n={1} title={t(locale, W("ans.desc.title"))} done={!missing.includes("description")} testId="answers-description">
-          <p className="text-[13px] text-ink-mute">{t(locale, W("ans.desc.now"), { count: (d.listing.description ?? "").trim().length })}</p>
-          <textarea value={state.description} onChange={(e) => state.setDescription(e.target.value)} rows={5} disabled={locked("description")} className={field} />
+          <OnGoogleNow description={d.listing.description} />
+          <label className="flex flex-col gap-1.5">
+            <span className="text-[13px] font-semibold text-ink-soft">{t(locale, W(locked("description") ? "ans.desc.yours" : "ans.desc.new"))}</span>
+            <textarea value={state.description} onChange={(e) => state.setDescription(e.target.value)} rows={5} disabled={locked("description")} className={field} data-testid="answers-description-text" />
+          </label>
           <p className={cn("text-[13px]", state.description.trim().length < DESCRIPTION_TARGET ? "text-red" : "text-ink-mute")}>{t(locale, W("ans.desc.count"), { count: state.description.trim().length })}</p>
           {descriptionProblems(state.description).filter((p) => p !== "empty").map((p) => (
             <p key={p} className="text-[13px] text-red">{t(locale, `dashboard.gbpProfileEdits.description.problem.${p}` as MessageKey)}</p>
           ))}
           {!d.descriptionDraft && !d.listing.description && <p className="text-[13px] text-ink-mute">{t(locale, W("ans.desc.noDraft"))}</p>}
           <SpellingLines state={state} part="description" />
-          {!locked("description") && <DescriptionRequest businessId={businessId} state={state} />}
+          {!locked("description") && <DescriptionSteer businessId={businessId} state={state} />}
           {state.results?.description && <PartResultLine businessId={businessId} part="description" result={state.results.description} onUndone={() => undefined} />}
         </Step>
         <Step n={2} title={t(locale, W("ans.services.title"))} done={!missing.includes("services")} testId="answers-services">
@@ -308,12 +312,13 @@ export function AnswersPreview({ businessId, state, standaloneApply = true }: { 
                 ) : (
                   <input value={s.name} onChange={(e) => state.setService(i, { name: e.target.value })} disabled={locked("services")} placeholder={t(locale, W("ans.services.name"))} className="min-h-[44px] min-w-[8rem] flex-1 rounded-lg border border-paper-line px-3 text-[14px]" />
                 )}
-                {!s.listed && <span className="rounded-full bg-paper px-2 py-0.5 text-[13px] font-semibold text-brass">{t(locale, W("ans.services.new"))}</span>}
-                {s.googlePrice !== null ? (
-                  <span className="text-[13px] text-ink-mute">{t(locale, W("ans.services.onGoogle"), { price: priceText(s.googlePrice) })}</span>
-                ) : (
+                <ServiceMark s={s} />
+                {s.googlePrice === null && (
                   <input value={s.price} onChange={(e) => state.setService(i, { price: e.target.value })} disabled={locked("services")} inputMode="decimal" placeholder={t(locale, W("ans.price"))} className={cn("min-h-[44px] w-40 rounded-lg border px-3 text-[14px]", s.price && parsePrice(s.price) === null ? "border-red" : "border-paper-line")} />
                 )}
+                <span className="basis-full text-[13px] text-ink-mute" data-testid="answers-service-google">
+                  {s.listed ? t(locale, W("ans.services.onGoogle"), { price: s.googlePrice !== null ? priceText(s.googlePrice) : t(locale, W("ans.services.noPrice")) }) : t(locale, W("ans.services.notOnGoogle"))}
+                </span>
               </li>
             ))}
           </ul>
@@ -385,32 +390,74 @@ export function AnswersPreview({ businessId, state, standaloneApply = true }: { 
   );
 }
 
-/** "Tell PostScore what you want" for the description: the same box and rules as the post's. */
-function DescriptionRequest({ businessId, state }: { businessId: string; state: AnswersState }) {
+/** What's on Google now, read live with the rest of the listing (never saved): the owner sees what
+ * the new description replaces. */
+export function OnGoogleNow({ description }: { description: string | null }) {
+  const locale = useLocale();
+  const text = (description ?? "").trim();
+  return (
+    <div className="flex flex-col gap-1" data-testid="answers-on-google">
+      <span className="text-[13px] font-semibold text-ink-soft">{t(locale, W("ans.desc.onGoogle"))}</span>
+      {text ? (
+        <p className="whitespace-pre-wrap rounded-lg border border-paper-line bg-paper px-3.5 py-2.5 text-[14px] text-ink-soft" data-testid="answers-on-google-text">
+          {text}
+        </p>
+      ) : (
+        <p className="rounded-lg border border-paper-line bg-paper px-3.5 py-2.5 text-[14px] text-ink-mute">{t(locale, W("ans.desc.onGoogleNone"))}</p>
+      )}
+      {text && <span className="text-[13px] text-ink-mute">{t(locale, W("ans.desc.chars"), { count: text.length })}</span>}
+    </div>
+  );
+}
+
+/** "New" (not on Google yet) or "Changed" (a price added to a listed service); nothing when it stays as on Google. */
+function ServiceMark({ s }: { s: ServiceEntry }) {
+  const locale = useLocale();
+  const changed = s.listed && s.googlePrice === null && parsePrice(s.price) !== null;
+  if (s.listed && !changed) return null;
+  return (
+    <span className="rounded-full bg-paper px-2 py-0.5 text-[13px] font-semibold text-brass" data-testid={s.listed ? "answers-service-changed" : "answers-service-new"}>
+      {t(locale, W(s.listed ? "ans.services.changed" : "ans.services.new"))}
+    </span>
+  );
+}
+
+/** "Draft another with PostAI" for the description: the same control and rules as the post's. */
+function DescriptionSteer({ businessId, state }: { businessId: string; state: AnswersState }) {
   const locale = useLocale();
   const timeZone = useTimeZone();
+  const left = useDraftsLeft(businessId);
   const [busy, setBusy] = useState(false);
   const [limited, setLimited] = useState(false);
   const [failed, setFailed] = useState(false);
-  const chips = [t(locale, W("req.chip.desc.specialties")), t(locale, W("req.chip.desc.area")), t(locale, W("req.chip.shorter")), t(locale, W("req.chip.friendlier"))];
+  // Grow's allowance before the first draft (Premium: null, unlimited).
+  useEffect(() => {
+    draftsLeftAction(businessId, timeZone)
+      .then((r) => setDraftsLeft(businessId, r))
+      .catch(() => undefined);
+  }, [businessId, timeZone]);
   return (
     <>
-      <RequestBox
-        chips={chips}
+      <DraftSteer
+        // Each section of the answers box steers only itself: this one is the description.
+        label={t(locale, W("steer.desc.label"))}
+        placeholder={t(locale, W(state.data?.topic === "hair" ? "steer.desc.placeholder.hair" : "steer.desc.placeholder.default"))}
         busy={busy}
+        left={left}
         limited={limited}
-        testId="description-request"
-        onWrite={async (request) => {
+        testId="description-steer"
+        onDraft={async (request) => {
           setBusy(true);
           setFailed(false);
           const r = await redraftDescription(businessId, request, timeZone).catch(() => null);
           setBusy(false);
-          if (r?.status === "ok") state.setDescription(r.text);
-          else if (r?.status === "limit") setLimited(true);
+          if (r?.status === "ok") {
+            state.setDescription(r.text);
+            setDraftsLeft(businessId, r.left);
+          } else if (r?.status === "limit") setLimited(true);
           else setFailed(true);
         }}
       />
-      {limited && <p className="text-[13px] text-ink-mute">{t(locale, W("post.limit"))}</p>}
       {failed && <p className="text-[13px] text-red">{t(locale, W("post.failed"))}</p>}
     </>
   );
@@ -487,7 +534,7 @@ export function AnswersCopy({ businessId, state }: { businessId: string; state: 
   const { load } = state;
   useEffect(() => load(), [load]);
   if (state.status === "idle" || state.status === "loading") return <p className="text-[13px] text-ink-mute" data-testid="answers-loading">{t(locale, W("ans.loading"))}</p>;
-  if (state.status === "failed" || !state.data) return <p className="text-[13px] text-ink-mute" data-testid="answers-failed">{t(locale, W("ans.failed"))}</p>;
+  if (state.status === "failed" || !state.data) return <p className="text-[13px] text-ink-mute" data-testid="answers-failed">{t(locale, W("ans.failedGoogle"))}</p>;
   const missing = state.data.plan?.missing ?? [];
   const priced = state.services.filter((s) => s.name && (s.googlePrice !== null || parsePrice(s.price) !== null));
   return (
@@ -496,14 +543,25 @@ export function AnswersCopy({ businessId, state }: { businessId: string; state: 
       {missing.includes("description") && state.description && (
         <>
           <p className="text-[13px] font-bold uppercase tracking-[0.08em] text-ink-soft">{t(locale, W("ans.desc.title"))}</p>
+          <OnGoogleNow description={state.data.listing.description} />
+          <p className="text-[13px] font-semibold text-ink-soft">{t(locale, W("ans.desc.new"))}</p>
           <CopyBlock text={state.description} rows={5} />
-          <DescriptionRequest businessId={businessId} state={state} />
+          <DescriptionSteer businessId={businessId} state={state} />
         </>
       )}
       {missing.includes("services") && priced.length > 0 && (
         <>
           <p className="text-[13px] font-bold uppercase tracking-[0.08em] text-ink-soft">{t(locale, W("ans.services.title"))}</p>
-          <CopyBlock text={priced.map((s) => `${s.name} — ${priceText((s.googlePrice ?? parsePrice(s.price))!)}`).join("\n")} rows={Math.min(8, priced.length + 1)} />
+          <ul className="flex flex-col gap-1 text-[13px]" data-testid="answers-copy-services">
+            {priced.map((s) => (
+              <li key={s.name} className="flex flex-wrap items-center gap-2">
+                <span className="text-ink">{s.name} — {priceText((s.googlePrice ?? parsePrice(s.price))!)}</span>
+                <ServiceMark s={s} />
+                <span className="text-ink-mute">{s.listed ? t(locale, W("ans.services.onGoogle"), { price: s.googlePrice !== null ? priceText(s.googlePrice) : t(locale, W("ans.services.noPrice")) }) : t(locale, W("ans.services.notOnGoogle"))}</span>
+              </li>
+            ))}
+          </ul>
+          {priced.some((s) => !s.listed || s.googlePrice === null) && <CopyBlock text={priced.filter((s) => !s.listed || s.googlePrice === null).map((s) => `${s.name} — ${priceText((s.googlePrice ?? parsePrice(s.price))!)}`).join("\n")} rows={Math.min(8, priced.length + 1)} />}
         </>
       )}
       <AnswersExtras businessId={businessId} state={state} premium={false} />

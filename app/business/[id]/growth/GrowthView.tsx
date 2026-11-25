@@ -1,6 +1,6 @@
 "use client";
 
-import { growthPlanHref } from "@/lib/routes";
+import { growthPlanHref, NEW_PAGES_LIVE } from "@/lib/routes";
 import { PlatformLinkCard } from "@/components/gbp/PlatformLinkCard";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -367,15 +367,18 @@ export function GrowthView({
     <ReviewGoalLinesContext.Provider value={reviewGoalLines}>
       <div className="flex flex-col gap-6 nav:gap-8">
         <div>
-          <Link
-            href={`/business/${businessId}`}
-            className="inline-flex items-center gap-1.5 text-[13px] font-medium text-ink-soft hover:text-ink"
-          >
-            <IconArrowLeft size={15} />
-            {t(locale, "dashboard.growth.view.backTo", {
-              name: businessName ?? t(locale, "dashboard.growth.view.businessFallback"),
-            })}
-          </Link>
+          {/* New design: the sidebar handles navigation. */}
+          {!NEW_PAGES_LIVE && (
+            <Link
+              href={`/business/${businessId}`}
+              className="inline-flex items-center gap-1.5 text-[13px] font-medium text-ink-soft hover:text-ink"
+            >
+              <IconArrowLeft size={15} />
+              {t(locale, "dashboard.growth.view.backTo", {
+                name: businessName ?? t(locale, "dashboard.growth.view.businessFallback"),
+              })}
+            </Link>
+          )}
           <h1 className="mt-2 font-serif text-2xl font-semibold text-ink nav:text-[27px]">
             {t(locale, "dashboard.growth.view.title")}
           </h1>

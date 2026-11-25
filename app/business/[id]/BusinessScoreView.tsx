@@ -44,6 +44,7 @@ import { LiveListingSection } from "@/components/gbp/LiveListingSection";
 import { GoogleListingCard } from "@/components/overview/GoogleListingCard";
 import { GoogleListingRow } from "@/components/overview/GoogleListingRow";
 import { NEW_PAGES_LIVE } from "@/lib/routes";
+import { TwoScoresStrip } from "@/components/overview/TwoScoresStrip";
 import { InfoTip } from "@/components/reports/ScoreHistoryChart";
 import { FreeReviews, FreeSection, RankUnlockLine } from "@/components/overview/FreeOverview";
 import { FixPlanBox } from "@/components/overview/FixPlanUpsell";
@@ -86,6 +87,7 @@ export function BusinessScoreView({
   gbpReplyCheck = null,
   googleListing = null,
   googleListingRow = null,
+  growthCount = null,
   detailsMismatch = null,
   hoursCheck = null,
   monthlyReportsLive = false,
@@ -140,6 +142,8 @@ export function BusinessScoreView({
   googleListing?: ComponentProps<typeof GoogleListingCard> | null;
   /** New-design preview (Day 25B step 4): the compact "Your Google listing" row, for every paid plan. */
   googleListingRow?: ComponentProps<typeof GoogleListingRow> | null;
+  /** New design: this week's Growth plan size ("4 tasks this week"). */
+  growthCount?: number | null;
   /** Day 23B: confirmed details that differ from Google or the website (lib/detailsMismatch.ts). */
   detailsMismatch?: DetailsMismatchState | null;
   /** Day 23B: the scored hours check as it is now (lib/hoursCheck.ts). */
@@ -258,6 +262,7 @@ export function BusinessScoreView({
           />
           <RescanMessages state={rescan.state} />
           {scoringNote && <ScoringUpdateNote businessId={businessId} />}
+          {NEW_PAGES_LIVE && <TwoScoresStrip businessId={businessId} />}
         </FreeSection>
 
         {/* C. What's behind the score: the breakdown (collapsed), then the
@@ -345,13 +350,14 @@ export function BusinessScoreView({
         <RescanMessages state={rescan.state} />
           {scoringNote && <ScoringUpdateNote businessId={businessId} />}
       </div>
+      {NEW_PAGES_LIVE && <TwoScoresStrip businessId={businessId} />}
 
       {/* Paid order: score card → Top recommendations + Since your last
           scan (side by side at equal height, stacked on phones) → Score
           breakdown → "More customers" → the rest. PostAI is the "Ask
           PostAI" button on every page (components/assistant/PostAIDock.tsx). */}
       <div data-testid="overview-recs-row" className="grid grid-cols-1 gap-4 nav:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]">
-        <TopRecommendations businessId={businessId} recommendations={recommendations ?? null} limit={TOP_RECOMMENDATIONS} detailsMismatch={detailsMismatch} hoursCheck={hoursCheck} lastScanAt={lastScanAt} />
+        <TopRecommendations businessId={businessId} recommendations={recommendations ?? null} limit={TOP_RECOMMENDATIONS} detailsMismatch={detailsMismatch} hoursCheck={hoursCheck} lastScanAt={lastScanAt} growthCount={growthCount} />
         <SinceLastScanCard businessId={businessId} snapshots={recentSnapshots} liveBreakdown={breakdown} gbpConnected={gbpConnected} now={{ rating: business.rating, reviewCount: business.review_count }} />
       </div>
 
@@ -368,14 +374,17 @@ export function BusinessScoreView({
         serviceOptions={serviceOptions}
       />
 
-      <GrowMoreCustomers
-        businessId={businessId}
-        profileTools={profileTools}
-        reviewCount={business.review_count}
-        nearbyReviewAverage={benchmark.status === "ok" ? benchmark.benchmark.competitorReviewAverage : null}
-        goal={reviewGoal}
-        group={reviewGroup}
-      />
+      {/* The new design: "More customers, whatever your score" lives on the Growth plan. */}
+      {!NEW_PAGES_LIVE && (
+        <GrowMoreCustomers
+          businessId={businessId}
+          profileTools={profileTools}
+          reviewCount={business.review_count}
+          nearbyReviewAverage={benchmark.status === "ok" ? benchmark.benchmark.competitorReviewAverage : null}
+          goal={reviewGoal}
+          group={reviewGroup}
+        />
+      )}
 
       <SectionHeading title={t(locale, "dashboard.overview.atAGlanceHeading")} />
       <Card className="p-5">

@@ -91,7 +91,7 @@ export async function captureScreenshotsWithClient(
   // to this authenticated user's own rows (the .single() above already
   // proved ownership; a business belonging to someone else simply
   // wouldn't have been found).
-  const { screenshotUrl, additionalPages } = await uploadWebsiteScreenshots(businessId, capture);
+  const { screenshotUrl, mobileScreenshotUrl, additionalPages } = await uploadWebsiteScreenshots(businessId, capture);
 
   const lastScreenshotRefreshAt = now.toISOString();
 
@@ -111,6 +111,7 @@ export async function captureScreenshotsWithClient(
     contentFetchFailureReason: existing?.contentFetchFailureReason ?? null,
     httpsUnreachableReason: existing?.httpsUnreachableReason ?? null,
     screenshotUrl,
+    mobileScreenshotUrl: mobileScreenshotUrl ?? null,
     additionalPages,
     lastScreenshotRefreshAt,
     screenshotHttpStatus: capture.screenshotHttpStatus ?? null,

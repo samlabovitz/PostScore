@@ -12,7 +12,7 @@ const state = vi.hoisted(() => ({
   /** The week's anchor (the last owner re-scan / first scan). */
   anchor: null as string | null,
   tableMissing: false,
-  ai: "Thank you so much for the kind words about your haircut, Ana! We're glad you loved it." as string | Error,
+  ai: "Thank you so much for the kind words about your haircut, Ana! I'm glad you loved it." as string | Error,
   aiCalls: [] as Array<{ system: string; userMessage: string }>,
   nextId: 1,
 }));
@@ -80,7 +80,7 @@ beforeEach(() => {
   state.plan = "free";
   state.rows = [];
   state.tableMissing = false;
-  state.ai = "Thank you so much for the kind words about your haircut! We're glad you loved it.";
+  state.ai = "Thank you so much for the kind words about your haircut! I'm glad you loved it.";
   state.aiCalls = [];
   state.anchor = new Date(Date.now() - 2 * 86_400_000).toISOString();
 });
@@ -137,7 +137,7 @@ describe("the server counter (review_reply_drafts)", () => {
       ...Array.from({ length: 5 }, (_, i) => ({ id: `o${i}`, business_id: "b1", status: "ok", created_at: old(5) })),
     ];
     const resetsAt = new Date(Date.parse(state.anchor!) + 7 * 86_400_000).toISOString();
-    expect(await draftReviewReply("b1", "Great haircut, very friendly!", 5)).toEqual({ status: "ok", reply: "Thank you so much for the kind words about your haircut! We're glad you loved it.", left: 0, resetsAt });
+    expect(await draftReviewReply("b1", "Great haircut, very friendly!", 5)).toEqual({ status: "ok", reply: "Thank you so much for the kind words about your haircut! I'm glad you loved it.", left: 0, resetsAt });
     expect(state.rows.at(-1)).toMatchObject({ status: "ok", input_tokens: 320, output_tokens: 60 });
     expect(await draftReviewReply("b1", "Another review", null)).toEqual({ status: "limit", resetsAt });
     expect(state.aiCalls).toHaveLength(1);

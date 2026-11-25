@@ -18,12 +18,13 @@ import { ApproveAll, type ItemFailures } from "@/components/gbp/ApproveAll";
 import { PostPreview, failedText, usePostDraft, type PostDraftState } from "@/components/gbp/PostPreview";
 import { publishPostAction } from "@/app/actions/gbpPosts";
 import { applyAnswersAction } from "@/app/actions/googleAnswers";
-import { RepliesPreview, useWeekReplies, type WeekRepliesState } from "@/components/gbp/RepliesPreview";
+import { RepliesLine, useWeekReplies, type WeekRepliesState } from "@/components/gbp/RepliesPreview";
 import type { Rec } from "@/lib/googleRecommendations";
 import type { IdeaType } from "@/lib/listingIdeas";
 import { t, type MessageKey, useLocale, useTimeZone } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import { shortDate, weekdayName } from "@/components/gbp/GoogleRecs";
+import { TierLineNote, useTierOrder } from "@/components/growth/TierPlanContext";
 
 const W = (key: string) => `dashboard.googleTab.w.${key}` as MessageKey;
 
@@ -103,7 +104,7 @@ function Badge({ state, minutes, tomorrow }: { state: ItemState; minutes: number
 }
 
 /** One to-do: its title, one line of detail, its status pill and one button; its preview opens below it (one at a time). */
-export function WeekItem({ rec, state, type, businessId, canEdit, children, failure, onRetry, tomorrow, open: openProp, onToggle }: { rec: Rec; state: ItemState; type: IdeaType | null; businessId: string; canEdit: boolean; children?: React.ReactNode; failure?: string | null; onRetry?: () => Promise<void>; tomorrow?: string; open?: boolean; onToggle?: () => void }) {
+export function WeekItem({ rec, state, type, businessId, canEdit, children, failure, onRetry, tomorrow, open: openProp, onToggle, line }: { rec: Rec; state: ItemState; type: IdeaType | null; businessId: string; canEdit: boolean; children?: React.ReactNode; failure?: string | null; onRetry?: () => Promise<void>; tomorrow?: string; open?: boolean; onToggle?: () => void; /** In place of the button: one line (the replies' "8 of 10 ready · Review them →"). */ line?: React.ReactNode }) {
   const locale = useLocale();
   const [openSelf, setOpenSelf] = useState(false);
   const open = openProp ?? openSelf;
@@ -116,10 +117,13 @@ export function WeekItem({ rec, state, type, businessId, canEdit, children, fail
         <div className="min-w-0">
           <p className="text-[15px] font-medium leading-snug text-ink">{x.text}</p>
           {x.sub && <p className="mt-0.5 text-[13px] leading-snug text-ink-mute">{x.sub}</p>}
+          <TierLineNote kind={rec.kind} />
         </div>
         <div className="flex shrink-0 flex-wrap items-center gap-2.5">
           <Badge state={state} minutes={needsMinutes(rec)} tomorrow={tomorrow} />
-          {rec.kind === "photos" ? (
+          {line ? (
+            line
+          ) : rec.kind === "photos" ? (
             // The owner's own photos: never "PostScore can do this for you".
             <a href="#edit-photos" className={ROW_BUTTON_SOLID} data-testid="week-upload-photos">
               {t(locale, W("photos.upload"))}
@@ -187,7 +191,8 @@ export function itemText(rec: Rec, locale: ReturnType<typeof useLocale>, type: I
 export function ThisWeekList({ businessId, recs, type, canEdit, practice, title, chips }: { businessId: string; recs: Rec[]; type: IdeaType | null; canEdit: boolean; practice: boolean; title?: React.ReactNode; chips?: React.ReactNode }) {
   const locale = useLocale();
   const timeZone = useTimeZone();
-  const list = thisWeekKinds(recs);
+  // Growth plan (Day 25B step 6): ranked by what each task does for the tier.
+  const list = useTierOrder(thisWeekKinds(recs));
   const has = (k: Rec["kind"]) => list.some((r) => r.kind === k);
   const postRec = list.find((r): r is Extract<Rec, { kind: "posts" }> => r.kind === "posts");
   const answersRec = list.find((r): r is Extract<Rec, { kind: "answers" }> => r.kind === "answers");
@@ -258,10 +263,11 @@ export function ThisWeekList({ businessId, recs, type, canEdit, practice, title,
 
   const row = (rec: Rec) => {
     const state = stateOf(rec);
-    const child = rec.kind === "replies" ? <RepliesPreview businessId={businessId} state={replies} /> : rec.kind === "posts" ? <PostPreview businessId={businessId} state={post} showBlocked={false} /> : rec.kind === "answers" ? <AnswersPreview businessId={businessId} state={answers} /> : null;
+    // Replies live on Presence → Reviews (the one reply tool): here, one line with the count, no list.
+    const child = rec.kind === "replies" ? null : rec.kind === "posts" ? <PostPreview businessId={businessId} state={post} showBlocked={false} /> : rec.kind === "answers" ? <AnswersPreview businessId={businessId} state={answers} /> : null;
     const tomorrow = rec.kind === "posts" && post.blockedToday === "posted_today" ? t(locale, W("tomorrow.posted")) : undefined;
     return (
-      <WeekItem key={rec.kind} rec={rec} state={state} type={type} businessId={businessId} canEdit={canEdit} failure={failures[rec.kind as keyof ItemFailures]} onRetry={retry[rec.kind]} tomorrow={tomorrow} open={openKind === rec.kind} onToggle={() => setOpenKind(openKind === rec.kind ? null : rec.kind)}>
+      <WeekItem key={rec.kind} rec={rec} state={state} type={type} businessId={businessId} canEdit={canEdit} failure={failures[rec.kind as keyof ItemFailures]} onRetry={retry[rec.kind]} tomorrow={tomorrow} open={openKind === rec.kind} onToggle={() => setOpenKind(openKind === rec.kind ? null : rec.kind)} line={rec.kind === "replies" ? <RepliesLine businessId={businessId} state={replies} /> : undefined}>
         {child}
       </WeekItem>
     );

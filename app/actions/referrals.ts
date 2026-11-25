@@ -2,6 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { offerIsTest } from "@/lib/offerTesting";
+import { logOfferUse } from "@/lib/offerUses.server";
 import { MAX_ACTIVE_REFERRALS, type ReferralRow } from "@/lib/referrals";
 
 const REFERRAL_COLUMNS = "id, business_id, referrer_reward, friend_reward, code, redemptions, active, created_at";
@@ -151,6 +152,8 @@ export async function incrementReferralRedemption(
   if (data === null || data === undefined) {
     return { status: "not_found" };
   }
+  // Day 25B step 6: the +1, dated (R4 and the Growth tier).
+  await logOfferUse(supabase, "referral", referralId, user.id);
 
   return { status: "ok", redemptions: data as number };
 }

@@ -83,6 +83,34 @@ export function buildFixPlan(input: {
   };
 }
 
+export interface FixPlanGroup {
+  when: FixWhen;
+  rows: FixPlanRow[];
+  /** The group's points ("+8.5 pts"); `upTo` when one of its rows is "up to". */
+  points: number;
+  upTo: boolean;
+  /** The running score after the group's last row ("→ 87"). */
+  to: number;
+}
+
+/** Fix plan v2: the rows under "This week" · "Takes a few weeks" · "Takes months" (ranked within each), the
+ * running score recomputed in that order (the same rule as buildFixPlan), with each group's subtotal. */
+export function groupFixPlan(plan: Pick<FixPlan, "rows" | "today">): FixPlanGroup[] {
+  const order: FixWhen[] = ["this_week", "weeks", "months"];
+  let sum = 0;
+  return order
+    .map((when) => {
+      const rows = plan.rows
+        .filter((r) => r.when === when)
+        .map((r) => {
+          sum += r.points;
+          return { ...r, running: Math.min(100, Math.round(plan.today + round1(sum))) } as FixPlanRow;
+        });
+      return { when, rows, points: round1(rows.reduce((a, r) => a + r.points, 0)), upTo: rows.some((r) => r.upTo), to: rows.length ? rows[rows.length - 1].running : 0 };
+    })
+    .filter((g) => g.rows.length > 0);
+}
+
 /**
  * The Website page's one-line summary (spec §2b): "Fix this 1 and your
  * Website goes 29 → 29.6 pts (score 78 → 79)". The fixes are the Website
@@ -104,6 +132,19 @@ export function websiteFixSummary(input: {
   const points = (banner?.points ?? 0) + (mismatch?.weightedPoints ?? 0);
   const from = round1((website.relativeScore * website.weight) / 100);
   return { count, from, to: Math.min(website.weight, round1(from + points)), score: input.breakdown.total, after: Math.min(100, Math.round(input.breakdown.total + round1(points))) };
+}
+
+/** The Website page's fix line in whole points, like its title (Day 25B): "Fix this 1 and your Website gets its
+ * last point (score 78 → 79)" — never "29.4 → 29.9". When the fixes add up to less than a whole point, no
+ * number is claimed ("Fix these 2 small things on your Website"). */
+export function websiteFixWords(summary: { count: number; to: number; score: number; after: number }, current: { earned: number; of: number }):
+  | { kind: "last"; count: number; points: number; score: number; after: number }
+  | { kind: "goes"; count: number; from: number; to: number; of: number; score: number; after: number }
+  | { kind: "small"; count: number } {
+  const to = Math.min(current.of, Math.round(summary.to));
+  if (to <= current.earned) return { kind: "small", count: summary.count };
+  if (to === current.of) return { kind: "last", count: summary.count, points: to - current.earned, score: summary.score, after: summary.after };
+  return { kind: "goes", count: summary.count, from: current.earned, to, of: current.of, score: summary.score, after: summary.after };
 }
 
 /** Presence → Reviews' fix line (Day 25B step 5): "Fix these 2 and Visibility

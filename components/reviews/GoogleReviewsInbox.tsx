@@ -21,6 +21,9 @@ import { IconBrandGoogle, IconCheck, IconClock, IconFlask, IconLock, IconPencil,
 import { changeGoogleReviewReply, checkGoogleReview, listGoogleReviews, type ChangeGoogleReplyResult } from "@/app/actions/googleReviews";
 import { mergePending, pendingFor, pendingPhase, pendingResolved, readPending, watchPending, writePending, type PendingReply } from "@/lib/gbpReviewPending";
 import { draftReviewReply } from "@/app/actions/reviewReplies";
+import { getSavedReplies, redraftWeekReply, saveReplyDraft, type SavedRepliesResult } from "@/app/actions/approveAll";
+import { ReplyTweaks, ReplyVoicePicker } from "@/components/reviews/ReplyTweaks";
+import type { ReplyLength } from "@/lib/reviewReplies";
 import {
   filterReviews,
   inboxSummary,
@@ -110,6 +113,8 @@ function saveSort(sort: InboxSort) {
   }
 }
 
+type SavedDraft = Extract<SavedRepliesResult, { status: "ok" }>["drafts"][number];
+
 type RowState =
   | { kind: "idle" }
   | { kind: "drafting" }
@@ -181,6 +186,7 @@ function ReviewText({ text }: { text: string | null }) {
 function ReviewRow({
   businessId,
   review,
+  saved = null,
   canPost,
   waiting,
   onChanged,
@@ -188,6 +194,8 @@ function ReviewRow({
 }: {
   businessId: string;
   review: InboxReview;
+  /** This review's saved draft (current for this version of the review), if any. */
+  saved?: SavedDraft | null;
   canPost: boolean;
   /** Google accepted a change it isn't showing yet: "waiting" (re-checking), or "timed_out" after 2 minutes. */
   waiting: { phase: "waiting" | "timed_out"; action: "post" | "edit" | "delete" } | null;
@@ -196,19 +204,47 @@ function ReviewRow({
 }) {
   const locale = useLocale();
   const timeZone = useTimeZone();
-  const [state, setState] = useState<RowState>({ kind: "idle" });
+  // A saved draft that fits this version of the review opens ready to read, edit and post.
+  const fits = !review.reply && !!saved?.reply && saved.reviewUpdated === (review.updateTime ?? null);
+  const [state, setState] = useState<RowState>(fits ? { kind: "editing", text: saved!.reply!, action: "post" } : { kind: "idle" });
+  const [include, setInclude] = useState(saved?.include !== false);
   const [message, setMessage] = useState<{ text: string; tone: MessageTone } | null>(null);
+  // The saved drafts arrive after the reviews: open on the draft then, unless the owner already started.
+  useEffect(() => {
+    if (fits) setState((s) => (s.kind === "idle" ? { kind: "editing", text: saved!.reply!, action: "post" } : s));
+    setInclude(saved?.include !== false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only when the saved draft arrives
+  }, [saved?.reply, saved?.include]);
+
+  const [length, setLength] = useState<ReplyLength>("medium");
+  const [redrafting, setRedrafting] = useState(false);
 
   async function draft() {
     setState({ kind: "drafting" });
     setMessage(null);
-    const result = await draftReviewReply(businessId, draftInput(review), review.stars).catch(() => ({ status: "unavailable" }) as const);
+    const result = await draftReviewReply(businessId, draftInput(review), review.stars, { reviewer: review.reviewer }).catch(() => ({ status: "unavailable" }) as const);
     if (result.status === "ok") {
+      setLength("medium");
       setState({ kind: "editing", text: result.reply, action: "post" });
       return;
     }
     setState({ kind: "idle" });
     setMessage({ text: t(locale, result.status === "error" ? "dashboard.replies.errorRules" : result.status === "limit" ? K("error.draftLimit") : "dashboard.replies.errorUnavailable"), tone: "failure" });
+  }
+
+  /** "Short · Medium · Long" / "Different wording": this reply again (counts as a draft on Free and Grow). */
+  async function redraft(opts: { length: ReplyLength; mode: "length" | "different" }) {
+    if (state.kind !== "editing") return;
+    const current = state.text;
+    setRedrafting(true);
+    setMessage(null);
+    // The one reply tool: the same rules as the saved drafts, saved as this review's draft.
+    const result = await redraftWeekReply(businessId, review.reviewId, { length: opts.length, mode: opts.mode, current }).catch(() => ({ status: "error" }) as const);
+    setRedrafting(false);
+    if (result.status === "ok") {
+      setLength(opts.length);
+      setState((s) => (s.kind === "editing" ? { ...s, text: result.reply } : s));
+    } else setMessage({ text: t(locale, "dashboard.replies.errorRules"), tone: "failure" });
   }
 
   async function send(action: "post" | "edit" | "delete", text: string | null) {
@@ -344,12 +380,36 @@ function ReviewRow({
             <textarea
               value={state.text}
               onChange={(e) => state.kind === "editing" && setState({ ...state, text: e.target.value })}
+              onBlur={() => {
+                // The owner's own words are kept for this review (never replaced by a background run).
+                if (state.kind === "editing" && state.action === "post" && state.text.trim() && state.text !== saved?.reply) void saveReplyDraft(businessId, review.reviewId, { text: state.text }).catch(() => undefined);
+              }}
               maxLength={MAX_POSTED_REPLY_CHARS}
               rows={5}
               disabled={state.kind === "sending"}
               className="w-full resize-y rounded-lg border border-paper-deep bg-white px-3 py-2 text-[14px] text-ink focus:border-brass focus:outline-none"
             />
           </label>
+          {state.action === "post" && state.text.trim() && <ReplyTweaks length={length} busy={redrafting} disabled={state.kind === "sending"} onRedraft={redraft} />}
+          {state.action === "post" && (
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[12.5px]">
+              <label className="flex items-center gap-1.5 text-ink-soft">
+                <input
+                  type="checkbox"
+                  checked={include}
+                  onChange={(e) => {
+                    setInclude(e.target.checked);
+                    void saveReplyDraft(businessId, review.reviewId, { include: e.target.checked }).catch(() => undefined);
+                  }}
+                  data-testid="reply-include"
+                />
+                {t(locale, "dashboard.googleTab.w.include")}
+              </label>
+              <button type="button" onClick={() => setState((s) => (s.kind === "editing" ? { ...s, text: "" } : s))} className="font-semibold text-ink underline underline-offset-2" data-testid="reply-write-own">
+                {t(locale, K("write"))}
+              </button>
+            </div>
+          )}
           <div className="flex flex-wrap items-center gap-2">
             {!canPost ? (
               <LockedAction testId="approve-reply" label={t(locale, K(state.action === "post" ? "approve" : "save"))} size="md" />
@@ -395,9 +455,12 @@ export function InboxBody({
   initialPending = [],
   initialFilter = "needs_reply",
   initialLimit = INBOX_FIRST,
+  saved = new Map(),
   onLoadAll,
   onChanged,
 }: {
+  /** The saved drafts by review id (lib/replyBatch.server.ts). */
+  saved?: Map<string, SavedDraft>;
   businessId: string;
   reviews: InboxReview[];
   practice: boolean;
@@ -599,6 +662,7 @@ export function InboxBody({
               key={r.reviewId}
               businessId={businessId}
               review={r}
+              saved={saved.get(r.reviewId) ?? null}
               canPost={canPost}
               waiting={waitingFor(r.reviewId)}
               onChanged={(updated, d) => {
@@ -670,6 +734,8 @@ export function GoogleReviewsInbox({ businessId }: { businessId: string }) {
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<MessageKey | null>(null);
   const [serverPending, setServerPending] = useState<PendingReply[]>([]);
+  // The saved drafts (written in the background; this page only reads them).
+  const [saved, setSaved] = useState<Map<string, SavedDraft>>(new Map());
 
   const page = useCallback(async (pageToken: string | null) => {
     const result = await listGoogleReviews(businessId, pageToken).catch(() => ({ status: "error", error: "failed" }) as const);
@@ -680,6 +746,12 @@ export function GoogleReviewsInbox({ businessId }: { businessId: string }) {
     setPractice(result.practice);
     setCanPost(result.canPost);
     return result;
+  }, [businessId]);
+
+  useEffect(() => {
+    getSavedReplies(businessId)
+      .then((r) => r.status === "ok" && setSaved(new Map(r.drafts.map((d) => [d.reviewId, d]))))
+      .catch(() => undefined);
   }, [businessId]);
 
   useEffect(() => {
@@ -717,6 +789,7 @@ export function GoogleReviewsInbox({ businessId }: { businessId: string }) {
         <h3 className="text-base font-semibold text-ink">{t(locale, K("heading"))}</h3>
       </div>
       <p className="text-[13px] leading-snug text-ink-soft">{t(locale, K("intro"))}</p>
+      <ReplyVoicePicker businessId={businessId} />
 
       {reviews === null ? (
         <p className="text-[13px] text-ink-soft">{t(locale, K("loading"))}</p>
@@ -730,6 +803,7 @@ export function GoogleReviewsInbox({ businessId }: { businessId: string }) {
             hasMore={!!next}
             loadingMore={loadingMore}
             initialPending={serverPending}
+            saved={saved}
             onLoadAll={loadAll}
             onChanged={(updated) => setReviews((prev) => (prev ?? []).map((x) => (x.reviewId === updated.reviewId ? updated : x)))}
           />

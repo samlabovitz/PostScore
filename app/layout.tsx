@@ -3,6 +3,9 @@ import localFont from "next/font/local";
 import "./globals.css";
 import { canSwitchPlan, getPlan } from "@/lib/premium";
 import { DevPlanPill } from "@/components/dev/DevPlanPill";
+import { cookies } from "next/headers";
+import { createClient } from "@/lib/supabase/server";
+import { DEV_TIER_COOKIE, devPreviewTier, devTierAllowed } from "@/lib/devTier";
 
 // Self-hosted (app/fonts, SIL Open Font License): Fraunces for headings,
 // page titles, business names and score numbers (`font-serif`), Inter for
@@ -49,8 +52,17 @@ export default async function RootLayout({
       <body className={`${fraunces.variable} ${inter.variable} antialiased`}>
         {children}
         {/* Development, or (production) only a PLAN_SWITCHER_EMAILS user — checked on the server. */}
-        {(await canSwitchPlan()) && <DevPlanPill plan={await getPlan()} />}
+        {(await canSwitchPlan()) && <DevPlanPill plan={await getPlan()} tier={await devTierForPill()} />}
       </body>
     </html>
   );
+}
+
+/** The dev test login's preview tier for the pill ("real" when none); undefined for everyone else. */
+async function devTierForPill(): Promise<number | "real" | undefined> {
+  if (process.env.NODE_ENV !== "development") return undefined;
+  const { data } = await createClient().auth.getUser();
+  const allowed = devTierAllowed(process.env, data.user?.email);
+  if (!allowed) return undefined;
+  return devPreviewTier(cookies().get(DEV_TIER_COOKIE)?.value, true) ?? "real";
 }

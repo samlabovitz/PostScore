@@ -12,7 +12,7 @@ import Link from "next/link";
 import { createContext, Fragment, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { syncGoogleNumbers } from "@/app/actions/gbpInsights";
-import { ideaTypeOf, listingIdeas, type Idea } from "@/lib/listingIdeas";
+import { ideaTypeOf, type Idea } from "@/lib/listingIdeas";
 import type { WeeklyHours } from "@/lib/gbpProfileEdits";
 import type { WebsiteBuilderId } from "@/lib/websiteBuilder";
 import { gbpResultText } from "@/components/gbp/GbpResultMessage";
@@ -25,9 +25,9 @@ import type { MediaPostsState } from "@/lib/gbpMediaPosts";
 import { type InsightsState, sixMonthSpan, type InsightsMonth } from "@/lib/gbpInsights";
 import type { GbpReplyCounts } from "@/lib/gbpReviewReplies";
 import { cn } from "@/lib/utils";
-import { recommendations, type ActionEvent, type Rec, type RecInputs } from "@/lib/googleRecommendations";
+import { type ActionEvent, type Rec } from "@/lib/googleRecommendations";
 import { thisWeekKinds } from "@/components/gbp/ThisWeekList";
-import { answersPlan } from "@/lib/googleAnswers";
+import { tabIdeasFor } from "@/lib/tabIdeas";
 
 export const K = (key: string) => `dashboard.googleTab.${key}` as MessageKey;
 
@@ -424,38 +424,7 @@ export const monthYear = (month: string, locale: Locale) => new Intl.DateTimeFor
 /** Section 5's ideas and the Day 23C recommendations, from the same real data. */
 export function useTabIdeas(props: GoogleProfileTabProps): { ideas: Idea[]; recs: Rec[]; type: ReturnType<typeof ideaTypeOf> } {
   const timeZone = useTimeZone();
-  const extras = props.extras ?? null;
-  const now = Date.now();
-  const type = ideaTypeOf(props.nicheId ?? null, extras?.categories ?? props.listing.categories ?? []);
-  const ideas = listingIdeas({
-    businessId: props.businessId,
-    now,
-    type,
-    months: props.insights ?? [],
-    listing: extras ? { services: extras.services, categories: extras.categories, description: extras.description ?? null, specialPeriods: extras.specialPeriods, attributeIds: extras.attributeIds ?? null, details: extras.details ?? null } : null,
-    photos: props.media?.photos ?? null,
-    posts: props.media?.posts ?? null,
-    messagingOn: props.messagingOn,
-    bookingTurnOn: props.booking?.tracking.kind === "turn_on" ? { provider: props.booking.tracking.provider } : null,
-  });
-  const details = ideas.find((i): i is Extract<Idea, { id: "details" }> => i.id === "details");
-  const services = ideas.find((i): i is Extract<Idea, { id: "services" }> => i.id === "services");
-  const input: RecInputs = {
-    type,
-    now,
-    timeZone,
-    replies: props.replyCounts ? { replied: props.replyCounts.replied, inWindow: props.replyCounts.reviewsInWindow } : null,
-    photos: props.media?.photos ?? null,
-    posts: props.media?.posts ?? null,
-    months: props.insights ?? [],
-    specialPeriods: extras?.specialPeriods ?? null,
-    description: extras && extras.description !== undefined ? extras.description : undefined,
-    missingDetails: details?.missing ?? [],
-    missingServices: services?.missing.map((m) => m.service) ?? [],
-    // Day 23E: what Google needs to answer customers' questions (unread parts are skipped).
-    answers: extras ? answersPlan({ description: extras.description, services: extras.services, pricedServices: extras.pricedServices, details: extras.details ?? null }) : null,
-  };
-  return { ideas, recs: recommendations(input), type };
+  return tabIdeasFor(props, timeZone, Date.now());
 }
 
 /** Section 1's "This week": the levers' to-dos (replies, photos, the post) and the answers. */

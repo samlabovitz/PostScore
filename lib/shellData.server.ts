@@ -30,7 +30,9 @@ export async function loadShellData(businessId: string): Promise<ShellData | nul
       presence: row ? { score: Math.round(Number(row.total)), grade: row.grade } : null,
       plan,
       testAccount: isDevTestAccount(process.env, auth.data.user?.email),
+      twoScoresHidden: (auth.data.user?.user_metadata as { two_scores_hidden?: unknown } | undefined)?.two_scores_hidden === true,
       reportsNew: userId ? await reportsNew(db, businessId, userId, plan).catch(() => false) : false,
+      growth: await growthForShell(businessId),
     };
   } catch {
     return null;
@@ -66,4 +68,11 @@ export async function markReportsOpened(businessId: string): Promise<void> {
   } catch {
     // The dot just stays until the next open.
   }
+}
+
+/** The Growth tier for the shell (Free: none). */
+async function growthForShell(businessId: string): Promise<ShellData["growth"]> {
+  const { loadGrowthView } = await import("@/lib/growthPlan.server");
+  const view = await loadGrowthView(businessId).catch(() => null);
+  return view?.status === "ok" ? { tier: view.state.tier, warning: view.state.warning, preview: view.state.preview } : null;
 }

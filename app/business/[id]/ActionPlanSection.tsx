@@ -32,7 +32,6 @@ import {
 } from "@/lib/actionPlan";
 import type { GrowthMove } from "@/lib/growthMoves";
 import { GoogleMapsAttribution } from "@/components/google/GoogleMapsAttribution";
-import { useGbpEdit } from "@/components/gbp/CustomerDetailsGoogleEdit";
 import { FixButton, FIX_BUTTON_CLASS, useFixContext } from "@/components/scoring/FixButton";
 import { fixDestination, hasGoogleTab } from "@/lib/fixDestination";
 import { GOOGLE_BUSINESS_URL } from "@/lib/googleProfileTab";
@@ -289,6 +288,13 @@ function taskPointsText(task: ActionPlanTask, context: TaskCardContext, locale: 
 }
 
 /** Fix plan: one decimal under 10, whole from 10 up ("+0.5 pts", "up to +6.8 pts", "+13 pts"). */
+/** Fix plan v2: one short line on why the fix matters (fits one line; the full line when there's no short one). */
+export function fixPlanWhy(task: Pick<ActionPlanTask, "checkId" | "why">, locale: Locale): string {
+  const key = `dashboard.fixPlan.why.${task.checkId}` as MessageKey;
+  const short = t(locale, key);
+  return short === key ? task.why : short;
+}
+
 export function fixPlanPoints(task: Pick<ActionPlanTask, "weightedPoints" | "upTo">, locale: Locale): string {
   const points = String(displayPoints(task.weightedPoints));
   return t(locale, task.upTo ? "dashboard.fixPlan.upToPts" : "dashboard.fixPlan.pts", { points });
@@ -352,7 +358,7 @@ export function TaskCard({
   businessId: string;
   /** Day 25B step 3, Fix plan: its priority, the running score after it, and
    * Free's lock (the steps are a locked preview; no "I did this"). */
-  fixPlan?: { priority: FixPriority; running: number; locked: boolean } | null;
+  fixPlan?: { priority: FixPriority; running: number; locked: boolean; compact?: { open: boolean; outline: boolean } } | null;
   /** Day 23B: the details mismatches this task shows with every version (one task per field). */
   merged?: DetailsMismatch[];
   /** Day 23B: this hours check as it is now — matching (re-scan) or the exact days that differ. */
@@ -372,24 +378,29 @@ export function TaskCard({
   const router = useRouter();
   const locale = useLocale();
   const [expanded, setExpanded] = useState(false);
+  // Fix plan v2 (compact rows): the row itself opens; only the first starts open.
+  const [rowOpen, setRowOpen] = useState(!!fixPlan?.compact?.open);
   const [state, setState] = useState<MarkState>({ kind: "idle" });
-  // Premium "Update on Google" (Step 1: customer details only).
-  const gbpEdit = useGbpEdit();
   const fixCtx = useFixContext(businessId);
-  const onGoogle = task.checkId === "completeness.customer_details";
-  // Premium + connected: PostScore can make this change ("Update on Google").
-  const canUpdateOnGoogle = onGoogle && gbpEdit.enabled && gbpEdit.premium && gbpEdit.connected;
   // Day 23B: ONE button (lib/fixDestination.ts). Premium with Google writes:
   // "PostScore can do this for you" (the editor); "Coming soon" only for
   // steps PostScore has no editor for yet.
   const fixItem = { checkId: task.checkId, mergedCheckIds: task.mergedCheckIds, hoursMismatch: task.checkId === GOOGLE_MISMATCH_CHECK_ID && (task.mismatchFields ?? []).includes("hours") };
   // An editor exists for this step at all (whatever this business's connection or writes).
   const hasEditor = fixDestination(fixItem, { ...fixCtx, premium: true, connected: true, canEdit: true }).kind === "do_it";
+  // PostScore can make this change now (Premium, Google connected, writes allowed for this place).
+  const canDo = fixDestination(fixItem, fixCtx)?.kind === "do_it";
+  // Otherwise who does it: Grow/Free on Google (the Premium line says what Premium does); Premium not
+  // connected: connect; connected but writes off here: read only for now; no editor at all: you, on Google.
+  const whoMakesIt: "self" | "connect" | "read_only" | "manual" = !hasEditor ? "manual" : !fixCtx.premium ? "self" : !hasGoogleTab(fixCtx) ? "connect" : "read_only";
   const cardId = `task-${task.checkId.replace(/\./g, "-")}`;
   // "?open=howto#task-…" (the step-by-step from the Overview): open "How to fix it" here.
   useEffect(() => {
     const open = () => {
-      if (window.location.hash.slice(1) === cardId && new URLSearchParams(window.location.search).get("open") === "howto") setExpanded(true);
+      if (window.location.hash.slice(1) === cardId && new URLSearchParams(window.location.search).get("open") === "howto") {
+        setExpanded(true);
+        setRowOpen(true);
+      }
     };
     open();
     window.addEventListener("hashchange", open);
@@ -443,6 +454,195 @@ export function TaskCard({
   // Google and the website agree now: only the confirmed details differ — the
   // scan's "show different hours" line and its points are out of date.
   const ownerOnly = merged.length > 0 && mergedKind(merged) === "owner_only";
+
+  // The one main button (lib/fixDestination.ts) and the rest of the row's actions — shared by the card and Fix plan's compact row.
+  const mainButton = (
+    <>
+              {stale ? (
+                <RescanNowButton businessId={businessId} lastScanAt={lastScanAt} />
+              ) : fixPlan?.locked ? (
+                // Free: "Fix it" opens the steps as a locked preview.
+                <button type="button" onClick={() => { setExpanded(true); setRowOpen(true); }} data-testid="fix-button" data-kind="locked" className={fixPlan?.compact?.outline ? cn(FIX_BUTTON_CLASS, "!border-paper-deep !bg-white !text-ink hover:!bg-paper") : FIX_BUTTON_CLASS}>
+                  {t(locale, "dashboard.fixPlan.fixIt")} →
+                </button>
+              ) : merged.length > 0 ? (
+                <MergedActions businessId={businessId} mismatches={merged} only="button" premiumLine={false} />
+              ) : (
+                <FixButton
+                  businessId={businessId}
+                  item={fixItem}
+                  premiumLine={false}
+                  fixPlan={!!fixPlan}
+                  className={fixPlan?.compact?.outline ? "!border-paper-deep !bg-white !text-ink hover:!bg-paper" : undefined}
+                  onSteps={() => {
+                    setExpanded(true);
+                    setRowOpen(true);
+                    requestAnimationFrame(() => document.getElementById(cardId)?.scrollIntoView({ behavior: "smooth", block: "start" }));
+                  }}
+                />
+              )}
+    </>
+  );
+  const secondaryActions = (
+    <>
+              {/* A row that grows over time ("Grow to 40 reviews") has no "I did this": its one action is row 1's. */}
+              {(!isPending || canMarkAgain) && !stale && task.markable !== false && !fixPlan?.locked && (
+                <Button variant="default" size="sm" onClick={handleMarkDone} disabled={state.kind === "saving"}>
+                  {state.kind === "saving"
+                    ? t(locale, "dashboard.overview.actionPlan.saving")
+                    : canMarkAgain
+                      ? t(locale, "dashboard.overview.actionPlan.checkAgain")
+                      : t(locale, "dashboard.overview.actionPlan.didThis")}
+                </Button>
+              )}
+              {state.kind === "error" && <span className="text-[12px] text-red">{state.message}</span>}
+              {merged.length > 0 && (
+                <div className="w-full">
+                  <MergedActions businessId={businessId} mismatches={merged} only="link" />
+                </div>
+              )}
+              {/* CLAUDE.md "Plans": Grow/Free — under the steps, what Premium does in one click. */}
+              {(merged.length === 0 || mergedKind(merged) !== "owner_only") && !stale && (
+                <PremiumOneClickLine businessId={businessId} item={merged.length > 0 ? (mergedOneClickItem(merged) ?? fixItem) : fixItem} className="w-full" />
+              )}
+              {noChangeYet && (
+                <p data-testid="check-again-note" className="w-full text-[12px] text-ink-mute">
+                  {t(locale, "dashboard.overview.actionPlan.checkAgainNote")}
+                </p>
+              )}
+    </>
+  );
+
+  // "How to fix it": the steps, or Free's locked preview.
+  const howToBody = fixPlan?.locked ? (
+
+              <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 rounded-xl border border-paper-line bg-paper p-3.5 text-[13px] text-ink-soft" data-testid="fix-plan-steps-locked">
+                <IconLock size={14} className="text-brass" aria-hidden />
+                <span>{t(locale, "dashboard.googlePages.listing.locked")}</span>
+                <UpgradeTrigger feature="grow" />
+              </div>
+  ) : (
+
+              <div className="mt-2 rounded-xl border border-paper-line bg-paper p-3.5 text-[13px] leading-relaxed text-ink-soft">
+                {canDo && (
+                  <div className="mb-2.5 flex flex-col gap-2 border-b border-paper-line pb-2.5" data-testid="how-to-done-for-you">
+                    <p className="font-medium text-ink">{t(locale, "dashboard.overview.actionPlan.doneForYou")}</p>
+                    <div className="flex flex-wrap items-center gap-2">{mainButton}</div>
+                  </div>
+                )}
+                <p className="mb-1.5">
+                  <span className="font-semibold text-ink">{t(locale, "dashboard.overview.actionPlan.doThisLabel")}</span>
+                  {task.action}
+                </p>
+                <p className="whitespace-pre-line">
+                  <span className="font-semibold text-ink">{t(locale, "dashboard.overview.actionPlan.howLabel")}</span>
+                  {task.fix}
+                </p>
+                {/* The steps' own pages (official Google help, the listing) — links, never a second button. */}
+                {!isSetup && (stepLinks.length > 0 || (task.checkId.startsWith("completeness.") && !hasEditor)) && (
+                  <p data-testid="how-to-links" className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[12.5px]">
+                    {task.checkId.startsWith("completeness.") && !hasEditor && <span className="text-ink-mute">{t(locale, "dashboard.fix.orOnGoogle")}</span>}
+                    {stepLinks.map((link) =>
+                      link.external ? (
+                        <a key={link.href} href={link.href} target="_blank" rel="noopener noreferrer" className="font-semibold text-ink underline decoration-brass underline-offset-2">
+                          {link.label} ↗
+                        </a>
+                      ) : (
+                        <Link key={link.href} href={link.href} className="font-semibold text-ink underline decoration-brass underline-offset-2">
+                          {link.label}
+                        </Link>
+                      )
+                    )}
+                    {task.checkId.startsWith("completeness.") && !hasEditor && !stepLinks.some((l) => l.external) && (
+                      <a href={GOOGLE_BUSINESS_URL} target="_blank" rel="noopener noreferrer" data-testid="open-on-google" className="font-semibold text-ink underline decoration-brass underline-offset-2">
+                        {t(locale, "dashboard.fix.openOnGoogle")} ↗
+                      </a>
+                    )}
+                  </p>
+                )}
+                {/* Day 23B: one main button + "I did this" on the card; the re-check lives with the steps. */}
+                {websiteRecheck && task.checkId.startsWith("website.") && task.checkId !== "website.has_website" && (
+                  <div className="mt-2.5 border-t border-paper-line pt-2.5" data-testid="how-to-recheck">
+                    <WebsiteRecheck businessId={businessId} initialLeft={websiteRecheck.left} hasWebsite={websiteRecheck.hasWebsite} compact />
+                  </div>
+                )}
+                {/* Who makes this change, by plan, connection and whether PostScore can write it: never "we can't edit your listing" when it can. */}
+                {task.ownerActionOnGoogle && !canDo && (
+                  <p className="mt-2.5 flex items-start gap-1.5 border-t border-paper-line pt-2.5 text-[12px] text-ink-mute" data-testid="how-to-who" data-who={whoMakesIt}>
+                    <IconBrandGoogle size={14} className="mt-0.5 shrink-0" aria-hidden />
+                    <span>
+                      {whoMakesIt === "connect" ? (
+                        <>
+                          <Link href={`/business/${businessId}/connect-gbp`} className="font-semibold text-ink underline decoration-brass underline-offset-2">{t(locale, "dashboard.overview.actionPlan.connectToDo")}</Link>{" "}
+                        </>
+                      ) : whoMakesIt === "read_only" ? (
+                        <>{t(locale, "dashboard.googleTab.w.readOnly")} </>
+                      ) : whoMakesIt === "manual" ? (
+                        <>{t(locale, "dashboard.overview.actionPlan.manualOnGoogle")} </>
+                      ) : null}
+                      <span data-testid="after-google-change" className="font-medium text-ink-soft">{t(locale, "dashboard.rescan.afterGoogleChange")}</span>
+                    </span>
+                  </p>
+                )}
+              </div>
+  );
+  // Fix plan v2: one compact row — number, priority, title, status dot, one short "why", "+6 pts → 84" and the
+  // main button; the row opens to the evidence, how to fix it, "I did this" / "Check again".
+  if (fixPlan?.compact) {
+    const dot = { neutral: "bg-[#c6c0b0]", amber: "bg-amber", brass: "bg-brass", green: "bg-green", red: "bg-red" }[status.variant as string] ?? "bg-[#c6c0b0]";
+    return (
+      <li id={cardId} className="scroll-mt-20 border-t border-paper-line first:border-t-0" data-testid="fix-row" data-open={rowOpen || undefined}>
+        <div className={cn("grid grid-cols-[26px_minmax(0,1fr)] items-center gap-x-3 gap-y-2 px-4 py-3.5 sm:px-5 nav:grid-cols-[26px_112px_minmax(0,1fr)_auto]", rowOpen && "bg-[color:color-mix(in_srgb,var(--color-paper)_60%,white)]")}>
+          <span aria-hidden className="flex h-6 w-6 items-center justify-center rounded-full font-serif text-[12.5px] font-semibold text-ink ps-icon-tile">{step}</span>
+          {/* The priority sits in its own column, so it lines up on every row whatever the title's length. */}
+          <span className="hidden nav:block">{task.urgent ? <span data-testid="task-urgent" className="inline-flex whitespace-nowrap rounded-full bg-red px-2 py-0.5 text-[11px] font-semibold text-white">{t(locale, "dashboard.overview.recs.urgent")}</span> : waiting ? <WaitingForGoogleTag /> : !stale && <FixPriorityTag priority={fixPlan.priority} />}</span>
+          <button type="button" onClick={() => setRowOpen((o) => !o)} aria-expanded={rowOpen} className="col-start-2 min-w-0 text-left nav:col-start-3">
+            <span className="mb-1 flex nav:hidden">{task.urgent ? <span className="inline-flex whitespace-nowrap rounded-full bg-red px-2 py-0.5 text-[11px] font-semibold text-white">{t(locale, "dashboard.overview.recs.urgent")}</span> : waiting ? <WaitingForGoogleTag /> : !stale && <FixPriorityTag priority={fixPlan.priority} />}</span>
+            <span className="flex items-center gap-2 text-[14.5px] font-semibold text-ink">
+              <span>{title}</span>
+              <span className={cn("h-2.5 w-2.5 shrink-0 rounded-full", dot)} title={status.label} aria-label={status.label} data-testid="fix-row-status" data-variant={status.variant} />
+            </span>
+            <span className="mt-0.5 block text-[12.5px] leading-snug text-ink-mute" data-testid="fix-row-why">{fixPlanWhy(task, locale)}</span>
+          </button>
+          <div className="col-start-2 flex items-center justify-between gap-3 nav:col-start-4 nav:justify-end" data-testid="fix-plan-points">
+            <span className="whitespace-nowrap text-[13px] font-semibold text-ink-soft">
+              {fixPlanPoints(task, locale)} → <b className="font-serif text-[16px] text-ink">{fixPlan.running}</b>
+            </span>
+            <span className="flex items-center gap-2">
+              {mainButton}
+              <button type="button" onClick={() => setRowOpen((o) => !o)} aria-label={t(locale, rowOpen ? "dashboard.overview.actionPlan.hideHowToFix" : "dashboard.overview.actionPlan.howToFixIt")} className="text-ink-mute hover:text-ink">
+                <IconChevronDown size={16} className={cn("transition-transform", rowOpen && "rotate-180")} aria-hidden />
+              </button>
+            </span>
+          </div>
+        </div>
+        {rowOpen && (
+          <div className="flex flex-col gap-3 px-4 pb-4 sm:px-5 nav:pl-[57px]" data-testid="fix-row-body">
+            {stale && <p data-testid="hours-stale" className="text-[12.5px] text-ink-soft">{t(locale, "dashboard.hoursCheck.staleTitle")}</p>}
+            {hours?.kind === "differs" ? <HoursDiffLines state={hours} /> : headline !== title && !ownerOnly && !stale && <p className="text-[13.5px] font-medium text-ink">{headline}</p>}
+            {task.mergedLabels && task.mergedLabels.length > 0 && (
+              <p className="text-[12px] text-ink-mute">
+                <span className="font-medium text-ink-soft">{t(locale, "dashboard.overview.actionPlan.mergedReviewsHelpsLabel")}</span> {task.mergedLabels.join(", ")}
+              </p>
+            )}
+            {task.timingNote && <p className="text-[12px] italic text-ink-mute">{task.timingNote}</p>}
+            {merged.length > 0 ? <DetailsVersions mismatches={merged} /> : hours ? null : <CurrentStatus task={task} pendingStatus={pendingStatus} metricProgress={metricProgress} lastScanAt={lastScanAt} />}
+            {!isSetup && (
+              <div>
+                <p className="text-[13px] font-semibold text-ink">{t(locale, "dashboard.overview.actionPlan.howToFixIt")}</p>
+                {howToBody}
+              </div>
+            )}
+            {!isSetup && (
+              <div className="flex flex-wrap items-center gap-2">
+                {secondaryActions}
+              </div>
+            )}
+          </div>
+        )}
+      </li>
+    );
+  }
 
   return (
     <li id={cardId} className="scroll-mt-20 rounded-2xl border border-paper-deep bg-white p-4 shadow-card sm:p-5">
@@ -557,68 +757,7 @@ export function TaskCard({
               {expanded ? t(locale, "dashboard.overview.actionPlan.hideHowToFix") : t(locale, "dashboard.overview.actionPlan.howToFixIt")}
               <IconChevronDown size={14} className={cn("transition-transform", expanded && "rotate-180")} aria-hidden />
             </button>
-            {expanded && fixPlan?.locked && (
-              <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 rounded-xl border border-paper-line bg-paper p-3.5 text-[13px] text-ink-soft" data-testid="fix-plan-steps-locked">
-                <IconLock size={14} className="text-brass" aria-hidden />
-                <span>{t(locale, "dashboard.googlePages.listing.locked")}</span>
-                <UpgradeTrigger feature="grow" />
-              </div>
-            )}
-            {expanded && !fixPlan?.locked && (
-              <div className="mt-2 rounded-xl border border-paper-line bg-paper p-3.5 text-[13px] leading-relaxed text-ink-soft">
-                {canUpdateOnGoogle && (
-                  <p data-testid="how-to-update-intro" className="mb-1.5 font-medium text-ink">
-                    {t(locale, "dashboard.gbpEdit.howToIntro")}
-                  </p>
-                )}
-                <p className="mb-1.5">
-                  <span className="font-semibold text-ink">{t(locale, "dashboard.overview.actionPlan.doThisLabel")}</span>
-                  {task.action}
-                </p>
-                <p className="whitespace-pre-line">
-                  <span className="font-semibold text-ink">{t(locale, "dashboard.overview.actionPlan.howLabel")}</span>
-                  {task.fix}
-                </p>
-                {/* The steps' own pages (official Google help, the listing) — links, never a second button. */}
-                {!isSetup && (stepLinks.length > 0 || (task.checkId.startsWith("completeness.") && !hasEditor)) && (
-                  <p data-testid="how-to-links" className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[12.5px]">
-                    {task.checkId.startsWith("completeness.") && !hasEditor && <span className="text-ink-mute">{t(locale, "dashboard.fix.orOnGoogle")}</span>}
-                    {stepLinks.map((link) =>
-                      link.external ? (
-                        <a key={link.href} href={link.href} target="_blank" rel="noopener noreferrer" className="font-semibold text-ink underline decoration-brass underline-offset-2">
-                          {link.label} ↗
-                        </a>
-                      ) : (
-                        <Link key={link.href} href={link.href} className="font-semibold text-ink underline decoration-brass underline-offset-2">
-                          {link.label}
-                        </Link>
-                      )
-                    )}
-                    {task.checkId.startsWith("completeness.") && !hasEditor && !stepLinks.some((l) => l.external) && (
-                      <a href={GOOGLE_BUSINESS_URL} target="_blank" rel="noopener noreferrer" data-testid="open-on-google" className="font-semibold text-ink underline decoration-brass underline-offset-2">
-                        {t(locale, "dashboard.fix.openOnGoogle")} ↗
-                      </a>
-                    )}
-                  </p>
-                )}
-                {/* Day 23B: one main button + "I did this" on the card; the re-check lives with the steps. */}
-                {websiteRecheck && task.checkId.startsWith("website.") && task.checkId !== "website.has_website" && (
-                  <div className="mt-2.5 border-t border-paper-line pt-2.5" data-testid="how-to-recheck">
-                    <WebsiteRecheck businessId={businessId} initialLeft={websiteRecheck.left} hasWebsite={websiteRecheck.hasWebsite} compact />
-                  </div>
-                )}
-                {task.ownerActionOnGoogle && (
-                  <p className="mt-2.5 flex items-start gap-1.5 border-t border-paper-line pt-2.5 text-[12px] text-ink-mute">
-                    <IconBrandGoogle size={14} className="mt-0.5 shrink-0" aria-hidden />
-                    <span>
-                      {/* Premium + connected: PostScore can make this change, so never "we can't edit your listing". */}
-                      {!canUpdateOnGoogle && <>{t(locale, "dashboard.overview.actionPlan.ownerActionOnGoogle")} </>}
-                      <span data-testid="after-google-change" className="font-medium text-ink-soft">{t(locale, "dashboard.rescan.afterGoogleChange")}</span>
-                    </span>
-                  </p>
-                )}
-              </div>
-            )}
+            {expanded && howToBody}
           </div>
 
           {isSetup && (task.href || stepLinks.length > 0) && (
@@ -644,53 +783,8 @@ export function TaskCard({
                   {t(locale, "dashboard.detailsMismatch.connect")}
                 </Link>
               )}
-              {/* Day 23B: the one dark button — on this page the step-by-step opens right here. */}
-              {stale ? (
-                <RescanNowButton businessId={businessId} lastScanAt={lastScanAt} />
-              ) : fixPlan?.locked ? (
-                // Free: "Fix it" opens the steps as a locked preview.
-                <button type="button" onClick={() => setExpanded(true)} data-testid="fix-button" data-kind="locked" className={FIX_BUTTON_CLASS}>
-                  {t(locale, "dashboard.fixPlan.fixIt")} →
-                </button>
-              ) : merged.length > 0 ? (
-                <MergedActions businessId={businessId} mismatches={merged} only="button" premiumLine={false} />
-              ) : (
-                <FixButton
-                  businessId={businessId}
-                  item={fixItem}
-                  premiumLine={false}
-                  fixPlan={!!fixPlan}
-                  onSteps={() => {
-                    setExpanded(true);
-                    requestAnimationFrame(() => document.getElementById(cardId)?.scrollIntoView({ behavior: "smooth", block: "start" }));
-                  }}
-                />
-              )}
-              {/* A row that grows over time ("Grow to 40 reviews") has no "I did this": its one action is row 1's. */}
-              {(!isPending || canMarkAgain) && !stale && task.markable !== false && !fixPlan?.locked && (
-                <Button variant="default" size="sm" onClick={handleMarkDone} disabled={state.kind === "saving"}>
-                  {state.kind === "saving"
-                    ? t(locale, "dashboard.overview.actionPlan.saving")
-                    : canMarkAgain
-                      ? t(locale, "dashboard.overview.actionPlan.checkAgain")
-                      : t(locale, "dashboard.overview.actionPlan.didThis")}
-                </Button>
-              )}
-              {state.kind === "error" && <span className="text-[12px] text-red">{state.message}</span>}
-              {merged.length > 0 && (
-                <div className="w-full">
-                  <MergedActions businessId={businessId} mismatches={merged} only="link" />
-                </div>
-              )}
-              {/* CLAUDE.md "Plans": Grow/Free — under the steps, what Premium does in one click. */}
-              {(merged.length === 0 || mergedKind(merged) !== "owner_only") && !stale && (
-                <PremiumOneClickLine businessId={businessId} item={merged.length > 0 ? (mergedOneClickItem(merged) ?? fixItem) : fixItem} className="w-full" />
-              )}
-              {noChangeYet && (
-                <p data-testid="check-again-note" className="w-full text-[12px] text-ink-mute">
-                  {t(locale, "dashboard.overview.actionPlan.checkAgainNote")}
-                </p>
-              )}
+              {mainButton}
+              {secondaryActions}
             </div>
           )}
 

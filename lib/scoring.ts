@@ -783,6 +783,8 @@ export interface WebsiteAnalysis {
   /** Public URL of a real captured screenshot. null = no
    * SCREENSHOT_API_KEY configured, or capture failed/was blocked. */
   screenshotUrl: string | null;
+  /** The homepage at a phone's size (Day 25B; display only, like screenshotUrl). Absent before the next capture. */
+  mobileScreenshotUrl?: string | null;
   /** Up to ~4 other real internal pages (services/about/contact/menu)
    * discovered on the homepage's nav and/or sitemap.xml during the same
    * scan, each with its own best-effort screenshot. Display only, purely

@@ -26,9 +26,58 @@ export type MessageKey =
   | "dashboard.fixPlan.upToPts"
   | "dashboard.fixPlan.priority.low"
   | "dashboard.fixPlan.fixIt"
+  | "dashboard.fixPlan.websiteWhole.lastOne"
+  | "dashboard.fixPlan.websiteWhole.lastOne.one"
+  | "dashboard.fixPlan.websiteWhole.lastOne.other"
+  | "dashboard.fixPlan.websiteWhole.last"
+  | "dashboard.fixPlan.websiteWhole.last.one"
+  | "dashboard.fixPlan.websiteWhole.last.other"
+  | "dashboard.fixPlan.websiteWhole.goes"
+  | "dashboard.fixPlan.websiteWhole.goes.one"
+  | "dashboard.fixPlan.websiteWhole.goes.other"
+  | "dashboard.fixPlan.websiteWhole.small"
+  | "dashboard.fixPlan.websiteWhole.small.one"
+  | "dashboard.fixPlan.websiteWhole.small.other"
+  | "dashboard.twoScores.title"
+  | "dashboard.twoScores.presence.title"
+  | "dashboard.twoScores.presence.body"
+  | "dashboard.twoScores.presence.link"
+  | "dashboard.twoScores.growth.title"
+  | "dashboard.twoScores.growth.body"
+  | "dashboard.twoScores.growth.link"
+  | "dashboard.twoScores.hide"
+  | "dashboard.twoScores.fixPlanTo"
+  | "dashboard.twoScores.higherScore"
+  | "dashboard.twoScores.under70"
+  | "dashboard.twoScores.openFixPlan"
+  | "dashboard.fixPlan.why.completeness.address"
+  | "dashboard.fixPlan.why.completeness.business_status"
+  | "dashboard.fixPlan.why.completeness.categories"
+  | "dashboard.fixPlan.why.completeness.customer_details"
+  | "dashboard.fixPlan.why.completeness.hours"
+  | "dashboard.fixPlan.why.completeness.phone"
+  | "dashboard.fixPlan.why.completeness.photos"
+  | "dashboard.fixPlan.why.completeness.website_link"
+  | "dashboard.fixPlan.why.visibility.rating"
+  | "dashboard.fixPlan.why.visibility.review_count"
+  | "dashboard.fixPlan.why.visibility.review_recency"
+  | "dashboard.fixPlan.why.visibility.review_replies"
+  | "dashboard.fixPlan.why.visibility.reviews_merged"
+  | "dashboard.fixPlan.why.visibility.reviews_trust"
+  | "dashboard.fixPlan.why.visibility.reviews_rating"
+  | "dashboard.fixPlan.why.visibility.reviews_count"
+  | "dashboard.fixPlan.why.website.contact_conversion"
+  | "dashboard.fixPlan.why.website.content_depth"
+  | "dashboard.fixPlan.why.website.has_website"
+  | "dashboard.fixPlan.why.website.https"
+  | "dashboard.fixPlan.why.website.mobile_friendly"
+  | "dashboard.fixPlan.why.website.performance_mobile"
+  | "dashboard.fixPlan.why.website.info_consistency"
+  | "dashboard.fixPlan.why.website.starter_site_merged"
   | "dashboard.breakdown.action.moreReviewsInGrowth"
   | "dashboard.fixPlan.speedTitle"
   | "dashboard.fixPlan.speedUpTo"
+  | "dashboard.fixPlan.speedShort"
   | "dashboard.fixPlan.footnote"
   | "dashboard.fixPlan.empty"
   | "dashboard.fixPlan.websiteRow"
@@ -138,6 +187,109 @@ export type MessageKey =
   | "dashboard.nav.competitors"
   | "dashboard.nav.pricing"
   | "dashboard.nav.reports"
+  | "dashboard.growth.checklist.items.answerQuestions.title"
+  | "dashboard.growth.checklist.items.answerQuestions.howTo"
+  | "dashboard.growthPlan.title"
+  | "dashboard.growthPlan.subtitle"
+  | "dashboard.growthPlan.unavailable"
+  | "dashboard.growthPlan.card.label"
+  | "dashboard.growthPlan.card.tierOf"
+  | "dashboard.growthPlan.card.activeWeeks"
+  | "dashboard.growthPlan.track.tier"
+  | "dashboard.growthPlan.track.you"
+  | "dashboard.growthPlan.onTrack"
+  | "dashboard.growthPlan.keep.set"
+  | "dashboard.growthPlan.keep.due"
+  | "dashboard.growthPlan.keep.quiet"
+  | "dashboard.growthPlan.keep.closed"
+  | "dashboard.growthPlan.keep.closedStart"
+  | "dashboard.growthPlan.keep.start"
+  | "dashboard.growthPlan.keep.startSet"
+  | "dashboard.growthPlan.keep.next"
+  | "dashboard.growthPlan.top.title"
+  | "dashboard.growthPlan.top.body"
+  | "dashboard.growthPlan.top.active"
+  | "dashboard.growthPlan.top.activeHave"
+  | "dashboard.growthPlan.top.results"
+  | "dashboard.growthPlan.top.resultsHave"
+  | "dashboard.growthPlan.change.up"
+  | "dashboard.growthPlan.change.upResults"
+  | "dashboard.growthPlan.change.restored"
+  | "dashboard.growthPlan.change.downQuiet"
+  | "dashboard.growthPlan.change.downResults"
+  | "dashboard.growthPlan.needs.toReach"
+  | "dashboard.growthPlan.needs.after"
+  | "dashboard.growthPlan.needs.progress"
+  | "dashboard.growthPlan.needs.active"
+  | "dashboard.growthPlan.needs.have.one"
+  | "dashboard.growthPlan.needs.have.other"
+  | "dashboard.growthPlan.needs.results1"
+  | "dashboard.growthPlan.needs.results2"
+  | "dashboard.growthPlan.needs.results3"
+  | "dashboard.growthPlan.needs.youHave"
+  | "dashboard.growthPlan.needs.nextResult"
+  | "dashboard.growthPlan.needs.r1Three"
+  | "dashboard.growthPlan.r1Connect"
+  | "dashboard.growthPlan.result.r1"
+  | "dashboard.growthPlan.result.r2"
+  | "dashboard.growthPlan.result.r3"
+  | "dashboard.growthPlan.result.r4"
+  | "dashboard.growthPlan.result.r5"
+  | "dashboard.growthPlan.result.r1.goal"
+  | "dashboard.growthPlan.result.r2.goal"
+  | "dashboard.growthPlan.result.r3.goal"
+  | "dashboard.growthPlan.result.r4.goal"
+  | "dashboard.growthPlan.result.r5.goal"
+  | "dashboard.growthPlan.week.title"
+  | "dashboard.growthPlan.week.subOneTap.one"
+  | "dashboard.growthPlan.week.subOneTap.other"
+  | "dashboard.growthPlan.week.subSteps.one"
+  | "dashboard.growthPlan.week.subSteps.other"
+  | "dashboard.growthPlan.week.subNotConnected"
+  | "dashboard.growthPlan.routine.also"
+  | "dashboard.growthPlan.routine.reviewLink"
+  | "dashboard.growthPlan.routine.reviewLinkHowTo"
+  | "dashboard.growthPlan.routine.hours"
+  | "dashboard.growthPlan.week.connectOneTap"
+  | "dashboard.growthPlan.top.onTrack"
+  | "dashboard.growthPlan.top.thisWeek"
+  | "dashboard.growthPlan.top.nextWeek"
+  | "dashboard.growthPlan.top.checkOffThis"
+  | "dashboard.growthPlan.top.checkOffNext"
+  | "dashboard.growthPlan.top.checkOffOnTrack"
+  | "dashboard.growthPlan.top.alreadyCounts"
+  | "dashboard.growthPlan.top.nextResult"
+  | "dashboard.growthPlan.line.nextWeekTier"
+  | "dashboard.growthPlan.line.nextWeek"
+  | "dashboard.growthPlan.line.makesThisWeek"
+  | "dashboard.growthPlan.line.alreadyCounts"
+  | "dashboard.growthPlan.line.photos"
+  | "dashboard.growthPlan.line.checkOff"
+  | "dashboard.growthPlan.doFirst"
+  | "dashboard.growthPlan.didThis"
+  | "dashboard.growthPlan.didIt"
+  | "dashboard.growthPlan.resultsLink"
+  | "dashboard.growthPlan.resultsLinkNotConnected"
+  | "dashboard.growthPlan.connectBanner"
+  | "dashboard.growthPlan.reconnectBanner"
+  | "dashboard.growthPlan.tasksThisWeek.one"
+  | "dashboard.replies.line.ready.one"
+  | "dashboard.replies.line.ready.other"
+  | "dashboard.growthPlan.tasksThisWeek.other"
+  | "dashboard.growthPlan.stepsThisWeek.one"
+  | "dashboard.growthPlan.stepsThisWeek.other"
+  | "dashboard.growthPlan.sinceNone"
+  | "dashboard.growthPlan.tools.offers"
+  | "dashboard.growthPlan.tools.campaigns"
+  | "dashboard.growthPlan.tools.printKit"
+  | "dashboard.growthPlan.tools.localEvents"
+  | "dashboard.growthPlan.free.title"
+  | "dashboard.growthPlan.free.measure1"
+  | "dashboard.growthPlan.free.measure2"
+  | "dashboard.growthPlan.free.measure3"
+  | "dashboard.growthPlan.free.blurred"
+  | "dashboard.growthPlan.free.grow"
+  | "dashboard.growthPlan.free.premium"
   | "dashboard.offers.title"
   | "dashboard.offers.noneRunning"
   | "dashboard.offers.subtitle"
@@ -530,6 +682,21 @@ export type MessageKey =
   | "dashboard.replies.privacy"
   | "dashboard.replies.errorInvalid"
   | "dashboard.replies.errorRules"
+  | "dashboard.replies.line.partial"
+  | "dashboard.replies.line.writing"
+  | "dashboard.replies.line.review"
+  | "dashboard.replies.tweak.length"
+  | "dashboard.replies.tweak.short"
+  | "dashboard.replies.tweak.medium"
+  | "dashboard.replies.tweak.long"
+  | "dashboard.replies.tweak.different"
+  | "dashboard.replies.tweak.writing"
+  | "dashboard.replies.voice.label"
+  | "dashboard.replies.voice.me"
+  | "dashboard.replies.voice.team"
+  | "dashboard.replies.voice.notReady"
+  | "dashboard.replies.reviewerLabel"
+  | "dashboard.replies.reviewerPlaceholder"
   | "dashboard.replies.errorUnavailable"
   | "dashboard.upgrade.feature.replies.name"
   | "dashboard.upgrade.feature.replies.b1"
@@ -2315,24 +2482,27 @@ export type MessageKey =
   | "dashboard.googleTab.w.approveAll.what.replyOne"
   | "dashboard.googleTab.w.approveAll.what.post"
   | "dashboard.googleTab.w.approveAll.what.answers"
-  | "dashboard.googleTab.w.req.open"
-  | "dashboard.googleTab.w.req.title"
-  | "dashboard.googleTab.w.req.placeholder"
   | "dashboard.googleTab.w.req.note"
-  | "dashboard.googleTab.w.req.write"
-  | "dashboard.googleTab.w.req.chip.shorter"
-  | "dashboard.googleTab.w.req.chip.friendlier"
-  | "dashboard.googleTab.w.req.chip.booking"
-  | "dashboard.googleTab.w.req.chip.story.hair"
-  | "dashboard.googleTab.w.req.chip.story.home"
-  | "dashboard.googleTab.w.req.chip.story.restaurant"
-  | "dashboard.googleTab.w.req.chip.story.art"
-  | "dashboard.googleTab.w.req.chip.story.default"
-  | "dashboard.googleTab.w.req.chip.qa.prices"
-  | "dashboard.googleTab.w.req.chip.qa.visit"
-  | "dashboard.googleTab.w.req.chip.offer.urgent"
-  | "dashboard.googleTab.w.req.chip.desc.specialties"
-  | "dashboard.googleTab.w.req.chip.desc.area"
+  | "dashboard.googleTab.w.steer.button"
+  | "dashboard.googleTab.w.steer.left"
+  | "dashboard.googleTab.w.steer.post.label"
+  | "dashboard.googleTab.w.steer.post.placeholder.hair"
+  | "dashboard.googleTab.w.steer.post.placeholder.home"
+  | "dashboard.googleTab.w.steer.post.placeholder.restaurant"
+  | "dashboard.googleTab.w.steer.post.placeholder.art"
+  | "dashboard.googleTab.w.steer.post.placeholder.default"
+  | "dashboard.googleTab.w.steer.desc.label"
+  | "dashboard.googleTab.w.steer.desc.placeholder.hair"
+  | "dashboard.googleTab.w.steer.desc.placeholder.default"
+  | "dashboard.googleTab.w.ans.desc.onGoogle"
+  | "dashboard.googleTab.w.ans.desc.onGoogleNone"
+  | "dashboard.googleTab.w.ans.desc.chars"
+  | "dashboard.googleTab.w.ans.desc.new"
+  | "dashboard.googleTab.w.ans.desc.yours"
+  | "dashboard.googleTab.w.ans.services.noPrice"
+  | "dashboard.googleTab.w.ans.services.notOnGoogle"
+  | "dashboard.googleTab.w.ans.services.changed"
+  | "dashboard.googleTab.w.ans.failedGoogle"
   | "dashboard.googleTab.w.post.type.label"
   | "dashboard.googleTab.w.post.type.update"
   | "dashboard.googleTab.w.post.type.qa"
@@ -2397,18 +2567,6 @@ export type MessageKey =
   | "dashboard.googleTab.w.spelling.blocked"
   | "dashboard.googleTab.w.post.offer.premium"
   | "dashboard.googleTab.w.post.offer.grow"
-  | "dashboard.googleTab.w.post.facts.open.hair"
-  | "dashboard.googleTab.w.post.facts.open.home"
-  | "dashboard.googleTab.w.post.facts.open.restaurant"
-  | "dashboard.googleTab.w.post.facts.open.art"
-  | "dashboard.googleTab.w.post.facts.open.default"
-  | "dashboard.googleTab.w.post.facts.note"
-  | "dashboard.googleTab.w.post.facts.placeholder.hair"
-  | "dashboard.googleTab.w.post.facts.placeholder.home"
-  | "dashboard.googleTab.w.post.facts.placeholder.restaurant"
-  | "dashboard.googleTab.w.post.facts.placeholder.art"
-  | "dashboard.googleTab.w.post.facts.placeholder.default"
-  | "dashboard.googleTab.w.post.facts.write"
   | "dashboard.googleTab.w.post.problem.invented_story"
   | "dashboard.googleTab.w.ans.answerToInclude"
   | "dashboard.googleTab.w.ans.answerToIncludeOnly"
@@ -2479,8 +2637,6 @@ export type MessageKey =
   | "dashboard.googleTab.w.post.cta.CALL"
   | "dashboard.googleTab.w.post.cta.NONE"
   | "dashboard.googleTab.w.post.ctaNote.CALL"
-  | "dashboard.googleTab.w.post.another"
-  | "dashboard.googleTab.w.post.anotherLeft"
   | "dashboard.googleTab.w.post.writing"
   | "dashboard.googleTab.w.post.limit"
   | "dashboard.googleTab.w.post.publish"
@@ -2511,10 +2667,8 @@ export type MessageKey =
   | "dashboard.googleTab.w.replies.more"
   | "dashboard.googleTab.w.ans.why"
   | "dashboard.googleTab.w.ans.loading"
-  | "dashboard.googleTab.w.ans.failed"
   | "dashboard.googleTab.w.ans.none"
   | "dashboard.googleTab.w.ans.desc.title"
-  | "dashboard.googleTab.w.ans.desc.now"
   | "dashboard.googleTab.w.ans.desc.count"
   | "dashboard.googleTab.w.ans.desc.noDraft"
   | "dashboard.googleTab.w.ans.services.title"
@@ -3548,6 +3702,20 @@ export type MessageKey =
   | "dashboard.website.businessFallback"
   | "dashboard.website.businessNameFallback"
   | "dashboard.website.pageTitle"
+  | "dashboard.website.speedNotScored"
+  | "dashboard.website.v2.fixTitle"
+  | "dashboard.website.v2.starterTitle"
+  | "dashboard.website.v2.pointsNote"
+  | "dashboard.website.v2.postStudio"
+  | "dashboard.website.v2.notOnListing"
+  | "dashboard.website.v2.addIt"
+  | "dashboard.website.v2.compare.scores"
+  | "dashboard.website.v2.compare.keep"
+  | "dashboard.website.v2.compare.keepEqual"
+  | "dashboard.website.v2.compare.add"
+  | "dashboard.website.v2.compare.addOne"
+  | "dashboard.website.v2.compare.recommended"
+  | "dashboard.website.v2.compare.build"
   | "dashboard.website.googleListingMissingWebsite"
   | "dashboard.website.googleListingWebsiteRemoved"
   | "dashboard.website.googleListingWebsiteRemovedUnknownDate"
@@ -3581,6 +3749,9 @@ export type MessageKey =
   | "dashboard.website.noPreviewCapturedNote"
   | "dashboard.website.screenshotsCaptured"
   | "dashboard.website.homepageLabel"
+  | "dashboard.website.couldNotCapture"
+  | "dashboard.website.phoneLabel"
+  | "dashboard.website.phoneAlt"
   | "dashboard.website.scoreHeading"
   | "dashboard.website.ptsAbbrev"
   | "dashboard.website.technicalHeading"
@@ -3807,7 +3978,9 @@ export type MessageKey =
   | "dashboard.overview.actionPlan.howToFixIt"
   | "dashboard.overview.actionPlan.doThisLabel"
   | "dashboard.overview.actionPlan.howLabel"
-  | "dashboard.overview.actionPlan.ownerActionOnGoogle"
+  | "dashboard.overview.actionPlan.doneForYou"
+  | "dashboard.overview.actionPlan.connectToDo"
+  | "dashboard.overview.actionPlan.manualOnGoogle"
   | "dashboard.overview.actionPlan.saving"
   | "dashboard.overview.actionPlan.checkAgain"
   | "dashboard.overview.actionPlan.checkAgainNote"
@@ -5382,6 +5555,7 @@ export type MessageKey =
   | "dashboard.wrongSite.source.owner"
   | "dashboard.wrongSite.source.verified"
   | "dashboard.wrongSite.source.listing"
+  | "dashboard.wrongSite.source.scan"
   | "dashboard.wrongSite.choose"
   | "dashboard.wrongSite.option.listing"
   | "dashboard.wrongSite.option.listingBroken"
@@ -6469,6 +6643,16 @@ export type MessageKey =
  * how a future locale with more categories, e.g. "few"/"many", would
  * still get a safe result even before every category is seeded for it). */
 export type PluralKeyBase =
+  | "dashboard.fixPlan.websiteWhole.lastOne"
+  | "dashboard.fixPlan.websiteWhole.last"
+  | "dashboard.fixPlan.websiteWhole.goes"
+  | "dashboard.fixPlan.websiteWhole.small"
+  | "dashboard.growthPlan.needs.have"
+  | "dashboard.growthPlan.week.subOneTap"
+  | "dashboard.growthPlan.week.subSteps"
+  | "dashboard.growthPlan.tasksThisWeek"
+  | "dashboard.replies.line.ready"
+  | "dashboard.growthPlan.stepsThisWeek"
   | "dashboard.offers.summary.started"
   | "dashboard.offers.summary.startedToday"
   | "dashboard.offers.summary.uses"
@@ -6569,7 +6753,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.overview.sinceCard.latest": "Latest scan · {date}",
     "dashboard.settings.plans.value.comingSoon": "Coming soon",
     "dashboard.fixPlan.title": "Fix plan",
-    "dashboard.fixPlan.subtitle": "Every fix that raises your PostScore score, most urgent first.",
+    "dashboard.fixPlan.subtitle": "Every fix that raises your PostScore score, grouped by how long it takes.",
     "dashboard.fixPlan.thisWeekLabel.one": "This week · 1 fix you can finish yourself, today",
     "dashboard.fixPlan.thisWeekLabel.other": "This week · {count} fixes you can finish yourself, today",
     "dashboard.fixPlan.everyFix": "When every fix is done",
@@ -6584,9 +6768,54 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.fixPlan.upToPts": "up to +{points} pts",
     "dashboard.fixPlan.priority.low": "Low priority",
     "dashboard.fixPlan.fixIt": "Fix it",
+    "dashboard.fixPlan.websiteWhole.lastOne.one": "Fix this 1 and your Website gets its last point (score {score} → {after}).",
+    "dashboard.fixPlan.websiteWhole.lastOne.other": "Fix these {count} and your Website gets its last point (score {score} → {after}).",
+    "dashboard.fixPlan.websiteWhole.last.one": "Fix this 1 and your Website gets its last {points} points (score {score} → {after}).",
+    "dashboard.fixPlan.websiteWhole.last.other": "Fix these {count} and your Website gets its last {points} points (score {score} → {after}).",
+    "dashboard.fixPlan.websiteWhole.goes.one": "Fix this 1 and your Website goes {from} → {to} / {of} (score {score} → {after}).",
+    "dashboard.fixPlan.websiteWhole.goes.other": "Fix these {count} and your Website goes {from} → {to} / {of} (score {score} → {after}).",
+    "dashboard.fixPlan.websiteWhole.small.one": "Fix this 1 small thing on your Website.",
+    "dashboard.fixPlan.websiteWhole.small.other": "Fix these {count} small things on your Website.",
+    "dashboard.twoScores.title": "How your two scores work together",
+    "dashboard.twoScores.presence.title": "Presence · Get found",
+    "dashboard.twoScores.presence.body": "Fix these and your score climbs to 100. A complete, accurate listing with fresh reviews helps Google show you to people searching nearby.",
+    "dashboard.twoScores.presence.link": "Fix plan →",
+    "dashboard.twoScores.growth.title": "Growth · Get chosen and come back",
+    "dashboard.twoScores.growth.body": "Offers, reviews and weekly posts that bring customers in the door, whatever your score.",
+    "dashboard.twoScores.growth.link": "Growth plan →",
+    "dashboard.twoScores.hide": "Hide",
+    "dashboard.twoScores.fixPlanTo": "Fix plan takes you to {score} →",
+    "dashboard.twoScores.higherScore": "A higher score helps more people find you on Google.",
+    "dashboard.twoScores.under70": "Your Presence score is {score}. Fixing it is the fastest way to be found by more customers.",
+    "dashboard.twoScores.openFixPlan": "Open Fix plan →",
+    "dashboard.fixPlan.why.completeness.address": "Customers and Google Maps need a verified address to find you.",
+    "dashboard.fixPlan.why.completeness.business_status": "If Google shows you as closed, customers won't come.",
+    "dashboard.fixPlan.why.completeness.categories": "Categories decide which searches Google shows you in.",
+    "dashboard.fixPlan.why.completeness.customer_details": "Customers check access, payments and parking before they visit.",
+    "dashboard.fixPlan.why.completeness.hours": "Customers check your hours before they visit.",
+    "dashboard.fixPlan.why.completeness.phone": "A phone number lets ready customers call you now.",
+    "dashboard.fixPlan.why.completeness.photos": "Real photos bring more clicks and calls.",
+    "dashboard.fixPlan.why.completeness.website_link": "A linked website gives customers one more way to choose you.",
+    "dashboard.fixPlan.why.visibility.rating": "Your star rating is often the first thing customers see.",
+    "dashboard.fixPlan.why.visibility.review_count": "More reviews make customers trust you more.",
+    "dashboard.fixPlan.why.visibility.review_recency": "Recent reviews count most: 3 in 90 days earns full points.",
+    "dashboard.fixPlan.why.visibility.review_replies": "Customers read how you answer their reviews.",
+    "dashboard.fixPlan.why.visibility.reviews_merged": "Recent reviews count most: 3 in 90 days earns full points.",
+    "dashboard.fixPlan.why.visibility.reviews_trust": "Your star rating counts fully once you have enough reviews.",
+    "dashboard.fixPlan.why.visibility.reviews_rating": "Your star rating is often the first thing customers see.",
+    "dashboard.fixPlan.why.visibility.reviews_count": "Review count keeps adding points up to 150 reviews.",
+    "dashboard.fixPlan.why.website.contact_conversion": "Visitors need to see how to reach you right away.",
+    "dashboard.fixPlan.why.website.content_depth": "Real content convinces visitors to choose you.",
+    "dashboard.fixPlan.why.website.has_website": "A website is one of the strongest trust signals.",
+    "dashboard.fixPlan.why.website.https": "Browsers warn visitors when a site isn't secure.",
+    "dashboard.fixPlan.why.website.mobile_friendly": "Most people find you on their phones.",
+    "dashboard.fixPlan.why.website.performance_mobile": "A slow site loses visitors before they see you.",
+    "dashboard.fixPlan.why.website.info_consistency": "Your website and Google should show the same details.",
+    "dashboard.fixPlan.why.website.starter_site_merged": "A website is one of the strongest trust signals.",
     "dashboard.breakdown.action.moreReviewsInGrowth": "Get more reviews (in Growth)",
     "dashboard.fixPlan.speedTitle": "Website speed: not scored yet",
     "dashboard.fixPlan.speedUpTo": "Up to {points} pts.",
+    "dashboard.fixPlan.speedShort": "One more speed test on your next scan; until then it doesn't count for or against you.",
     "dashboard.fixPlan.footnote": "Running score adds each fix's points from the top. Your real score changes only after a scan confirms the fix.",
     "dashboard.fixPlan.empty": "Nothing to fix. Your score has every point it can get right now.",
     "dashboard.fixPlan.websiteRow": "Improve your website",
@@ -6695,6 +6924,109 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.nav.competitors": "Competitors",
     "dashboard.nav.pricing": "Price check",
     "dashboard.nav.reports": "Reports",
+    "dashboard.growth.checklist.items.answerQuestions.title": "Answer your customers' common questions",
+    "dashboard.growth.checklist.items.answerQuestions.howTo": "Add what customers ask about to your Google listing: a description, your services and prices, parking and accessibility.",
+    "dashboard.growthPlan.title": "Growth plan",
+    "dashboard.growthPlan.subtitle": "Win customers and keep them coming back. This is separate from your PostScore score.",
+    "dashboard.growthPlan.unavailable": "Your Growth tier couldn't load right now. Try again in a moment.",
+    "dashboard.growthPlan.card.label": "Your Growth tier · updated Mondays",
+    "dashboard.growthPlan.card.tierOf": "Tier {n} of 5",
+    "dashboard.growthPlan.card.activeWeeks": "Active weeks · last 8",
+    "dashboard.growthPlan.track.tier": "Tier {n}",
+    "dashboard.growthPlan.track.you": "Tier {n} · you",
+    "dashboard.growthPlan.onTrack": "On track for {tier} on {date}",
+    "dashboard.growthPlan.keep.set": "You're set for this week. Stay active each week to keep {tier}.",
+    "dashboard.growthPlan.keep.due": "One thing from this week's plan by Sunday keeps {tier}.",
+    "dashboard.growthPlan.keep.quiet": "Last week was quiet. One task by Sunday keeps {tier}; two quiet weeks in a row drop you to {lower}.",
+    "dashboard.growthPlan.keep.closed": "This week is marked closed, so it won't count against {tier}.",
+    "dashboard.growthPlan.keep.closedStart": "This week is marked closed, so it doesn't count either way.",
+    "dashboard.growthPlan.keep.start": "Make this week count: one thing from this week's plan by Sunday.",
+    "dashboard.growthPlan.keep.startSet": "This week counts. Keep it up each week to reach Building.",
+    "dashboard.growthPlan.keep.next": "Next update: {date}",
+    "dashboard.growthPlan.top.title": "You're at the top",
+    "dashboard.growthPlan.top.body": "Local favorite stays yours as long as you keep showing up.",
+    "dashboard.growthPlan.top.active": "Stay active: never two quiet weeks in a row",
+    "dashboard.growthPlan.top.activeHave": "{n} active weeks out of the last {of}.",
+    "dashboard.growthPlan.top.results": "Keep three real results, at least two measured",
+    "dashboard.growthPlan.top.resultsHave": "Results you have now: {n}.",
+    "dashboard.growthPlan.change.up": "You moved up to {tier}: {count} active weeks.",
+    "dashboard.growthPlan.change.upResults": "You moved up to {tier}: {count} active weeks and {results}.",
+    "dashboard.growthPlan.change.restored": "{tier} is back: two active weeks in a row.",
+    "dashboard.growthPlan.change.downQuiet": "You moved to {tier}: no activity the weeks of {a} and {b}. Two active weeks bring {back} back.",
+    "dashboard.growthPlan.change.downResults": "You moved to {tier}: the results {back} needs weren't there 4 Mondays in a row. Two active weeks with them bring it back.",
+    "dashboard.growthPlan.needs.toReach": "To reach {tier}",
+    "dashboard.growthPlan.needs.after": "After that: {tier}",
+    "dashboard.growthPlan.needs.progress": "{done} of {of}",
+    "dashboard.growthPlan.needs.active": "{n} active weeks out of the last {of}",
+    "dashboard.growthPlan.needs.have.one": "You have {count}.",
+    "dashboard.growthPlan.needs.have.other": "You have {count}.",
+    "dashboard.growthPlan.needs.results1": "One real result",
+    "dashboard.growthPlan.needs.results2": "Two real results, at least one measured",
+    "dashboard.growthPlan.needs.results3": "Three real results, at least two measured",
+    "dashboard.growthPlan.needs.youHave": "You have: {list}.",
+    "dashboard.growthPlan.needs.nextResult": "Next: {result}.",
+    "dashboard.growthPlan.needs.r1Three": "And customer actions from Google up on last year, 3 months in a row.",
+    "dashboard.growthPlan.r1Connect": "Connect Google to reach Local favorite: it needs your customer actions from Google.",
+    "dashboard.growthPlan.result.r1": "customer actions from Google up on last year",
+    "dashboard.growthPlan.result.r2": "3 new reviews in 30 days",
+    "dashboard.growthPlan.result.r3": "QR scans",
+    "dashboard.growthPlan.result.r4": "3 offer uses logged in 30 days",
+    "dashboard.growthPlan.result.r5": "an email campaign opened",
+    "dashboard.growthPlan.result.r1.goal": "more customer actions from Google than the same month last year",
+    "dashboard.growthPlan.result.r2.goal": "3 new reviews in 30 days",
+    "dashboard.growthPlan.result.r3.goal": "10 QR scans in 30 days (counts once QR tracking is on)",
+    "dashboard.growthPlan.result.r4.goal": "3 offer uses logged in 30 days",
+    "dashboard.growthPlan.result.r5.goal": "an email campaign opened by 20% or more",
+    "dashboard.growthPlan.week.title": "This week's plan",
+    "dashboard.growthPlan.week.subOneTap.one": "{count} task · ranked by what it does for your tier",
+    "dashboard.growthPlan.week.subOneTap.other": "{count} tasks · ranked by what they do for your tier",
+    "dashboard.growthPlan.week.subSteps.one": "{count} step · do it on Google, then check it off",
+    "dashboard.growthPlan.week.subSteps.other": "{count} steps · do them on Google, then check them off",
+    "dashboard.growthPlan.week.subNotConnected": "Do them on Google, then check them off. 2 check-offs make a week count.",
+    "dashboard.growthPlan.routine.also": "Also this week",
+    "dashboard.growthPlan.routine.reviewLink": "Get your review link & QR →",
+    "dashboard.growthPlan.routine.reviewLinkHowTo": "Copy your review link or QR on Get more reviews and send it to a few recent customers.",
+    "dashboard.growthPlan.routine.hours": "Check your hours →",
+    "dashboard.growthPlan.week.connectOneTap": "Connect Google and the post, replies and answers become one tap.",
+    "dashboard.growthPlan.top.onTrack": "Do 1 task → on track for {tier} on {date}.",
+    "dashboard.growthPlan.top.thisWeek": "Do 1 task → this week counts.",
+    "dashboard.growthPlan.top.nextWeek": "Do 1 task → next week counts too.",
+    "dashboard.growthPlan.top.checkOffThis": "Check off 2 tasks → this week counts.",
+    "dashboard.growthPlan.top.checkOffNext": "Check off 2 tasks → next week counts too.",
+    "dashboard.growthPlan.top.checkOffOnTrack": "Check off 2 tasks → on track for {tier} on {date}.",
+    "dashboard.growthPlan.top.alreadyCounts": "This week already counts ✓.",
+    "dashboard.growthPlan.top.nextResult": "Your next result, for {tier}: {result}.",
+    "dashboard.growthPlan.line.nextWeekTier": "Goes out {day}, so next week counts → {tier} on {date}",
+    "dashboard.growthPlan.line.nextWeek": "Goes out {day}, so next week counts",
+    "dashboard.growthPlan.line.makesThisWeek": "Makes this week count",
+    "dashboard.growthPlan.line.alreadyCounts": "Goes out today, in a week that already counts",
+    "dashboard.growthPlan.line.photos": "Counts for the week you upload them",
+    "dashboard.growthPlan.line.checkOff": "Check it off when it's done: 2 check-offs make a week count",
+    "dashboard.growthPlan.doFirst": "Do this one first",
+    "dashboard.growthPlan.didThis": "I did this",
+    "dashboard.growthPlan.didIt": "Done ✓",
+    "dashboard.growthPlan.resultsLink": "See what Google brought you last month",
+    "dashboard.growthPlan.resultsLinkNotConnected": "See what Google results will show you",
+    "dashboard.growthPlan.connectBanner": "Connect your Google listing to see your results and let PostScore post for you.",
+    "dashboard.growthPlan.reconnectBanner": "Google disconnected: reconnect to keep your plan one tap. Your tier is kept.",
+    "dashboard.growthPlan.tasksThisWeek.one": "{count} task this week",
+    "dashboard.replies.line.ready.one": "{count} reply drafted and ready",
+    "dashboard.replies.line.ready.other": "{count} replies drafted and ready",
+    "dashboard.growthPlan.tasksThisWeek.other": "{count} tasks this week",
+    "dashboard.growthPlan.stepsThisWeek.one": "{count} step this week",
+    "dashboard.growthPlan.stepsThisWeek.other": "{count} steps this week",
+    "dashboard.growthPlan.sinceNone": "Nothing from your plan last month yet. Do a task from this week's plan, and what changed after it shows here.",
+    "dashboard.growthPlan.tools.offers": "First-time, loyalty, coupons, referrals",
+    "dashboard.growthPlan.tools.campaigns": "Email, text and social campaigns (coming soon)",
+    "dashboard.growthPlan.tools.printKit": "Signs and cards with your QR codes",
+    "dashboard.growthPlan.tools.localEvents": "Get known nearby",
+    "dashboard.growthPlan.free.title": "Your Growth tier",
+    "dashboard.growthPlan.free.measure1": "Active weeks: the weeks you do something from your plan",
+    "dashboard.growthPlan.free.measure2": "Real results: customer actions from Google, new reviews, offers used",
+    "dashboard.growthPlan.free.measure3": "Five tiers, updated every Monday, separate from your PostScore score",
+    "dashboard.growthPlan.free.blurred": "How to do it, and what it does for your tier",
+    "dashboard.growthPlan.free.grow": "Your tier and your weekly plan, with the steps to do each task yourself.",
+    "dashboard.growthPlan.free.premium": "The same plan, and PostScore does the tasks for you: approve them in one tap.",
     "dashboard.offers.title": "Customer offers",
     "dashboard.offers.noneRunning": "No offers running right now. Design one on the Coupons or Referrals tab and save it to start tracking.",
     "dashboard.offers.subtitle": "Coupons, first-time offers and referral cards that bring people in, and how many times each one was used.",
@@ -7091,6 +7423,21 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.replies.privacy": "We don't save the review you paste — only your reply.",
     "dashboard.replies.errorInvalid": "Paste the review first (up to 2,000 characters).",
     "dashboard.replies.errorRules": "PostAI couldn't write a reply that follows the rules (no offers, no asking to change the review). Please try again — it didn't use up a free reply.",
+    "dashboard.replies.line.partial": "{ready} of {total} replies ready",
+    "dashboard.replies.line.writing": "Drafts are being written",
+    "dashboard.replies.line.review": "Review them →",
+    "dashboard.replies.tweak.length": "Length",
+    "dashboard.replies.tweak.short": "Short",
+    "dashboard.replies.tweak.medium": "Medium",
+    "dashboard.replies.tweak.long": "Long",
+    "dashboard.replies.tweak.different": "Different wording",
+    "dashboard.replies.tweak.writing": "Writing…",
+    "dashboard.replies.voice.label": "Replies are written as:",
+    "dashboard.replies.voice.me": "Me (I)",
+    "dashboard.replies.voice.team": "My team (we)",
+    "dashboard.replies.voice.notReady": "Couldn't save this yet. Replies are written as Me (I) for now.",
+    "dashboard.replies.reviewerLabel": "Reviewer's name (optional)",
+    "dashboard.replies.reviewerPlaceholder": "e.g. Yadira M.",
     "dashboard.replies.errorUnavailable": "Reply drafts aren't available right now. Please try again later.",
     "dashboard.upgrade.feature.replies.name": "Unlimited AI review replies",
     "dashboard.upgrade.feature.replies.b1": "Draft a reply to every review, as many as you need",
@@ -7362,10 +7709,10 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.free.web.openPreview": "Open full preview",
     "dashboard.free.web.pathA": "Keep your current website — fix it with PostScore",
     "dashboard.free.web.pathAIntroPaid": "Fix every issue and aim for a perfect 100/100 — step by step, in {builder}.",
-    "dashboard.free.web.checksLeft": "{count} checks left to fix",
-    "dashboard.free.web.checksLeftOne": "1 check left to fix",
+    "dashboard.free.web.checksLeft": "{count} checks left",
+    "dashboard.free.web.checksLeftOne": "1 check left",
     "dashboard.free.web.checksLeftNone": "Every check passes — keep it that way.",
-    "dashboard.free.web.guidesLink": "How to fix each check, step by step",
+    "dashboard.free.web.guidesLink": "How to fix each check",
     "dashboard.free.web.pathAIntro": "Like your site? Fix every issue and aim for a perfect 100/100 — PostScore shows you exactly how, in {builder}.",
     "dashboard.free.web.yourBuilder": "your site builder",
     "dashboard.free.web.pathB": "Or start fresh with a new website",
@@ -8828,24 +9175,27 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.googleTab.w.approveAll.what.replyOne": "1 review reply",
     "dashboard.googleTab.w.approveAll.what.post": "this week's post",
     "dashboard.googleTab.w.approveAll.what.answers": "the answers",
-    "dashboard.googleTab.w.req.open": "Tell PostScore what you want →",
-    "dashboard.googleTab.w.req.title": "Tell PostScore what you want",
-    "dashboard.googleTab.w.req.placeholder": "e.g. Invite people to book online and keep it short",
     "dashboard.googleTab.w.req.note": "PostScore adds no events, prices or results you didn't give, and keeps Google's rules.",
-    "dashboard.googleTab.w.req.write": "Write it",
-    "dashboard.googleTab.w.req.chip.shorter": "Make it shorter",
-    "dashboard.googleTab.w.req.chip.friendlier": "Friendlier tone",
-    "dashboard.googleTab.w.req.chip.booking": "Invite people to book online",
-    "dashboard.googleTab.w.req.chip.story.hair": "A real before-and-after: ",
-    "dashboard.googleTab.w.req.chip.story.home": "A recent job: ",
-    "dashboard.googleTab.w.req.chip.story.restaurant": "This week's special: ",
-    "dashboard.googleTab.w.req.chip.story.art": "Our next class: ",
-    "dashboard.googleTab.w.req.chip.story.default": "Something new: ",
-    "dashboard.googleTab.w.req.chip.qa.prices": "Focus on prices",
-    "dashboard.googleTab.w.req.chip.qa.visit": "Focus on parking and payments",
-    "dashboard.googleTab.w.req.chip.offer.urgent": "Say when it ends",
-    "dashboard.googleTab.w.req.chip.desc.specialties": "Mention our specialties",
-    "dashboard.googleTab.w.req.chip.desc.area": "Mention the area we serve",
+    "dashboard.googleTab.w.steer.button": "Draft another with PostAI",
+    "dashboard.googleTab.w.steer.left": "{count} of {of} drafts left this week",
+    "dashboard.googleTab.w.steer.post.label": "What should this post be about? (optional)",
+    "dashboard.googleTab.w.steer.post.placeholder.hair": "e.g. holiday gift cards, our new stylist, 20% off color in December",
+    "dashboard.googleTab.w.steer.post.placeholder.home": "e.g. a kitchen we just finished, winter scheduling, free estimates this month",
+    "dashboard.googleTab.w.steer.post.placeholder.restaurant": "e.g. this week's special, holiday hours, gift cards",
+    "dashboard.googleTab.w.steer.post.placeholder.art": "e.g. a class coming up, new work, holiday gift cards",
+    "dashboard.googleTab.w.steer.post.placeholder.default": "e.g. holiday gift cards, someone new on the team, open Sundays in December",
+    "dashboard.googleTab.w.steer.desc.label": "What should the description focus on? (optional)",
+    "dashboard.googleTab.w.steer.desc.placeholder.hair": "e.g. our curly hair specialists, walk-ins welcome, 20 years in Tarrytown",
+    "dashboard.googleTab.w.steer.desc.placeholder.default": "e.g. what you're known for, walk-ins welcome, how long you've been in business",
+    "dashboard.googleTab.w.ans.desc.onGoogle": "On Google now",
+    "dashboard.googleTab.w.ans.desc.onGoogleNone": "No description on Google yet.",
+    "dashboard.googleTab.w.ans.desc.chars": "{count} characters",
+    "dashboard.googleTab.w.ans.desc.new": "Your new description (not on Google yet)",
+    "dashboard.googleTab.w.ans.desc.yours": "Your new description",
+    "dashboard.googleTab.w.ans.services.noPrice": "no price",
+    "dashboard.googleTab.w.ans.services.notOnGoogle": "Not on Google yet",
+    "dashboard.googleTab.w.ans.services.changed": "Changed",
+    "dashboard.googleTab.w.ans.failedGoogle": "Couldn't load what's on Google right now.",
     "dashboard.googleTab.w.post.type.label": "Post type",
     "dashboard.googleTab.w.post.type.update": "Update",
     "dashboard.googleTab.w.post.type.qa": "Your questions, answered",
@@ -8910,18 +9260,6 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.googleTab.w.spelling.blocked": "Check the spelling above first.",
     "dashboard.googleTab.w.post.offer.premium": "About your coupon “{offer}” (code {code}): it goes on Google as an offer, with its code and dates.",
     "dashboard.googleTab.w.post.offer.grow": "About your coupon “{offer}” (code {code}). On Google, add it as an offer.",
-    "dashboard.googleTab.w.post.facts.open.hair": "Have a real before-and-after? Tell PostScore 1–2 facts →",
-    "dashboard.googleTab.w.post.facts.open.home": "Have a recent job to show? Tell PostScore 1–2 facts →",
-    "dashboard.googleTab.w.post.facts.open.restaurant": "Have a special this week? Tell PostScore what it is →",
-    "dashboard.googleTab.w.post.facts.open.art": "Have a class coming up? Tell PostScore the details →",
-    "dashboard.googleTab.w.post.facts.open.default": "Want it about something real? Tell PostScore 1–2 facts →",
-    "dashboard.googleTab.w.post.facts.note": "PostScore writes only from what you type here and adds nothing else.",
-    "dashboard.googleTab.w.post.facts.placeholder.hair": "e.g. Balayage with soft highlights, done this Tuesday",
-    "dashboard.googleTab.w.post.facts.placeholder.home": "e.g. New kitchen backsplash installed in Tarrytown this week",
-    "dashboard.googleTab.w.post.facts.placeholder.restaurant": "e.g. Butternut squash soup, $9, through Sunday",
-    "dashboard.googleTab.w.post.facts.placeholder.art": "e.g. Watercolor class Saturday Dec 6, 10 am, $40",
-    "dashboard.googleTab.w.post.facts.placeholder.default": "e.g. Open on Sundays starting Dec 1",
-    "dashboard.googleTab.w.post.facts.write": "Write from my facts",
     "dashboard.googleTab.w.post.problem.invented_story": "This tells a specific story PostScore can't know. Give it the facts, or edit it.",
     "dashboard.googleTab.w.ans.answerToInclude": "Answer {count} questions above to include customer details — or apply the rest now.",
     "dashboard.googleTab.w.ans.answerToIncludeOnly": "Answer {count} questions above to include customer details.",
@@ -8992,8 +9330,6 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.googleTab.w.post.cta.CALL": "Call",
     "dashboard.googleTab.w.post.cta.NONE": "No button",
     "dashboard.googleTab.w.post.ctaNote.CALL": "Uses your listing's phone number.",
-    "dashboard.googleTab.w.post.another": "Write another",
-    "dashboard.googleTab.w.post.anotherLeft": "Write another ({count} left this week)",
     "dashboard.googleTab.w.post.writing": "Writing…",
     "dashboard.googleTab.w.post.limit": "No more new drafts this week. You can still edit this one.",
     "dashboard.googleTab.w.post.publish": "Publish to Google",
@@ -9024,10 +9360,8 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.googleTab.w.replies.more": "{count} more in the reviews inbox",
     "dashboard.googleTab.w.ans.why": "Google now answers many customers' questions from your listing's own details. Fill in what's missing:",
     "dashboard.googleTab.w.ans.loading": "Reading your listing…",
-    "dashboard.googleTab.w.ans.failed": "Couldn't load from Google right now.",
     "dashboard.googleTab.w.ans.none": "Your listing already has what Google needs to answer customers' questions.",
     "dashboard.googleTab.w.ans.desc.title": "Description",
-    "dashboard.googleTab.w.ans.desc.now": "On Google now: {count} characters",
     "dashboard.googleTab.w.ans.desc.count": "{count} characters (aim for 250+)",
     "dashboard.googleTab.w.ans.desc.noDraft": "PostScore couldn't draft one right now. Write a few sentences about what you do and the area you serve.",
     "dashboard.googleTab.w.ans.services.title": "Services and prices",
@@ -10336,6 +10670,20 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.website.businessFallback": "business",
     "dashboard.website.businessNameFallback": "Your business",
     "dashboard.website.pageTitle": "Website",
+    "dashboard.website.speedNotScored": "· speed not scored yet",
+    "dashboard.website.v2.fixTitle": "Fix your website",
+    "dashboard.website.v2.starterTitle": "One-page starter site",
+    "dashboard.website.v2.pointsNote": "Points count once the starter site is live and linked on your Google listing.",
+    "dashboard.website.v2.postStudio": "Want a full website? PostStudio is coming soon.",
+    "dashboard.website.v2.notOnListing": "Your website isn't on your Google listing yet:",
+    "dashboard.website.v2.addIt": "add it →",
+    "dashboard.website.v2.compare.scores": "Your website scores {current} / {of}. A PostScore starter site would score {starter} / {of}.",
+    "dashboard.website.v2.compare.keep": "Your current site already scores higher, so keep it. The starter is here if you ever need a backup.",
+    "dashboard.website.v2.compare.keepEqual": "Your current site already scores as high, so keep it. The starter is here if you ever need a backup.",
+    "dashboard.website.v2.compare.add": "A starter site would add {gain} points to your score.",
+    "dashboard.website.v2.compare.addOne": "A starter site would add 1 point to your score.",
+    "dashboard.website.v2.compare.recommended": "Recommended",
+    "dashboard.website.v2.compare.build": "Build your starter site →",
     "dashboard.website.googleListingMissingWebsite":
       "Google didn't return your website on our last check — make sure it's still on your Google Business Profile.",
     "dashboard.website.googleListingWebsiteRemoved":
@@ -10374,6 +10722,9 @@ export const messages: Record<Locale, LocaleMessages> = {
       "Some sites block automated screenshot tools, or a preview just hasn't been captured yet — this doesn't affect your Website score.",
     "dashboard.website.screenshotsCaptured": "Screenshots captured {date}",
     "dashboard.website.homepageLabel": "Homepage",
+    "dashboard.website.couldNotCapture": "Couldn't capture this page",
+    "dashboard.website.phoneLabel": "On a phone",
+    "dashboard.website.phoneAlt": "Your homepage on a phone",
     "dashboard.website.scoreHeading": "Website score",
     "dashboard.website.ptsAbbrev": "pts",
     "dashboard.website.technicalHeading": "Technical",
@@ -10627,8 +10978,9 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.overview.actionPlan.howToFixIt": "How to fix it",
     "dashboard.overview.actionPlan.doThisLabel": "Do this: ",
     "dashboard.overview.actionPlan.howLabel": "How: ",
-    "dashboard.overview.actionPlan.ownerActionOnGoogle":
-      "This is a change you make yourself, on Google — PostScore can tell you exactly what to do, but we can't edit your listing for you.",
+    "dashboard.overview.actionPlan.doneForYou": "PostScore drafts it. You read it, change anything, and approve; it goes to Google. (Beta)",
+    "dashboard.overview.actionPlan.connectToDo": "Connect Google and PostScore can do this for you.",
+    "dashboard.overview.actionPlan.manualOnGoogle": "This one you do yourself, on Google.",
     "dashboard.overview.actionPlan.saving": "Saving...",
     "dashboard.overview.actionPlan.checkAgain": "Check again",
     "dashboard.overview.actionPlan.checkAgainNote": "Changes on Google can take a few days — we'll also re-check on your next scan.",
@@ -12381,6 +12733,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.wrongSite.source.owner": "Confirmed by you",
     "dashboard.wrongSite.source.verified": "Verified by PostScore",
     "dashboard.wrongSite.source.listing": "From your Google listing",
+    "dashboard.wrongSite.source.scan": "From your last scan",
     "dashboard.wrongSite.choose": "Which one is your website?",
     "dashboard.wrongSite.option.listing": "Your Google listing link",
     "dashboard.wrongSite.option.listingBroken": "doesn't go to your website",
@@ -13465,7 +13818,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.overview.sinceCard.latest": "Último análisis · {date}",
     "dashboard.settings.plans.value.comingSoon": "Próximamente",
     "dashboard.fixPlan.title": "Plan de correcciones",
-    "dashboard.fixPlan.subtitle": "Cada corrección que sube su puntuación de PostScore, la más urgente primero.",
+    "dashboard.fixPlan.subtitle": "Cada corrección que sube su puntuación de PostScore, agrupada por cuánto tarda.",
     "dashboard.fixPlan.thisWeekLabel.one": "Esta semana · 1 corrección que puede terminar usted mismo, hoy",
     "dashboard.fixPlan.thisWeekLabel.other": "Esta semana · {count} correcciones que puede terminar usted mismo, hoy",
     "dashboard.fixPlan.everyFix": "Cuando termine todas las correcciones",
@@ -13480,9 +13833,54 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.fixPlan.upToPts": "hasta +{points} pts",
     "dashboard.fixPlan.priority.low": "Prioridad baja",
     "dashboard.fixPlan.fixIt": "Corregir",
+    "dashboard.fixPlan.websiteWhole.lastOne.one": "Arregle esta 1 y su sitio web obtiene su último punto (puntuación {score} → {after}).",
+    "dashboard.fixPlan.websiteWhole.lastOne.other": "Arregle estas {count} y su sitio web obtiene su último punto (puntuación {score} → {after}).",
+    "dashboard.fixPlan.websiteWhole.last.one": "Arregle esta 1 y su sitio web obtiene sus últimos {points} puntos (puntuación {score} → {after}).",
+    "dashboard.fixPlan.websiteWhole.last.other": "Arregle estas {count} y su sitio web obtiene sus últimos {points} puntos (puntuación {score} → {after}).",
+    "dashboard.fixPlan.websiteWhole.goes.one": "Arregle esta 1 y su sitio web pasa de {from} a {to} / {of} (puntuación {score} → {after}).",
+    "dashboard.fixPlan.websiteWhole.goes.other": "Arregle estas {count} y su sitio web pasa de {from} a {to} / {of} (puntuación {score} → {after}).",
+    "dashboard.fixPlan.websiteWhole.small.one": "Arregle este 1 detalle de su sitio web.",
+    "dashboard.fixPlan.websiteWhole.small.other": "Arregle estos {count} detalles de su sitio web.",
+    "dashboard.twoScores.title": "Cómo trabajan juntas sus dos puntuaciones",
+    "dashboard.twoScores.presence.title": "Presencia · Que lo encuentren",
+    "dashboard.twoScores.presence.body": "Arregle esto y su puntuación sube hasta 100. Una ficha completa y correcta, con reseñas recientes, ayuda a que Google lo muestre a quienes buscan cerca.",
+    "dashboard.twoScores.presence.link": "Plan de correcciones →",
+    "dashboard.twoScores.growth.title": "Crecimiento · Que lo elijan y vuelvan",
+    "dashboard.twoScores.growth.body": "Ofertas, reseñas y publicaciones semanales que traen clientes a su puerta, sea cual sea su puntuación.",
+    "dashboard.twoScores.growth.link": "Plan de crecimiento →",
+    "dashboard.twoScores.hide": "Ocultar",
+    "dashboard.twoScores.fixPlanTo": "El Plan de correcciones lo lleva a {score} →",
+    "dashboard.twoScores.higherScore": "Una puntuación más alta ayuda a que más personas lo encuentren en Google.",
+    "dashboard.twoScores.under70": "Su puntuación de Presencia es {score}. Arreglarla es la forma más rápida de que más clientes lo encuentren.",
+    "dashboard.twoScores.openFixPlan": "Abrir el Plan de correcciones →",
+    "dashboard.fixPlan.why.completeness.address": "Los clientes y Google Maps necesitan una dirección verificada para encontrarlo.",
+    "dashboard.fixPlan.why.completeness.business_status": "Si Google lo muestra como cerrado, los clientes no vendrán.",
+    "dashboard.fixPlan.why.completeness.categories": "Las categorías deciden en qué búsquedas lo muestra Google.",
+    "dashboard.fixPlan.why.completeness.customer_details": "Los clientes revisan acceso, pagos y estacionamiento antes de ir.",
+    "dashboard.fixPlan.why.completeness.hours": "Los clientes revisan su horario antes de ir.",
+    "dashboard.fixPlan.why.completeness.phone": "Un teléfono permite que los clientes lo llamen en el momento.",
+    "dashboard.fixPlan.why.completeness.photos": "Las fotos reales traen más clics y llamadas.",
+    "dashboard.fixPlan.why.completeness.website_link": "Un sitio enlazado da a los clientes otra forma de elegirlo.",
+    "dashboard.fixPlan.why.visibility.rating": "Su calificación suele ser lo primero que ven los clientes.",
+    "dashboard.fixPlan.why.visibility.review_count": "Más reseñas hacen que los clientes confíen más en usted.",
+    "dashboard.fixPlan.why.visibility.review_recency": "Las reseñas recientes cuentan más: 3 en 90 días dan el puntaje completo.",
+    "dashboard.fixPlan.why.visibility.review_replies": "Los clientes leen cómo responde a sus reseñas.",
+    "dashboard.fixPlan.why.visibility.reviews_merged": "Las reseñas recientes cuentan más: 3 en 90 días dan el puntaje completo.",
+    "dashboard.fixPlan.why.visibility.reviews_trust": "Su calificación cuenta por completo cuando tenga suficientes reseñas.",
+    "dashboard.fixPlan.why.visibility.reviews_rating": "Su calificación suele ser lo primero que ven los clientes.",
+    "dashboard.fixPlan.why.visibility.reviews_count": "El número de reseñas suma puntos hasta llegar a 150.",
+    "dashboard.fixPlan.why.website.contact_conversion": "Los visitantes deben ver de inmediato cómo contactarlo.",
+    "dashboard.fixPlan.why.website.content_depth": "El contenido real convence a los visitantes de elegirlo.",
+    "dashboard.fixPlan.why.website.has_website": "Un sitio web es una de las señales de confianza más fuertes.",
+    "dashboard.fixPlan.why.website.https": "Los navegadores advierten cuando un sitio no es seguro.",
+    "dashboard.fixPlan.why.website.mobile_friendly": "La mayoría lo encuentra desde el teléfono.",
+    "dashboard.fixPlan.why.website.performance_mobile": "Un sitio lento pierde visitantes antes de que lo vean.",
+    "dashboard.fixPlan.why.website.info_consistency": "Su sitio web y Google deben mostrar los mismos datos.",
+    "dashboard.fixPlan.why.website.starter_site_merged": "Un sitio web es una de las señales de confianza más fuertes.",
     "dashboard.breakdown.action.moreReviewsInGrowth": "Consiga más reseñas (en Crecimiento)",
     "dashboard.fixPlan.speedTitle": "Velocidad del sitio: aún sin puntuar",
     "dashboard.fixPlan.speedUpTo": "Hasta {points} pts.",
+    "dashboard.fixPlan.speedShort": "Una prueba de velocidad más en su próximo escaneo; hasta entonces no cuenta ni a favor ni en contra.",
     "dashboard.fixPlan.footnote": "La puntuación acumulada suma los puntos de cada corrección desde arriba. Su puntuación real solo cambia cuando un análisis confirma la corrección.",
     "dashboard.fixPlan.empty": "Nada que corregir. Su puntuación tiene todos los puntos que puede obtener por ahora.",
     "dashboard.fixPlan.websiteRow": "Mejore su sitio web",
@@ -13591,6 +13989,109 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.nav.competitors": "Competencia",
     "dashboard.nav.pricing": "Revisión de precios",
     "dashboard.nav.reports": "Informes",
+    "dashboard.growth.checklist.items.answerQuestions.title": "Responda las preguntas frecuentes de sus clientes",
+    "dashboard.growth.checklist.items.answerQuestions.howTo": "Agregue a su ficha de Google lo que preguntan sus clientes: una descripción, sus servicios y precios, estacionamiento y accesibilidad.",
+    "dashboard.growthPlan.title": "Plan de crecimiento",
+    "dashboard.growthPlan.subtitle": "Gane clientes y haga que vuelvan. Esto es aparte de su puntuación de PostScore.",
+    "dashboard.growthPlan.unavailable": "No se pudo cargar su nivel de crecimiento. Inténtelo de nuevo en un momento.",
+    "dashboard.growthPlan.card.label": "Su nivel de crecimiento · se actualiza los lunes",
+    "dashboard.growthPlan.card.tierOf": "Nivel {n} de 5",
+    "dashboard.growthPlan.card.activeWeeks": "Semanas activas · últimas 8",
+    "dashboard.growthPlan.track.tier": "Nivel {n}",
+    "dashboard.growthPlan.track.you": "Nivel {n} · usted",
+    "dashboard.growthPlan.onTrack": "Va camino de {tier} el {date}",
+    "dashboard.growthPlan.keep.set": "Ya está listo esta semana. Siga activo cada semana para mantener {tier}.",
+    "dashboard.growthPlan.keep.due": "Una tarea del plan de esta semana antes del domingo mantiene {tier}.",
+    "dashboard.growthPlan.keep.quiet": "La semana pasada estuvo tranquila. Una tarea antes del domingo mantiene {tier}; dos semanas tranquilas seguidas lo bajan a {lower}.",
+    "dashboard.growthPlan.keep.closed": "Esta semana está marcada como cerrada, así que no cuenta en contra de {tier}.",
+    "dashboard.growthPlan.keep.closedStart": "Esta semana está marcada como cerrada, así que no cuenta ni a favor ni en contra.",
+    "dashboard.growthPlan.keep.start": "Haga que esta semana cuente: una tarea del plan de esta semana antes del domingo.",
+    "dashboard.growthPlan.keep.startSet": "Esta semana cuenta. Siga así cada semana para llegar a Construyendo.",
+    "dashboard.growthPlan.keep.next": "Próxima actualización: {date}",
+    "dashboard.growthPlan.top.title": "Está en lo más alto",
+    "dashboard.growthPlan.top.body": "Favorito local sigue siendo suyo mientras siga presente.",
+    "dashboard.growthPlan.top.active": "Siga activo: nunca dos semanas tranquilas seguidas",
+    "dashboard.growthPlan.top.activeHave": "{n} semanas activas de las últimas {of}.",
+    "dashboard.growthPlan.top.results": "Mantenga tres resultados reales, al menos dos medidos",
+    "dashboard.growthPlan.top.resultsHave": "Resultados que tiene ahora: {n}.",
+    "dashboard.growthPlan.change.up": "Subió a {tier}: {count} semanas activas.",
+    "dashboard.growthPlan.change.upResults": "Subió a {tier}: {count} semanas activas y {results}.",
+    "dashboard.growthPlan.change.restored": "Recuperó {tier}: dos semanas activas seguidas.",
+    "dashboard.growthPlan.change.downQuiet": "Pasó a {tier}: sin actividad las semanas del {a} y del {b}. Dos semanas activas le devuelven {back}.",
+    "dashboard.growthPlan.change.downResults": "Pasó a {tier}: los resultados que pide {back} no estuvieron 4 lunes seguidos. Dos semanas activas con ellos lo recuperan.",
+    "dashboard.growthPlan.needs.toReach": "Para llegar a {tier}",
+    "dashboard.growthPlan.needs.after": "Después: {tier}",
+    "dashboard.growthPlan.needs.progress": "{done} de {of}",
+    "dashboard.growthPlan.needs.active": "{n} semanas activas de las últimas {of}",
+    "dashboard.growthPlan.needs.have.one": "Tiene {count}.",
+    "dashboard.growthPlan.needs.have.other": "Tiene {count}.",
+    "dashboard.growthPlan.needs.results1": "Un resultado real",
+    "dashboard.growthPlan.needs.results2": "Dos resultados reales, al menos uno medido",
+    "dashboard.growthPlan.needs.results3": "Tres resultados reales, al menos dos medidos",
+    "dashboard.growthPlan.needs.youHave": "Tiene: {list}.",
+    "dashboard.growthPlan.needs.nextResult": "Siguiente: {result}.",
+    "dashboard.growthPlan.needs.r1Three": "Y acciones de clientes desde Google por encima del año pasado, 3 meses seguidos.",
+    "dashboard.growthPlan.r1Connect": "Conecte Google para llegar a Favorito local: necesita sus acciones de clientes desde Google.",
+    "dashboard.growthPlan.result.r1": "acciones de clientes desde Google por encima del año pasado",
+    "dashboard.growthPlan.result.r2": "3 reseñas nuevas en 30 días",
+    "dashboard.growthPlan.result.r3": "escaneos de QR",
+    "dashboard.growthPlan.result.r4": "3 usos de ofertas registrados en 30 días",
+    "dashboard.growthPlan.result.r5": "una campaña de correo abierta",
+    "dashboard.growthPlan.result.r1.goal": "más acciones de clientes desde Google que el mismo mes del año pasado",
+    "dashboard.growthPlan.result.r2.goal": "3 reseñas nuevas en 30 días",
+    "dashboard.growthPlan.result.r3.goal": "10 escaneos de QR en 30 días (cuenta cuando el seguimiento de QR esté activo)",
+    "dashboard.growthPlan.result.r4.goal": "3 usos de ofertas registrados en 30 días",
+    "dashboard.growthPlan.result.r5.goal": "una campaña de correo abierta por el 20% o más",
+    "dashboard.growthPlan.week.title": "El plan de esta semana",
+    "dashboard.growthPlan.week.subOneTap.one": "{count} tarea · ordenada por lo que hace por su nivel",
+    "dashboard.growthPlan.week.subOneTap.other": "{count} tareas · ordenadas por lo que hacen por su nivel",
+    "dashboard.growthPlan.week.subSteps.one": "{count} paso · hágalo en Google y luego márquelo",
+    "dashboard.growthPlan.week.subSteps.other": "{count} pasos · hágalos en Google y luego márquelos",
+    "dashboard.growthPlan.week.subNotConnected": "Hágalos en Google y luego márquelos. 2 tareas marcadas hacen que una semana cuente.",
+    "dashboard.growthPlan.routine.also": "También esta semana",
+    "dashboard.growthPlan.routine.reviewLink": "Obtenga su enlace de reseñas y QR →",
+    "dashboard.growthPlan.routine.reviewLinkHowTo": "Copie su enlace de reseñas o su QR en Consiga más reseñas y envíelo a algunos clientes recientes.",
+    "dashboard.growthPlan.routine.hours": "Revise su horario →",
+    "dashboard.growthPlan.week.connectOneTap": "Conecte Google y la publicación, las respuestas y las preguntas se hacen con un toque.",
+    "dashboard.growthPlan.top.onTrack": "Haga 1 tarea → va camino de {tier} el {date}.",
+    "dashboard.growthPlan.top.thisWeek": "Haga 1 tarea → esta semana cuenta.",
+    "dashboard.growthPlan.top.nextWeek": "Haga 1 tarea → la próxima semana también cuenta.",
+    "dashboard.growthPlan.top.checkOffThis": "Marque 2 tareas → esta semana cuenta.",
+    "dashboard.growthPlan.top.checkOffNext": "Marque 2 tareas → la próxima semana también cuenta.",
+    "dashboard.growthPlan.top.checkOffOnTrack": "Marque 2 tareas → va camino de {tier} el {date}.",
+    "dashboard.growthPlan.top.alreadyCounts": "Esta semana ya cuenta ✓.",
+    "dashboard.growthPlan.top.nextResult": "Su próximo resultado, para {tier}: {result}.",
+    "dashboard.growthPlan.line.nextWeekTier": "Sale el {day}, así que la próxima semana cuenta → {tier} el {date}",
+    "dashboard.growthPlan.line.nextWeek": "Sale el {day}, así que la próxima semana cuenta",
+    "dashboard.growthPlan.line.makesThisWeek": "Hace que esta semana cuente",
+    "dashboard.growthPlan.line.alreadyCounts": "Sale hoy, en una semana que ya cuenta",
+    "dashboard.growthPlan.line.photos": "Cuenta para la semana en que las suba",
+    "dashboard.growthPlan.line.checkOff": "Márquela al terminar: 2 tareas marcadas hacen que una semana cuente",
+    "dashboard.growthPlan.doFirst": "Haga esta primero",
+    "dashboard.growthPlan.didThis": "Ya lo hice",
+    "dashboard.growthPlan.didIt": "Hecho ✓",
+    "dashboard.growthPlan.resultsLink": "Vea lo que Google le trajo el mes pasado",
+    "dashboard.growthPlan.resultsLinkNotConnected": "Vea lo que le mostrarán los resultados en Google",
+    "dashboard.growthPlan.connectBanner": "Conecte su ficha de Google para ver sus resultados y dejar que PostScore publique por usted.",
+    "dashboard.growthPlan.reconnectBanner": "Google se desconectó: vuelva a conectar para mantener su plan a un toque. Su nivel se mantiene.",
+    "dashboard.growthPlan.tasksThisWeek.one": "{count} tarea esta semana",
+    "dashboard.replies.line.ready.one": "{count} respuesta redactada y lista",
+    "dashboard.replies.line.ready.other": "{count} respuestas redactadas y listas",
+    "dashboard.growthPlan.tasksThisWeek.other": "{count} tareas esta semana",
+    "dashboard.growthPlan.stepsThisWeek.one": "{count} paso esta semana",
+    "dashboard.growthPlan.stepsThisWeek.other": "{count} pasos esta semana",
+    "dashboard.growthPlan.sinceNone": "Todavía nada de su plan del mes pasado. Haga una tarea del plan de esta semana y aquí verá lo que cambió después.",
+    "dashboard.growthPlan.tools.offers": "Clientes nuevos, lealtad, cupones, referidos",
+    "dashboard.growthPlan.tools.campaigns": "Campañas por correo, texto y redes sociales (próximamente)",
+    "dashboard.growthPlan.tools.printKit": "Letreros y tarjetas con sus códigos QR",
+    "dashboard.growthPlan.tools.localEvents": "Hágase conocer en su zona",
+    "dashboard.growthPlan.free.title": "Su nivel de crecimiento",
+    "dashboard.growthPlan.free.measure1": "Semanas activas: las semanas en que hace algo de su plan",
+    "dashboard.growthPlan.free.measure2": "Resultados reales: acciones de clientes desde Google, reseñas nuevas, ofertas usadas",
+    "dashboard.growthPlan.free.measure3": "Cinco niveles, actualizados cada lunes, aparte de su puntuación de PostScore",
+    "dashboard.growthPlan.free.blurred": "Cómo hacerlo y lo que hace por su nivel",
+    "dashboard.growthPlan.free.grow": "Su nivel y su plan semanal, con los pasos para hacer cada tarea usted mismo.",
+    "dashboard.growthPlan.free.premium": "El mismo plan, y PostScore hace las tareas por usted: apruébelas con un toque.",
     "dashboard.offers.title": "Ofertas para clientes",
     "dashboard.offers.noneRunning": "No hay ofertas activas ahora. Diseñe una en la pestaña Cupones o Referidos y guárdela para empezar a llevar la cuenta.",
     "dashboard.offers.subtitle": "Cupones, ofertas para clientes nuevos y tarjetas de referidos que atraen clientes, y cuántas veces se usó cada una.",
@@ -13987,6 +14488,21 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.replies.privacy": "No guardamos la reseña que pega, solo su respuesta.",
     "dashboard.replies.errorInvalid": "Primero pegue la reseña (hasta 2,000 caracteres).",
     "dashboard.replies.errorRules": "PostAI no pudo escribir una respuesta que cumpla las reglas (sin ofertas, sin pedir que cambien la reseña). Inténtelo de nuevo; no usó una respuesta gratis.",
+    "dashboard.replies.line.partial": "{ready} de {total} respuestas listas",
+    "dashboard.replies.line.writing": "Las respuestas se están redactando",
+    "dashboard.replies.line.review": "Revíselas →",
+    "dashboard.replies.tweak.length": "Largo",
+    "dashboard.replies.tweak.short": "Corta",
+    "dashboard.replies.tweak.medium": "Media",
+    "dashboard.replies.tweak.long": "Larga",
+    "dashboard.replies.tweak.different": "Otras palabras",
+    "dashboard.replies.tweak.writing": "Escribiendo…",
+    "dashboard.replies.voice.label": "Las respuestas se escriben como:",
+    "dashboard.replies.voice.me": "Yo",
+    "dashboard.replies.voice.team": "Mi equipo (nosotros)",
+    "dashboard.replies.voice.notReady": "Todavía no se pudo guardar. Por ahora, las respuestas se escriben como Yo.",
+    "dashboard.replies.reviewerLabel": "Nombre de quien escribió la reseña (opcional)",
+    "dashboard.replies.reviewerPlaceholder": "p. ej., Yadira M.",
     "dashboard.replies.errorUnavailable": "Los borradores de respuestas no están disponibles ahora. Inténtelo más tarde.",
     "dashboard.upgrade.feature.replies.name": "Respuestas ilimitadas con IA",
     "dashboard.upgrade.feature.replies.b1": "Redacte una respuesta para cada reseña, todas las que necesite",
@@ -14258,10 +14774,10 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.free.web.openPreview": "Abrir vista previa completa",
     "dashboard.free.web.pathA": "Conserve su sitio web actual — arréglelo con PostScore",
     "dashboard.free.web.pathAIntroPaid": "Arregle cada problema y apunte a un 100/100 perfecto — paso a paso, en {builder}.",
-    "dashboard.free.web.checksLeft": "Le quedan {count} revisiones por arreglar",
-    "dashboard.free.web.checksLeftOne": "Le queda 1 revisión por arreglar",
+    "dashboard.free.web.checksLeft": "Le quedan {count} revisiones",
+    "dashboard.free.web.checksLeftOne": "Le queda 1 revisión",
     "dashboard.free.web.checksLeftNone": "Todas las revisiones están bien: manténgalo así.",
-    "dashboard.free.web.guidesLink": "Cómo arreglar cada revisión, paso a paso",
+    "dashboard.free.web.guidesLink": "Cómo arreglar cada revisión",
     "dashboard.free.web.pathAIntro": "¿Le gusta su sitio? Arregle cada problema y apunte a un 100/100 perfecto — PostScore le muestra exactamente cómo, en {builder}.",
     "dashboard.free.web.yourBuilder": "su creador de sitios",
     "dashboard.free.web.pathB": "O empiece de cero con un sitio web nuevo",
@@ -15615,24 +16131,27 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.googleTab.w.approveAll.what.replyOne": "1 respuesta a reseña",
     "dashboard.googleTab.w.approveAll.what.post": "la publicación de esta semana",
     "dashboard.googleTab.w.approveAll.what.answers": "las respuestas",
-    "dashboard.googleTab.w.req.open": "Dígale a PostScore lo que quiere →",
-    "dashboard.googleTab.w.req.title": "Dígale a PostScore lo que quiere",
-    "dashboard.googleTab.w.req.placeholder": "p. ej., Invite a reservar en línea y que sea breve",
     "dashboard.googleTab.w.req.note": "PostScore no agrega eventos, precios ni resultados que usted no haya dado, y respeta las reglas de Google.",
-    "dashboard.googleTab.w.req.write": "Escribirlo",
-    "dashboard.googleTab.w.req.chip.shorter": "Más breve",
-    "dashboard.googleTab.w.req.chip.friendlier": "Tono más cercano",
-    "dashboard.googleTab.w.req.chip.booking": "Invite a reservar en línea",
-    "dashboard.googleTab.w.req.chip.story.hair": "Un antes y después real: ",
-    "dashboard.googleTab.w.req.chip.story.home": "Un trabajo reciente: ",
-    "dashboard.googleTab.w.req.chip.story.restaurant": "El especial de esta semana: ",
-    "dashboard.googleTab.w.req.chip.story.art": "Nuestra próxima clase: ",
-    "dashboard.googleTab.w.req.chip.story.default": "Algo nuevo: ",
-    "dashboard.googleTab.w.req.chip.qa.prices": "Enfóquese en los precios",
-    "dashboard.googleTab.w.req.chip.qa.visit": "Enfóquese en estacionamiento y pagos",
-    "dashboard.googleTab.w.req.chip.offer.urgent": "Diga cuándo termina",
-    "dashboard.googleTab.w.req.chip.desc.specialties": "Mencione nuestras especialidades",
-    "dashboard.googleTab.w.req.chip.desc.area": "Mencione la zona que atendemos",
+    "dashboard.googleTab.w.steer.button": "Redactar otro con PostAI",
+    "dashboard.googleTab.w.steer.left": "Le quedan {count} de {of} borradores esta semana",
+    "dashboard.googleTab.w.steer.post.label": "¿De qué debería tratar esta publicación? (opcional)",
+    "dashboard.googleTab.w.steer.post.placeholder.hair": "p. ej., tarjetas de regalo para las fiestas, nuestra nueva estilista, 20% de descuento en color en diciembre",
+    "dashboard.googleTab.w.steer.post.placeholder.home": "p. ej., una cocina que acabamos de terminar, citas de invierno, presupuestos gratis este mes",
+    "dashboard.googleTab.w.steer.post.placeholder.restaurant": "p. ej., el especial de esta semana, horario de fiestas, tarjetas de regalo",
+    "dashboard.googleTab.w.steer.post.placeholder.art": "p. ej., una clase próxima, obras nuevas, tarjetas de regalo para las fiestas",
+    "dashboard.googleTab.w.steer.post.placeholder.default": "p. ej., tarjetas de regalo para las fiestas, alguien nuevo en el equipo, abierto los domingos en diciembre",
+    "dashboard.googleTab.w.steer.desc.label": "¿En qué debería enfocarse la descripción? (opcional)",
+    "dashboard.googleTab.w.steer.desc.placeholder.hair": "p. ej., nuestras especialistas en cabello rizado, sin cita previa, 20 años en Tarrytown",
+    "dashboard.googleTab.w.steer.desc.placeholder.default": "p. ej., por lo que es conocido, sin cita previa, cuántos años lleva en el negocio",
+    "dashboard.googleTab.w.ans.desc.onGoogle": "En Google ahora",
+    "dashboard.googleTab.w.ans.desc.onGoogleNone": "Todavía no hay descripción en Google.",
+    "dashboard.googleTab.w.ans.desc.chars": "{count} caracteres",
+    "dashboard.googleTab.w.ans.desc.new": "Su nueva descripción (todavía no está en Google)",
+    "dashboard.googleTab.w.ans.desc.yours": "Su nueva descripción",
+    "dashboard.googleTab.w.ans.services.noPrice": "sin precio",
+    "dashboard.googleTab.w.ans.services.notOnGoogle": "Todavía no está en Google",
+    "dashboard.googleTab.w.ans.services.changed": "Cambiado",
+    "dashboard.googleTab.w.ans.failedGoogle": "No se pudo cargar lo que hay en Google en este momento.",
     "dashboard.googleTab.w.post.type.label": "Tipo de publicación",
     "dashboard.googleTab.w.post.type.update": "Novedad",
     "dashboard.googleTab.w.post.type.qa": "Sus preguntas, respondidas",
@@ -15697,18 +16216,6 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.googleTab.w.spelling.blocked": "Revise primero la ortografía de arriba.",
     "dashboard.googleTab.w.post.offer.premium": "Sobre su cupón “{offer}” (código {code}): se publica en Google como oferta, con su código y fechas.",
     "dashboard.googleTab.w.post.offer.grow": "Sobre su cupón “{offer}” (código {code}). En Google, agréguelo como oferta.",
-    "dashboard.googleTab.w.post.facts.open.hair": "¿Tiene un antes y después real? Cuéntele a PostScore 1 o 2 datos →",
-    "dashboard.googleTab.w.post.facts.open.home": "¿Tiene un trabajo reciente para mostrar? Cuéntele a PostScore 1 o 2 datos →",
-    "dashboard.googleTab.w.post.facts.open.restaurant": "¿Tiene un especial esta semana? Cuéntele a PostScore cuál es →",
-    "dashboard.googleTab.w.post.facts.open.art": "¿Tiene una clase próxima? Cuéntele a PostScore los detalles →",
-    "dashboard.googleTab.w.post.facts.open.default": "¿Quiere que trate de algo real? Cuéntele a PostScore 1 o 2 datos →",
-    "dashboard.googleTab.w.post.facts.note": "PostScore escribe solo con lo que usted escriba aquí y no agrega nada más.",
-    "dashboard.googleTab.w.post.facts.placeholder.hair": "p. ej., balayage con reflejos suaves, hecho este martes",
-    "dashboard.googleTab.w.post.facts.placeholder.home": "p. ej., nuevo salpicadero de cocina instalado en Tarrytown esta semana",
-    "dashboard.googleTab.w.post.facts.placeholder.restaurant": "p. ej., sopa de calabaza, $9, hasta el domingo",
-    "dashboard.googleTab.w.post.facts.placeholder.art": "p. ej., clase de acuarela el sábado 6 de dic., 10 am, $40",
-    "dashboard.googleTab.w.post.facts.placeholder.default": "p. ej., abierto los domingos desde el 1 de dic.",
-    "dashboard.googleTab.w.post.facts.write": "Escribir con mis datos",
     "dashboard.googleTab.w.post.problem.invented_story": "Esto cuenta una historia concreta que PostScore no puede saber. Dele los datos o edítelo.",
     "dashboard.googleTab.w.ans.answerToInclude": "Responda las {count} preguntas de arriba para incluir los datos para clientes, o aplique el resto ahora.",
     "dashboard.googleTab.w.ans.answerToIncludeOnly": "Responda las {count} preguntas de arriba para incluir los datos para clientes.",
@@ -15779,8 +16286,6 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.googleTab.w.post.cta.CALL": "Llamar",
     "dashboard.googleTab.w.post.cta.NONE": "Sin botón",
     "dashboard.googleTab.w.post.ctaNote.CALL": "Usa el teléfono de su ficha.",
-    "dashboard.googleTab.w.post.another": "Escribir otra",
-    "dashboard.googleTab.w.post.anotherLeft": "Escribir otra (le quedan {count} esta semana)",
     "dashboard.googleTab.w.post.writing": "Escribiendo…",
     "dashboard.googleTab.w.post.limit": "No hay más borradores nuevos esta semana. Todavía puede editar este.",
     "dashboard.googleTab.w.post.publish": "Publicar en Google",
@@ -15811,10 +16316,8 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.googleTab.w.replies.more": "{count} más en la bandeja de reseñas",
     "dashboard.googleTab.w.ans.why": "Google ahora responde muchas preguntas de los clientes con los datos de su ficha. Complete lo que falta:",
     "dashboard.googleTab.w.ans.loading": "Leyendo su ficha…",
-    "dashboard.googleTab.w.ans.failed": "No se pudo cargar desde Google en este momento.",
     "dashboard.googleTab.w.ans.none": "Su ficha ya tiene lo que Google necesita para responder las preguntas de los clientes.",
     "dashboard.googleTab.w.ans.desc.title": "Descripción",
-    "dashboard.googleTab.w.ans.desc.now": "En Google ahora: {count} caracteres",
     "dashboard.googleTab.w.ans.desc.count": "{count} caracteres (busque 250+)",
     "dashboard.googleTab.w.ans.desc.noDraft": "PostScore no pudo redactar una en este momento. Escriba unas frases sobre lo que hace y la zona que atiende.",
     "dashboard.googleTab.w.ans.services.title": "Servicios y precios",
@@ -17080,6 +17583,20 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.website.businessFallback": "negocio",
     "dashboard.website.businessNameFallback": "Su negocio",
     "dashboard.website.pageTitle": "Sitio web",
+    "dashboard.website.speedNotScored": "· velocidad aún sin calificar",
+    "dashboard.website.v2.fixTitle": "Arregle su sitio web",
+    "dashboard.website.v2.starterTitle": "Sitio web de una página",
+    "dashboard.website.v2.pointsNote": "Los puntos cuentan cuando el sitio de una página esté publicado y enlazado en su ficha de Google.",
+    "dashboard.website.v2.postStudio": "¿Quiere un sitio web completo? PostStudio llega pronto.",
+    "dashboard.website.v2.notOnListing": "Su sitio web aún no está en su ficha de Google:",
+    "dashboard.website.v2.addIt": "agréguelo →",
+    "dashboard.website.v2.compare.scores": "Su sitio web obtiene {current} / {of}. Un sitio de una página de PostScore obtendría {starter} / {of}.",
+    "dashboard.website.v2.compare.keep": "Su sitio actual ya obtiene más, así que consérvelo. El sitio de una página está aquí si alguna vez necesita uno de respaldo.",
+    "dashboard.website.v2.compare.keepEqual": "Su sitio actual ya obtiene lo mismo, así que consérvelo. El sitio de una página está aquí si alguna vez necesita uno de respaldo.",
+    "dashboard.website.v2.compare.add": "Un sitio de una página sumaría {gain} puntos a su puntuación.",
+    "dashboard.website.v2.compare.addOne": "Un sitio de una página sumaría 1 punto a su puntuación.",
+    "dashboard.website.v2.compare.recommended": "Recomendado",
+    "dashboard.website.v2.compare.build": "Cree su sitio de una página →",
     "dashboard.website.googleListingMissingWebsite":
       "Google no mostró su sitio web en nuestra última verificación — asegúrese de que todavía esté en su Perfil de Empresa en Google.",
     "dashboard.website.googleListingWebsiteRemoved":
@@ -17116,6 +17633,9 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.website.noPreviewCapturedNote": "Algunos sitios bloquean las herramientas automáticas de captura, o simplemente todavía no se ha capturado una vista previa — esto no afecta su puntuación de Sitio web.",
     "dashboard.website.screenshotsCaptured": "Capturas tomadas el {date}",
     "dashboard.website.homepageLabel": "Página de inicio",
+    "dashboard.website.couldNotCapture": "No se pudo capturar esta página",
+    "dashboard.website.phoneLabel": "En un teléfono",
+    "dashboard.website.phoneAlt": "Su página de inicio en un teléfono",
     "dashboard.website.scoreHeading": "Puntuación del sitio web",
     "dashboard.website.ptsAbbrev": "pts",
     "dashboard.website.technicalHeading": "Técnico",
@@ -17327,7 +17847,9 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.overview.actionPlan.howToFixIt": "Cómo solucionarlo",
     "dashboard.overview.actionPlan.doThisLabel": "Haga esto: ",
     "dashboard.overview.actionPlan.howLabel": "Cómo: ",
-    "dashboard.overview.actionPlan.ownerActionOnGoogle": "Este es un cambio que usted mismo hace, en Google — PostScore puede decirle exactamente qué hacer, pero no podemos editar su ficha por usted.",
+    "dashboard.overview.actionPlan.doneForYou": "PostScore lo redacta. Usted lo lee, cambia lo que quiera y lo aprueba; se envía a Google. (Beta)",
+    "dashboard.overview.actionPlan.connectToDo": "Conecte Google y PostScore puede hacer esto por usted.",
+    "dashboard.overview.actionPlan.manualOnGoogle": "Esto lo hace usted mismo, en Google.",
     "dashboard.overview.actionPlan.saving": "Guardando...",
     "dashboard.overview.actionPlan.checkAgain": "Comprobar de nuevo",
     "dashboard.overview.actionPlan.checkAgainNote": "Los cambios en Google pueden tardar unos días — también lo comprobaremos en su próximo análisis.",
@@ -19380,6 +19902,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.wrongSite.source.owner": "Confirmado por usted",
     "dashboard.wrongSite.source.verified": "Verificado por PostScore",
     "dashboard.wrongSite.source.listing": "De su Perfil de Empresa en Google",
+    "dashboard.wrongSite.source.scan": "De su último escaneo",
     "dashboard.wrongSite.choose": "¿Cuál es su sitio web?",
     "dashboard.wrongSite.option.listing": "El enlace de su Perfil de Empresa en Google",
     "dashboard.wrongSite.option.listingBroken": "no lleva a su sitio web",

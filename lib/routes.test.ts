@@ -94,9 +94,9 @@ describe("old URLs → new pages (legacyRedirect)", () => {
   it("/growth#ways-to-grow → Growth plan #more", () => {
     expect(go("/growth", "", "#ways-to-grow")).toBe(`${B}/growth#more`);
   });
-  it("/growth#weekly-routine and #more-ways → Growth plan #this-week", () => {
+  it("/growth#weekly-routine → Growth plan #this-week; #more-ways keeps its own block (Day 25B step 6)", () => {
     expect(go("/growth", "", "#weekly-routine")).toBe(`${B}/growth#this-week`);
-    expect(go("/growth", "", "#more-ways")).toBe(`${B}/growth#this-week`);
+    expect(go("/growth", "", "#more-ways")).toBeNull();
   });
   it("/growth with nothing else stays (it's the Growth plan)", () => {
     expect(go("/growth")).toBeNull();

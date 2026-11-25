@@ -1,6 +1,6 @@
 "use client";
 
-import { googleResultsHref } from "@/lib/routes";
+import { googleResultsHref, NEW_PAGES_LIVE } from "@/lib/routes";
 import { GbpMessagingStep, GoogleAiAnswersLine } from "@/components/gbp/GbpMessagingStep";
 import Link from "next/link";
 import {
@@ -126,15 +126,18 @@ export function ConnectGbpView({
   return (
     <div className="flex flex-col gap-6 nav:gap-8">
       <div>
-        <Link
-          href={`/business/${businessId}`}
-          className="inline-flex items-center gap-1.5 text-[13px] font-medium text-ink-soft hover:text-ink"
-        >
-          <IconArrowLeft size={15} />
-          {t(locale, "dashboard.common.backTo", {
-            name: businessName ?? t(locale, "dashboard.common.businessFallback"),
-          })}
-        </Link>
+        {/* New design: the sidebar handles navigation. */}
+        {!NEW_PAGES_LIVE && (
+          <Link
+            href={`/business/${businessId}`}
+            className="inline-flex items-center gap-1.5 text-[13px] font-medium text-ink-soft hover:text-ink"
+          >
+            <IconArrowLeft size={15} />
+            {t(locale, "dashboard.common.backTo", {
+              name: businessName ?? t(locale, "dashboard.common.businessFallback"),
+            })}
+          </Link>
+        )}
         <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1.5">
           <h1 className="font-serif text-2xl font-semibold text-ink nav:text-[27px]">
             {t(locale, "dashboard.connectGbp.pageTitle")}

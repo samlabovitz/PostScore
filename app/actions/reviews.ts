@@ -1,5 +1,6 @@
 "use server";
 
+import { wholeCategoryPoints } from "@/lib/categoryPoints";
 import { emptyListingColumns } from "@/lib/listingScoringRow";
 import { withOwnerDetailsFor } from "@/lib/ownerDetails.server";
 import { withTimeZone } from "@/lib/businessTimeZone";
@@ -40,6 +41,9 @@ export interface ReviewsPageData {
    * their actual earned/max points and confidence. Never re-derived or
    * re-styled here; the Reviews page renders this exact object. */
   visibilityCategory: CategoryResult;
+  /** The title's "21 / 40 pts": Visibility & Reputation's whole points from the saved scan, rounded as the
+   * Overview's breakdown rounds them (lib/categoryPoints.ts) so the three pages add up to the score. */
+  categoryPoints?: { earned: number; of: number } | null;
   /** Whether this business has connected its Google Business Profile —
    * gates the reply-assistant card between "connect to unlock" and an
    * honest "connected, syncing soon" state (see app/actions/gbp.ts). */
@@ -145,6 +149,11 @@ export async function getReviewsPageData(businessId: string, options: { live?: b
       reviewCount: live.review_count ?? null,
       liveUnavailable: live.live_unavailable === true,
       visibilityCategory,
+      categoryPoints: (() => {
+        const i = breakdown.categories.findIndex((c) => c.id === "visibility");
+        const earned = wholeCategoryPoints(breakdown.categories)[i];
+        return earned === null || earned === undefined ? null : { earned, of: breakdown.categories[i].weight };
+      })(),
       gbpConnected: gbpStatus.status === "ok" && gbpStatus.connected,
       verifiedSocials: verifiedSocialProfiles(row.website_analysis_json),
     },

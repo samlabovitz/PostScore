@@ -222,7 +222,9 @@ export async function scoreBusinessWithClient(
   } else {
     liveListing = await liveListingFor(supabase, businessId, business);
     live = liveListing.status;
-    row = liveListing.status === "ok" ? { ...business, ...liveListing.columns } : liveListing.status === "unavailable" ? { ...business, ...emptyListingColumns() } : business;
+    // Can't be read right now: no Google values — except the website our last scan graded (our own result),
+    // so the wording matches the saved score and no page says "no website" for a site it just scored.
+    row = liveListing.status === "ok" ? { ...business, ...liveListing.columns } : liveListing.status === "unavailable" ? { ...business, ...emptyListingColumns(), website: gradedSiteUrl(business.website_analysis_json) } : business;
   }
   // No Google listing (website only): the name, address and site the owner gave.
   if (live === "none") row = { ...row, ...(await (await import("@/lib/ownerListing.server")).websiteOnlyDetails(supabase, businessId)) };
@@ -365,6 +367,9 @@ export async function saveScoreSnapshotWithClient(
   } catch (err) {
     console.error(`[notifications] sync failed for ${businessId}:`, err instanceof Error ? err.message : err);
   }
+
+  // After a scan: the review reply drafts are written in the background (never on a page load).
+  (await import("@/lib/replyBatch.server")).writeReplyDraftsSoon(businessId);
 
   return {
     status: "saved",
@@ -559,7 +564,7 @@ async function latestScore(supabase: SupabaseClient, businessId: string) {
 }
 
 /** The latest FULL scan — the 1-a-day re-scan limit never counts a
- * website-only re-check (at most 3 a day, so 10 rows always reach one). */
+ * website-only re-check (at most 2 a day, so 10 rows always reach one). */
 async function latestFullScore(supabase: SupabaseClient, businessId: string) {
   const { data } = await supabase
     .from("scores")

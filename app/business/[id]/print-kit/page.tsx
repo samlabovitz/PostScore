@@ -5,7 +5,7 @@ import { getBusinessSummary } from "@/app/actions/businesses";
 import { resolveBizProfile } from "@/config/bizProfiles";
 import { getPlan } from "@/lib/premium";
 import { viewLocale } from "@/lib/viewLocale.server";
-import { NEW_PAGES_LIVE, printKitHref } from "@/lib/routes";
+import { NEW_PAGES_LIVE, PRINT_KIT_LIVE, printKitHref } from "@/lib/routes";
 import { loadOffers } from "@/lib/offers.server";
 import { getReviewsPageData } from "@/app/actions/reviews";
 import { PrintKitView } from "./PrintKitView";
@@ -16,7 +16,8 @@ import { PrintKitView } from "./PrintKitView";
  * Reviews page. Open on Free (the review QR is free; the rest locked).
  */
 export default async function PrintKitPage({ params }: { params: { id: string } }) {
-  if (!NEW_PAGES_LIVE) redirect(printKitHref(params.id));
+  // Hidden until Day 34 / 37-Core: Get more reviews #review-link (lib/routes.ts PRINT_KIT_LIVE).
+  if (!NEW_PAGES_LIVE || !PRINT_KIT_LIVE) redirect(printKitHref(params.id));
   const summary = await getBusinessSummary(params.id);
   if (summary.status === "unauthenticated") redirect("/login");
   if (summary.status === "not_found") notFound();

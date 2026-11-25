@@ -254,7 +254,15 @@ export async function writeAnotherPost(businessId: string, timeZone: unknown, da
   return { status: "ok", text: d.text, fallback: d.fallback, left: o.premium ? null : Math.max(0, GROW_POST_REDRAFTS - used - 1) };
 }
 
-/** "Tell PostScore what you want" for the description (the answers' step 1): PostAI under Google's
+/** Grow's new drafts left this week (the post and the description share them); null: unlimited (Premium). */
+export async function draftsLeftAction(businessId: string, timeZone: unknown): Promise<number | null> {
+  const o = await owner(businessId);
+  if (!o || o.plan === "free" || o.premium) return null;
+  const used = await customDraftsUsed(o.admin, businessId, weekStartOf(Date.now(), await cleanZone(timeZone)));
+  return Math.max(0, GROW_POST_REDRAFTS - used);
+}
+
+/** "Draft another with PostAI" for the description (the answers' step 1): PostAI under Google's
  * description rules, from what PostScore knows plus the owner's request. Grow: counts toward the 3. */
 export async function redraftDescription(businessId: string, request: unknown, timeZone: unknown): Promise<WriteAnotherResult> {
   const o = await owner(businessId);
@@ -272,7 +280,7 @@ export async function redraftDescription(businessId: string, request: unknown, t
   for (let attempt = 0; attempt < 2; attempt++) {
     try {
       const raw = await callAnthropicMessage({
-        system: `${descriptionSystemPrompt(inputs.locale)}\nFollow the owner's request between <owner_request> tags (what to mention, the tone, the length) — but add no fact that isn't in the facts or the request itself.`,
+        system: `${descriptionSystemPrompt(inputs.locale)}\nFollow the owner's request between <owner_request> tags (what to focus on, the tone, the length) — but add no fact that isn't in the facts or the request itself.`,
         userMessage: `<facts>\n${facts.join("\n")}\n</facts>${req ? `\n\n<owner_request>\n${req}\n</owner_request>` : ""}\n\nWrite at least 300 characters.`,
         maxTokens: 400,
       });

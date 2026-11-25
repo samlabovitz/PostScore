@@ -181,7 +181,7 @@ describe("points read the same everywhere: one decimal under 10, whole from 10 u
 });
 
 describe("Part A: Approve {n} tasks · {m} items go to Google", () => {
-  const replies = (n: number): WeekRepliesState => ({ status: "ok", items: [], canPost: true, practice: false, more: 0, setText: vi.fn(), setInclude: vi.fn(), ready: Array.from({ length: n }, (_, i) => `r${i}`), post: vi.fn(), load: vi.fn() });
+  const replies = (n: number): WeekRepliesState => ({ status: "ok", items: [], canPost: true, practice: false, more: 0, setText: vi.fn(), setInclude: vi.fn(), ready: Array.from({ length: n }, (_, i) => `r${i}`), post: vi.fn(), load: vi.fn(), redraft: vi.fn(), reload: vi.fn() });
   const post = { status: "ok", text: "Hi", problems: [], flags: [], publish: { canEdit: true, practice: false }, blockedToday: null, latest: null } as unknown as PostDraftState;
   const answers = { status: "ok", data: { canEdit: true }, ready: ["description"] } as unknown as AnswersState;
 

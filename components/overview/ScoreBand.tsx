@@ -6,7 +6,7 @@
 // (7.4:1+). Translucent colors use color-mix(): Tailwind's "/70"
 // shorthand produces no CSS for this project's var()-based colors.
 
-import { fixPlanHref } from "@/lib/routes";
+import { fixPlanHref, NEW_PAGES_LIVE } from "@/lib/routes";
 import { displayPoints } from "@/lib/pointRange";
 import { useState } from "react";
 import Link from "next/link";
@@ -273,9 +273,21 @@ export function ScoreBand({
                 {t(locale, "dashboard.overview.someFixesTakeMonths")}
               </p>
             )}
-            <Link href={fixPlanHref(businessId)} className="w-fit text-[12.5px] font-medium text-[color:color-mix(in_srgb,var(--color-paper)_80%,transparent)] hover:text-paper hover:underline">
-              {t(locale, "dashboard.overview.seeActionPlan")}
-            </Link>
+            {NEW_PAGES_LIVE ? (
+              <>
+                <Link href={fixPlanHref(businessId)} className="w-fit text-[12.5px] font-semibold text-brass hover:underline" data-testid="fix-plan-to-100">
+                  {t(locale, "dashboard.twoScores.fixPlanTo", { score: projectedScore })}
+                </Link>
+                {/* Honest: a higher score helps people find you — never a promised ranking. */}
+                <p className="-mt-1 text-[12px] text-[color:color-mix(in_srgb,var(--color-paper)_75%,transparent)]" data-testid="higher-score-line">
+                  {t(locale, "dashboard.twoScores.higherScore")}
+                </p>
+              </>
+            ) : (
+              <Link href={fixPlanHref(businessId)} className="w-fit text-[12.5px] font-medium text-[color:color-mix(in_srgb,var(--color-paper)_80%,transparent)] hover:text-paper hover:underline">
+                {t(locale, "dashboard.overview.seeActionPlan")}
+              </Link>
+            )}
             {biggestBoost && (
               <Link
                 href={fixPlanHref(businessId)}

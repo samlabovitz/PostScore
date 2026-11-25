@@ -3,7 +3,6 @@ import { describe, expect, test } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 import { LocaleProvider } from "@/lib/i18n";
 import type { CategoryResult, CheckResult, WebsiteAnalysis } from "@/lib/scoring";
-import { formatPoints } from "@/components/scoring/CategoryCard";
 import { WebsiteScoreBreakdown } from "./WebsiteScoreBreakdown";
 
 // renderToStaticMarkup HTML-entity-escapes text content (apostrophes
@@ -116,10 +115,8 @@ describe("WebsiteScoreBreakdown — points rendering", () => {
     expect(html).not.toContain("6.000000000000001");
     expect(html).not.toContain("4.000000000000001");
 
-    expect(html).toContain("14.4");
-    expect(html).toContain("10.0");
-    expect(html).toContain("6.0");
-    expect(html).toContain("4.0");
+    // The card shows one whole number (the page title's); the rows keep their own points.
+    expect(html).toContain('data-testid="website-score-one"');
   });
 });
 
@@ -330,8 +327,10 @@ describe("WebsiteScoreBreakdown — Day 4 Step 2e: Trust & accuracy group matche
     for (const c of ALL_WEBSITE_CHECKS) {
       expect(html.split(`>${c.label}<`).length - 1, c.id).toBe(1);
     }
-    expect(html).toContain(`>${formatPoints(earned)}<`);
-    expect(html).toContain(`/ ${formatPoints(possible)} pts`);
+    // One number on the card: whole points out of the category's weight (never "26.5 / 27 pts").
+    expect(html).toMatch(/data-testid="website-score-one"[\s\S]*?\d+ \/ 30 pts/);
+    void earned;
+    void possible;
   });
 
   test("Spanish: the Trust & accuracy heading renders via t()", () => {

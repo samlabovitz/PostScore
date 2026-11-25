@@ -2,6 +2,7 @@
 
 import { NEW_PAGES_LIVE } from "@/lib/routes";
 import { tabForPath } from "@/lib/navTabs";
+import { buildGrowthPlanTools } from "@/lib/growBannerTools";
 
 // "More customers, whatever your score" — Reviews is the featured tile
 // (the business's real review count, and the nearby average when a saved
@@ -10,7 +11,7 @@ import { tabForPath } from "@/lib/navTabs";
 // real; nothing here is score-dependent. Light theme, PostScore palette.
 
 import Link from "next/link";
-import { IconArrowRight, IconBuildingStore, IconLock, IconStar } from "@tabler/icons-react";
+import { IconArrowRight, IconBuildingStore, IconCalendarEvent, IconLock, IconStar } from "@tabler/icons-react";
 import { UpgradeButton, UpgradeTrigger } from "@/components/upgrade/UpgradeTrigger";
 import { reviewGoalText } from "@/lib/reviewGoal";
 import { GoogleMapsAttribution } from "@/components/google/GoogleMapsAttribution";
@@ -39,7 +40,12 @@ export function GrowMoreCustomers({
   goal = null,
   group = null,
   embedded = false,
+  growthPlan = false,
 }: {
+  /** Day 25B step 6: on the Growth plan — the Growth tools (Customer offers,
+   * Campaigns, Print kit & QR, Local events), not Price check or Competitors
+   * (one click away in Presence). */
+  growthPlan?: boolean;
   businessId: string;
   profileTools: ProfileTools;
   reviewCount: number | null;
@@ -59,7 +65,7 @@ export function GrowMoreCustomers({
   embedded?: boolean;
 }) {
   const locale = useLocale();
-  const tools = buildGrowBannerTools(businessId, profileTools);
+  const tools = growthPlan ? buildGrowthPlanTools(businessId) : buildGrowBannerTools(businessId, profileTools);
 
   return (
     <section data-testid="more-customers" className={embedded ? "" : "rounded-2xl border border-paper-deep bg-white p-4 shadow-card sm:p-5"}>
@@ -103,7 +109,7 @@ export function GrowMoreCustomers({
             className="inline-flex w-fit max-w-full items-center rounded-lg bg-brass px-3.5 py-2 text-[13.5px] font-semibold text-ink transition-colors hover:bg-[color:color-mix(in_srgb,var(--color-brass)_85%,white)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
           >
             {/* New design: the Overview (Presence) linking into Growth says so. */}
-            {NEW_PAGES_LIVE ? t(locale, "dashboard.overview.growBanner.reviews.ctaInGrowth") : t(locale, "dashboard.overview.growBanner.reviews.cta")}
+            {NEW_PAGES_LIVE && !growthPlan ? t(locale, "dashboard.overview.growBanner.reviews.ctaInGrowth") : t(locale, "dashboard.overview.growBanner.reviews.cta")}
           </Link>
           </GoogleMapsAttribution>
           )}
@@ -142,7 +148,7 @@ export function GrowMoreCustomers({
                     <span className="flex items-center justify-between gap-2 text-[13.5px] font-semibold text-ink">
                       <span className="min-w-0 break-words">
                         {t(locale, tool.labelKey)}
-                        {inGrowth(tool.href) && <span className="font-normal text-ink-mute"> {t(locale, "dashboard.nav.inGrowth")}</span>}
+                        {!growthPlan && inGrowth(tool.href) && <span className="font-normal text-ink-mute"> {t(locale, "dashboard.nav.inGrowth")}</span>}
                       </span>
                       <IconArrowRight size={14} className="shrink-0 text-ink-mute transition-colors group-hover:text-brass" aria-hidden />
                     </span>
@@ -157,16 +163,16 @@ export function GrowMoreCustomers({
           <li className="min-w-0">
             <div className="flex h-full min-w-0 cursor-default items-start gap-3 rounded-xl border border-paper-deep bg-paper p-3">
               <span aria-hidden className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ps-icon-tile opacity-70">
-                <IconBuildingStore size={17} />
+                {growthPlan ? <IconCalendarEvent size={17} /> : <IconBuildingStore size={17} />}
               </span>
               <span className="flex min-w-0 flex-1 flex-col gap-0.5">
                 <span className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[13.5px] font-semibold text-ink-soft">
-                  <span className="min-w-0 break-words">{t(locale, GROW_BANNER_SHOP_LABEL_KEY)}</span>
+                  <span className="min-w-0 break-words">{t(locale, growthPlan ? "dashboard.nav.localEvents" : GROW_BANNER_SHOP_LABEL_KEY)}</span>
                   <span className="rounded-full border border-paper-deep bg-white px-2 py-px text-[10.5px] font-semibold text-ink-soft">
                     {t(locale, "dashboard.overview.studio.comingSoon")}
                   </span>
                 </span>
-                <span className="break-words text-[12.5px] leading-snug text-ink-mute">{t(locale, "dashboard.overview.growBanner.tools.shop.desc")}</span>
+                <span className="break-words text-[12.5px] leading-snug text-ink-mute">{t(locale, growthPlan ? "dashboard.growthPlan.tools.localEvents" : "dashboard.overview.growBanner.tools.shop.desc")}</span>
               </span>
             </div>
           </li>

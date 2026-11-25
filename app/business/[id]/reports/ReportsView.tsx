@@ -11,6 +11,7 @@ import type { WeeklyRecapData } from "@/lib/weekly/weeklyData.server";
 import { VerifiedFixesCard } from "@/components/reports/VerifiedFixesCard";
 import type { GetReportsDataResult } from "@/app/actions/reports";
 import { t, useLocale } from "@/lib/i18n";
+import { NEW_PAGES_LIVE } from "@/lib/routes";
 
 export function ReportsView({
   businessId,
@@ -34,15 +35,18 @@ export function ReportsView({
   return (
     <div className="flex flex-col gap-6 nav:gap-8">
       <div>
-        <Link
-          href={`/business/${businessId}`}
-          className="inline-flex items-center gap-1.5 text-[13px] font-medium text-ink-soft hover:text-ink"
-        >
-          <IconArrowLeft size={15} />
-          {t(locale, "dashboard.common.backTo", {
-            name: businessName ?? t(locale, "dashboard.common.businessFallback"),
-          })}
-        </Link>
+        {/* New design: the sidebar handles navigation. */}
+        {!NEW_PAGES_LIVE && (
+          <Link
+            href={`/business/${businessId}`}
+            className="inline-flex items-center gap-1.5 text-[13px] font-medium text-ink-soft hover:text-ink"
+          >
+            <IconArrowLeft size={15} />
+            {t(locale, "dashboard.common.backTo", {
+              name: businessName ?? t(locale, "dashboard.common.businessFallback"),
+            })}
+          </Link>
+        )}
         <h1 className="mt-2 font-serif text-2xl font-semibold text-ink nav:text-[27px]">
           {t(locale, "dashboard.reports.pageTitle")}
         </h1>

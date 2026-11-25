@@ -1,10 +1,12 @@
-import { getReviewsHref, growthPlanHref, offersHref } from "@/lib/routes";
+import { campaignsPageHref, getReviewsHref, growthPlanHref, offersHref, PRINT_KIT_LIVE, printKitHref } from "@/lib/routes";
 import {
-  IconUsers,
-  IconTicket,
   IconCalendarCheck,
+  IconPrinter,
+  IconSpeakerphone,
   IconTag,
+  IconTicket,
   IconTrophy,
+  IconUsers,
 } from "@tabler/icons-react";
 import type { MessageKey } from "@/lib/i18n";
 
@@ -100,3 +102,13 @@ export function buildGrowBannerTools(businessId: string, profileTools: ProfileTo
  * announced-but-not-live Shop tile. */
 export const GROW_BANNER_REVIEWS_LABEL_KEY: MessageKey = "dashboard.overview.growBanner.reviews.title";
 export const GROW_BANNER_SHOP_LABEL_KEY: MessageKey = "dashboard.overview.growBanner.tools.shop.shortLabel";
+
+/** Day 25B step 6: the Growth plan's tools (its "More customers" block): Customer offers, Campaigns, Print kit & QR. */
+export function buildGrowthPlanTools(businessId: string): GrowBannerTool[] {
+  return [
+    { icon: IconTicket, labelKey: "dashboard.nav.offers", descKey: "dashboard.growthPlan.tools.offers", href: offersHref(businessId) },
+    { icon: IconSpeakerphone, labelKey: "dashboard.nav.campaigns", descKey: "dashboard.growthPlan.tools.campaigns", href: campaignsPageHref(businessId) },
+    // Hidden with the sidebar item until Day 34 / 37-Core (lib/routes.ts PRINT_KIT_LIVE).
+    ...(PRINT_KIT_LIVE ? [{ icon: IconPrinter, labelKey: "dashboard.nav.printKit" as const, descKey: "dashboard.growthPlan.tools.printKit" as const, href: printKitHref(businessId) }] : []),
+  ];
+}

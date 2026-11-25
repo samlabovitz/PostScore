@@ -26,7 +26,9 @@ export interface BusinessWebsiteSource {
 }
 
 /** Where the graded site came from. */
-export type WebsiteSource = "owner" | "verified" | "listing";
+/** "scan": the site our last scan graded (website_analysis_json, our own result) — used when the listing
+ * can't be read live, so a page never says "no website" for a site the scan just scored. */
+export type WebsiteSource = "owner" | "verified" | "listing" | "scan";
 
 /** The site PostScore grades and screenshots, and where it came from —
  * null when there's no real site at all. A parked or broken listing link
