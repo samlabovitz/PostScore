@@ -34,11 +34,11 @@ describe("the preview switch", () => {
     expect(readFileSync("next.config.mjs", "utf8")).toContain('distDir: process.env.NEXT_DIST_DIR || ".next"');
     expect(readFileSync(".gitignore", "utf8")).toContain("/.next-*/");
   });
-  test("redirects only to pages already built (Fix plan, Google listing, Google results); the rest stay on today's pages", () => {
+  test("redirects only to pages already built (steps 2–5); the rest stay on today's pages", () => {
     expect(redirectToBuilt("/business/b1/google-results#searches")).toBe("/business/b1/google-results#searches");
     expect(redirectToBuilt("/business/b1/fix-plan#weekly-plan")).toBe("/business/b1/fix-plan#weekly-plan");
-    expect(redirectToBuilt("/business/b1/offers?tab=coupons")).toBeNull();
-    expect(redirectToBuilt("/business/b1/get-reviews#get-more-reviews")).toBeNull();
+    expect(redirectToBuilt("/business/b1/offers?tab=coupons")).toBe("/business/b1/offers?tab=coupons");
+    expect(redirectToBuilt("/business/b1/get-reviews#get-more-reviews")).toBe("/business/b1/get-reviews#get-more-reviews");
     expect(redirectToBuilt("/business/b1/growth#this-week")).toBeNull();
     expect(redirectToBuilt(null)).toBeNull();
   });

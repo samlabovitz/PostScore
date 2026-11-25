@@ -1,3 +1,4 @@
+import { displayPoints } from "@/lib/pointRange";
 import { IconAlertTriangle, IconCircleCheck, IconMinus } from "@tabler/icons-react";
 import { WebsiteCoverageNote } from "./WebsiteCoverageNote";
 import { Card } from "@/components/ui/Card";
@@ -60,8 +61,11 @@ export function CategoryCard({
   fixLinks,
   lockedFixes = false,
   businessId = null,
+  gainPoints = false,
 }: {
   category: CategoryResult;
+  /** Day 25B step 5 (Presence → Reviews): "+N pts" on each row that needs work. */
+  gainPoints?: boolean;
   /** The owner's own business: shows the customer-details answers
    * ("No parking available"…). Omitted = read-only. */
   businessId?: string | null;
@@ -98,7 +102,7 @@ export function CategoryCard({
       <WebsiteCoverageNote category={category} hasWebsite={hasWebsite} scoreBasis={scoreBasis} className="mt-1 text-[12px] text-ink-mute" />
 
       <div className="mt-4">
-        <CheckRows category={category} businessId={businessId} />
+        <CheckRows category={category} businessId={businessId} gainPoints={gainPoints} />
       </div>
     </Card>
   );
@@ -109,8 +113,10 @@ function CheckRows({
   fixLinks,
   lockedFixes = false,
   businessId = null,
+  gainPoints = false,
 }: {
   category: CategoryResult;
+  gainPoints?: boolean;
   fixLinks?: Record<string, BreakdownFix>;
   lockedFixes?: boolean;
   businessId?: string | null;
@@ -147,6 +153,11 @@ function CheckRows({
               >
                 {formatPoints(check.earnedPoints)} / {formatPoints(check.maxPoints)}
               </span>
+              {gainPoints && !isFull && check.earnedPoints !== null && check.maxPoints > check.earnedPoints && (
+                <span data-testid="check-gain" className="whitespace-nowrap rounded-full border border-[color:color-mix(in_srgb,var(--color-brass)_40%,white)] bg-[color:color-mix(in_srgb,var(--color-brass)_10%,white)] px-2 py-0.5 text-[11.5px] font-semibold text-ink">
+                  {t(locale, "dashboard.fixPlan.pts", { points: displayPoints(check.maxPoints - check.earnedPoints) })}
+                </span>
+              )}
               <Pill variant={pill.variant}>{t(locale, pill.labelKey)}</Pill>
             </div>
           </div>

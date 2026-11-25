@@ -68,19 +68,20 @@ describe("tabs and pages", () => {
     expect(text(sidebar("/business/b1/fix-plan", PAID, "es"))).toContain("Resumen Plan de correcciones Ficha de Google Reseñas Sitio web Competencia Revisión de precios PostStudio Pronto Informes");
   });
 
-  test("Growth: its 7 pages, Local events last and Coming soon; pages not built yet link to today's pages", () => {
+  test("Growth: its 7 pages, each opening its own page (Day 25B step 5); Local events last, Coming soon", () => {
     const html = sidebar("/business/b1/growth", PAID);
     expect(items(html)).toEqual(["growthPlan", "googleResults", "getReviews", "offers", "campaigns", "printKit", "localEvents", "postStudio", "reports"]);
     expect(text(html)).toContain("Growth plan Google results Get more reviews Customer offers Campaigns Print kit & QR Local events Coming soon");
     const hrefOf = (id: string) => html.match(new RegExp(`<a data-nav="${id}"[^>]*href="([^"]+)"`))?.[1] ?? null;
     expect(hrefOf("growthPlan")).toBe("/business/b1/growth");
     expect(hrefOf("googleResults")).toBe("/business/b1/google-results");
-    expect(hrefOf("getReviews")).toBe("/business/b1/website-reviews#get-more-reviews");
-    expect(hrefOf("offers")).toBe("/business/b1/campaigns");
-    expect(hrefOf("printKit")).toBe("/business/b1/website-reviews#get-more-reviews");
-    expect(hrefOf("localEvents")).toBeNull();
-    // On /campaigns, Campaigns is the highlighted page (Customer offers only stands in for now).
-    expect(activeItem("/business/b1/campaigns", "b1", GROWTH_ITEMS)).toBe("campaigns");
+    expect(hrefOf("getReviews")).toBe("/business/b1/get-reviews");
+    expect(hrefOf("offers")).toBe("/business/b1/offers");
+    expect(hrefOf("campaigns")).toBe("/business/b1/campaigns");
+    expect(hrefOf("printKit")).toBe("/business/b1/print-kit");
+    expect(hrefOf("localEvents")).toBe("/business/b1/local-events");
+    // Each page highlights its own item.
+    for (const [path, id] of [["/business/b1/get-reviews", "getReviews"], ["/business/b1/offers", "offers"], ["/business/b1/campaigns", "campaigns"], ["/business/b1/print-kit", "printKit"], ["/business/b1/local-events", "localEvents"]] as const) expect(activeItem(path, "b1", GROWTH_ITEMS), path).toBe(id);
     expect(text(sidebar("/business/b1/growth", PAID, "es"))).toContain("Plan de crecimiento Resultados en Google Consiga más reseñas Ofertas para clientes Campañas Kit de impresión y QR Eventos locales Pronto PostStudio Pronto Informes");
   });
 
@@ -120,18 +121,21 @@ describe("tabs and pages", () => {
     expect(readFileSync("components/layout/Sidebar.tsx", "utf8")).toContain("<AccountMenu business={business} userEmail={userEmail} />");
   });
 
-  test("Free: Growth shows '?' and Locked; every Growth page and Reports locked; Reviews and Price check keep their locks; Local events Coming soon", () => {
+  test("Free: Growth shows its lock; every Growth page and Reports locked; Price check keeps its lock; Reviews open (Nov 24); Local events Coming soon", () => {
     const html = sidebar("/business/b1/growth", FREE);
     expect(html).toMatch(/data-testid="nav-tab-growth"[^>]*data-locked="true"/);
     expect(html).toContain('data-icon="lock"');
     expect(text(html)).toContain("Growth Locked");
     expect(html).not.toContain("nav-test-account");
     for (const id of ["growthPlan", "googleResults", "getReviews", "offers", "campaigns", "printKit", "reports"]) expect(navItemLocked("free", id as never), id).toBe(true);
-    for (const id of ["overview", "fixPlan", "googleListing", "website", "competitors", "localEvents", "postStudio"]) expect(navItemLocked("free", id as never), id).toBe(false);
-    expect(navItemLocked("free", "reviews")).toBe(true);
+    for (const id of ["overview", "fixPlan", "googleListing", "reviews", "website", "competitors", "localEvents", "postStudio"]) expect(navItemLocked("free", id as never), id).toBe(false);
     expect(navItemLocked("free", "pricing")).toBe(true);
     for (const item of [...PRESENCE_ITEMS, ...GROWTH_ITEMS]) expect(navItemLocked("grow", item.id)).toBe(false);
     expect(html.match(/data-testid="nav-lock"/g)?.length).toBe(7);
+    // On Presence: only Price check is locked (and Reports below).
+    const presence = sidebar("/business/b1", FREE);
+    expect(presence.match(/data-testid="nav-lock"/g)?.length).toBe(2);
+    expect(presence).not.toMatch(/data-nav="reviews"[^>]*>(?:(?!<\/a>)[\s\S])*nav-lock/);
   });
 
   test("phones: 'PostScore · Presence · 78 C ☰' and the open tab's pages in a row (EN + ES)", () => {

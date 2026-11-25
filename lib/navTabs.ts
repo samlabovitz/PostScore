@@ -2,12 +2,11 @@
 // Presence (the 0–100 score) and Growth (the tier), each with its pages;
 // then PostStudio and Reports; Account is pinned below. The open tab follows
 // the URL; shared pages (Reports, Settings, Connect Google, PostStudio) keep
-// the tab open last. Pages not built yet link to today's pages until their
-// step (5–6). Pure.
+// the tab open last. Every item opens its own page (Day 25B step 5). Pure.
 
 import type { MessageKey } from "@/lib/i18n";
 import type { Plan } from "@/lib/plan";
-import { campaignsPageHref, fixPlanHref, getReviewsHref, googleListingHref, googleResultsHref, growthPlanHref, offersHref, reviewsHref } from "@/lib/routes";
+import { campaignsPageHref, fixPlanHref, getReviewsHref, googleListingHref, googleResultsHref, growthPlanHref, localEventsHref, offersHref, printKitHref, reviewsHref } from "@/lib/routes";
 
 export type NavTab = "presence" | "growth";
 
@@ -35,8 +34,6 @@ export interface NavItem {
   /** null: nothing to open yet ("Coming soon", not a link). */
   href: (businessId: string) => string | null;
   comingSoon?: boolean;
-  /** Links to another page until its own is built (steps 5–6): never the highlighted item. */
-  standIn?: boolean;
 }
 
 const biz = (id: string) => `/business/${id}`;
@@ -54,14 +51,11 @@ export const PRESENCE_ITEMS: NavItem[] = [
 export const GROWTH_ITEMS: NavItem[] = [
   { id: "growthPlan", labelKey: "dashboard.nav.growthPlan", href: (id) => growthPlanHref(id) },
   { id: "googleResults", labelKey: "dashboard.nav.googleResults", href: (id) => googleResultsHref(id) },
-  // Until step 5: today's Reviews page, its asking part.
-  { id: "getReviews", labelKey: "dashboard.nav.getReviews", href: (id) => getReviewsHref(id, { hash: "get-more-reviews" }), standIn: true },
-  // Until step 5: today's Campaigns page (coupons and referrals).
-  { id: "offers", labelKey: "dashboard.nav.offers", href: (id) => offersHref(id), standIn: true },
+  { id: "getReviews", labelKey: "dashboard.nav.getReviews", href: (id) => getReviewsHref(id) },
+  { id: "offers", labelKey: "dashboard.nav.offers", href: (id) => offersHref(id) },
   { id: "campaigns", labelKey: "dashboard.nav.campaigns", href: (id) => campaignsPageHref(id) },
-  // Until step 5: the review QR on today's Reviews page.
-  { id: "printKit", labelKey: "dashboard.nav.printKit", href: (id) => reviewsHref(id, { hash: "get-more-reviews" }), standIn: true },
-  { id: "localEvents", labelKey: "dashboard.nav.localEvents", href: () => null, comingSoon: true },
+  { id: "printKit", labelKey: "dashboard.nav.printKit", href: (id) => printKitHref(id) },
+  { id: "localEvents", labelKey: "dashboard.nav.localEvents", href: (id) => localEventsHref(id), comingSoon: true },
 ];
 
 /** After the open tab's pages and a thin divider, on both tabs. */
@@ -86,7 +80,6 @@ export function tabForPath(pathname: string): NavTab | null {
 export function activeItem(pathname: string, businessId: string, items: NavItem[]): NavItemId | null {
   const path = pathname.replace(/\/$/, "");
   for (const item of items) {
-    if (item.standIn) continue;
     const href = item.href(businessId)?.split(/[?#]/)[0];
     if (!href) continue;
     if (path === href || (href !== biz(businessId) && path.startsWith(`${href}/`))) return item.id;
@@ -95,12 +88,13 @@ export function activeItem(pathname: string, businessId: string, items: NavItem[
 }
 
 /** Free (spec §1, §5): every Growth page and Reports are locked; on
- * Presence, Reviews and Price check keep today's locks. "Coming soon" items
+ * Presence, Price check keeps today's lock (Reviews opens, Nov 24). "Coming soon" items
  * show that instead of a lock. */
 export function navItemLocked(plan: Plan | null | undefined, id: NavItemId): boolean {
   if (plan !== "free") return false;
   if (id === "localEvents" || id === "postStudio") return false;
-  return GROWTH_ITEMS.some((i) => i.id === id) || id === "reports" || id === "reviews" || id === "pricing";
+  // Reviews is open on Free in the new design (spec §5): rating, points, 3 reply drafts a week.
+  return GROWTH_ITEMS.some((i) => i.id === id) || id === "reports" || id === "pricing";
 }
 
 /** The five Growth tiers (spec §6). Everyone shows "1 Starting out" until step 6. */

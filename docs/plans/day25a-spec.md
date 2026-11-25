@@ -89,7 +89,7 @@ Account ▾ (pinned to the bottom, with space above it; no divider; notification
   - Paid but no tier yet (first week) = "1 Starting out".
 - **Free locks:**
   - every Growth item and Reports shows the lock;
-  - Presence items stay open, as today (Overview, Competitors and Website are open; Reviews and Price check keep today's locks, see §5);
+  - Presence items stay open (Overview, Fix plan, Google listing, Competitors, Website, and Reviews: rating, points, the fix line and 3 reply drafts a week, with the inbox and posting replies locked, see §5); Price check keeps today's lock *(Reviews opened on Free Nov 24)*;
   - Local events shows "Coming soon" instead of a lock.
 - **Phone (<860px):**
   - the top bar shows "PostScore · Presence · 78 C ☰";
@@ -126,7 +126,7 @@ Columns: Tab · Page · Route · What's on it · Source.
 | **Customer offers** | `/business/[id]/offers` (new; `?tab=running\|coupons\|referrals\|first-time\|loyalty`) | Opens on **Running now** (today's All campaigns rows for coupons and referrals: code, start, times used, +1, Share, End). Then the Coupons and Referrals designers. First-time customers and Loyalty programs are "Coming soon" until Day 25D. **Offer tracking lives here** (moved off the Growth plan): a summary card at the top of Running now, "{n} offers started since {date} · {uses} uses logged", plus per-offer uses. Test and practice offers are never listed or counted (§6.2). | `campaigns/CampaignsView.tsx` (coupon/referral rows), `CouponsSection`, `ReferralSection`, `HowToRunIt` |
 | **Campaigns** | `/business/[id]/campaigns` (repurposed) | Email (Day 37), Text messages, Social posts: "Coming soon" until they ship, with the Premium/Grow labels from today. Small link: "Running coupons and referrals are in Customer offers →". | `campaigns/AllCampaigns.tsx` (email/text/social block) |
 | **Local events** | `/business/[id]/local-events` (new) | "Coming soon" + what it will do, until Day 25D. | new |
-| **Print kit & QR** | `/business/[id]/print-kit` (new) | One place for every printable, each with its QR code and scan count: review sign (Sign Studio), coupon and referral cards (links into the designers), first-time and loyalty cards (25D). The vector kit itself is Day 34. | links to existing designers; scan counts from `/r/…` short links |
+| **Print kit & QR** | `/business/[id]/print-kit` (new) | One place for every printable, each with its QR code: review sign (Sign Studio), coupon and referral cards (links into the designers), first-time and loyalty cards (25D). **Scan counts: not yet.** Today's QR codes open Google or the offer directly, so the page says "Scan counts aren't tracked yet" and shows the uses logged with +1 instead; short links + scan counts are built in 37-Core with offer tracking *(decided Nov 24)*. The vector kit itself is Day 34. | links to existing designers; scan counts from `/r/…` short links (37-Core) |
 
 ### 2a. Overview, in full
 **Stays on Overview:**
@@ -511,7 +511,7 @@ The dry run (§6.7) prints how many rows each part of the rule removed, per busi
 |---|---|---|---|---|
 | R1 | Customer actions from Google up on last year | Last full month's calls + directions + bookings + website clicks ≥ the same month last year (needs 13 months of data; otherwise ≥ the 3-month average before it) | Business Profile | Measured |
 | R2 | Fresh reviews | ≥ 3 new Google reviews in 30 days | Scans / Business Profile | Measured |
-| R3 | QR scans | ≥ 10 scans of PostScore QR codes / short links in 30 days | `/r/…` | Measured |
+| R3 | QR scans | ≥ 10 scans of PostScore QR codes / short links in 30 days | `/r/…` (37-Core) | Measured, once QR tracking is on. Until then it can't count: shown as "Counts once QR tracking is on", never as failed or 0 *(decided Nov 24)* |
 | R4 | Offers used | ≥ 3 offer uses logged in 30 days | +1 tally | You told us |
 | R5 | Email campaign opened (from Day 37) | ≥ 1 campaign sent with ≥ 20% opens | Day 37 | Measured |
 
@@ -643,12 +643,12 @@ Shown **only** when the business's Google listing isn't connected. Hair Express 
 
 **Tier without Google**
 - **Active weeks can still be met:**
-  - verified actions PostScore sees itself: offers started, QR scans, review-link opens;
+  - verified actions PostScore sees itself: offers started, QR scans (once QR tracking is on, 37-Core), review-link opens;
   - new photos and listing fixes seen on the next scan;
   - "I did this" check-offs (2 = an active week).
 - **Real results still available:**
   - R2 fresh reviews: seen on every scan;
-  - R3 QR scans;
+  - R3 QR scans, once QR tracking is on (37-Core); until then "Counts once QR tracking is on";
   - R4 offers used ("You told us");
   - R5 email campaigns, once Day 37 ships.
 - **R1 "customer actions from Google up on last year" needs the connection.** The requirement row says "counts once Google is connected" (shown in 03b). Local favorite needs R1, so it needs the connection.
@@ -781,7 +781,7 @@ Each in `*-desktop.png` (1280) and `*-phone.png` (390). EN only, as asked. The m
 3. **Requirements vs points:** requirements on screen (§6.1). Points never appear on Growth pages.
 4. **Thresholds:** keep 3/4 · 5/6 + 1 · 7/8 + 2 · 11/12 + 3. Revisit after the 25B dry run.
 5. **"You told us" weight:** yes, 2 check-offs = 1 active week.
-6. **Print kit & QR:** ship a simple hub in 25B: the review QR + scan counts + links to the coupon and referral cards. The full vector kit stays Day 34.
+6. **Print kit & QR:** ship a simple hub in 25B: the review QR + links to the coupon and referral cards. Scan counts wait for short links in 37-Core (the page says so honestly). The full vector kit stays Day 34.
 7. **Campaigns:** stays in the sidebar now, with "Coming soon".
 8. **Reviews URL:** keep `/website-reviews`.
 9. **Dev test login businesses:** a real tier computed including test actions, with a gray "Test account" tag, plus the dev-only preview-tier switch. Real owners never count test or practice rows. Claimed businesses start fresh. (§6.2)

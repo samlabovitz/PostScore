@@ -7,6 +7,7 @@
 // weekly "+14 within reach" cap is gone: the rows are the action plan's own
 // tasks at their real points (lib/actionPlan.ts), never apportioned. Pure.
 
+import { displayPoints } from "@/lib/pointRange";
 import { GOOGLE_MISMATCH_CHECK_ID, type ActionPlanTask, type FixWhen, type WebsiteBanner } from "@/lib/actionPlan";
 import { fixPriority, isHighByRule, isReviewGrowthRow, rankFixes, type FixPriority } from "@/lib/overviewTiles";
 import type { CheckResult, ScoreBreakdown } from "@/lib/scoring";
@@ -103,4 +104,32 @@ export function websiteFixSummary(input: {
   const points = (banner?.points ?? 0) + (mismatch?.weightedPoints ?? 0);
   const from = round1((website.relativeScore * website.weight) / 100);
   return { count, from, to: Math.min(website.weight, round1(from + points)), score: input.breakdown.total, after: Math.min(100, Math.round(input.breakdown.total + round1(points))) };
+}
+
+/** Presence → Reviews' fix line (Day 25B step 5): "Fix these 2 and Visibility
+ * & Reputation goes 21 → 32 pts (score 78 → 89)" — the review fixes that
+ * don't take months (reply to reviews, the next few reviews), with the same
+ * points as Fix plan (splitReviewTasks). `later`: rows that take months
+ * still to come ("the rest comes as reviews grow"). */
+export function reviewsFixSummary(input: {
+  breakdown: Pick<ScoreBreakdown, "total" | "categories">;
+  /** splitReviewTasks(buildActionPlan(…)) — Fix plan's own rows. */
+  tasks: ActionPlanTask[];
+}): { count: number; from: number; to: number; score: number; after: number; later: boolean } | null {
+  const visibility = input.breakdown.categories.find((c) => c.id === "visibility");
+  if (!visibility || visibility.relativeScore === null) return null;
+  const mine = input.tasks.filter((t) => t.category === "visibility" && t.weightedPoints > 0);
+  const soon = mine.filter((t) => t.when !== "months");
+  if (soon.length === 0) return null;
+  const points = soon.reduce((sum, t) => sum + t.weightedPoints, 0);
+  const from = round1((visibility.relativeScore * visibility.weight) / 100);
+  // Shown like every other "pts": one decimal under 10, whole from 10 up ("21 → 32 pts").
+  return {
+    count: soon.length,
+    from: displayPoints(from),
+    to: displayPoints(Math.min(visibility.weight, round1(from + points))),
+    score: input.breakdown.total,
+    after: Math.min(100, Math.round(input.breakdown.total + round1(points))),
+    later: mine.some((t) => t.when === "months"),
+  };
 }

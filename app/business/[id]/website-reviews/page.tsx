@@ -15,11 +15,16 @@ import { getReplyDraftStatus } from "@/app/actions/reviewReplies";
 import { getGbpConnectionStatus } from "@/app/actions/gbp";
 import { gbpReplyCheckState } from "@/lib/gbpReplyCheck";
 import { reviewRepliesPracticeOn } from "@/lib/gbpReviewPractice";
+import { NEW_PAGES_LIVE } from "@/lib/routes";
 
 export default async function WebsiteReviewsPage({ params, searchParams = {} }: { params: { id: string }; searchParams?: { gbp?: string } }) {
   // Free: this tab is locked — its showroom, before any of its own data loads.
-  const showroom = await freeShowroom(params.id, "reviews");
-  if (showroom) return showroom;
+  // New design (spec §5): Reviews is open on Free (rating, points, the fix
+  // line, 3 reply drafts a week); only the inbox and posting replies are locked.
+  if (!NEW_PAGES_LIVE) {
+    const showroom = await freeShowroom(params.id, "reviews");
+    if (showroom) return showroom;
+  }
   // Independent loads run together.
   const [websiteOnly, result, lastScanAt, upgrade, benchmark, replyDrafts] = await Promise.all([
     websiteOnlyGuard(params.id, "reviews"),
@@ -79,6 +84,9 @@ export default async function WebsiteReviewsPage({ params, searchParams = {} }: 
         replyDrafts={replyDrafts}
         // Practice mode (never in production): the inbox with sample reviews, no Google connection needed.
         reviewRepliesPractice={reviewRepliesPracticeOn()}
+        // Day 25B step 5 (new design): what customers say and your replies; asking is on Get more reviews.
+        split={NEW_PAGES_LIVE}
+        fixLine={NEW_PAGES_LIVE ? await (await import("@/lib/fixPlan.server")).loadReviewsFixLine(params.id).catch(() => null) : null}
       />
     </DashboardShell>
   );

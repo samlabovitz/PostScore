@@ -50,7 +50,8 @@ describe("paid plans keep their pre-batch layout, page by page", () => {
   test("Reviews: stats, the review link & sign, the guide, counter tools, social proof, the rubric, replies — plus the review goal and 'Reply to a review' (the AI reply drafts)", () => {
     const view = read("app/business/[id]/website-reviews/ReviewsView.tsx");
     expect(without(tags(view), ["ReviewGapLine"])).toEqual([
-      "Card", "ProgressBar", "SectionHeading", "StatCard", "StatCard", "Pill", "Pill", "Card", "Link", "GetMoreReviews", "ReviewGuide", "CounterTools", "LiveUnavailableNote", "ReviewSocialProof", "SectionHeading", "CategoryCard", "GbpReplyCheckConnect", "GoogleReviewsInbox", "ReviewReplyDrafter", "ReviewReplyDrafter", "LockedPreview", "ConnectToUnlockCard", "ComingSoonCard",
+      // Day 25B step 5: the new design (split) shows ReviewsFixLine in place of the asking parts (two Links in it).
+      "Card", "ProgressBar", "SectionHeading", "StatCard", "StatCard", "Pill", "Pill", "Card", "Link", "ReviewsFixLine", "GetMoreReviews", "ReviewGuide", "CounterTools", "LiveUnavailableNote", "ReviewSocialProof", "SectionHeading", "CategoryCard", "GbpReplyCheckConnect", "GoogleReviewsInbox", "ReviewReplyDrafter", "ReviewReplyDrafter", "LockedPreview", "ConnectToUnlockCard", "ComingSoonCard", "Link", "Link",
     ]);
     // Premium/Multi: the replies line (unlimited drafts; with Google connected, replying from here).
     expect(view).toContain('{isPremiumPlan(plan) && (\n          <p data-testid="ai-replies-soon"');

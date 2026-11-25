@@ -138,6 +138,62 @@ export type MessageKey =
   | "dashboard.nav.competitors"
   | "dashboard.nav.pricing"
   | "dashboard.nav.reports"
+  | "dashboard.offers.title"
+  | "dashboard.offers.noneRunning"
+  | "dashboard.offers.subtitle"
+  | "dashboard.offers.tab.running"
+  | "dashboard.offers.tab.firstTime"
+  | "dashboard.offers.tab.loyalty"
+  | "dashboard.offers.summary.none"
+  | "dashboard.offers.summary.started.one"
+  | "dashboard.offers.summary.started.other"
+  | "dashboard.offers.summary.startedToday.one"
+  | "dashboard.offers.summary.startedToday.other"
+  | "dashboard.offers.summary.uses.one"
+  | "dashboard.offers.summary.uses.other"
+  | "dashboard.offers.campaignsLine"
+  | "dashboard.offers.campaignsLink"
+  | "dashboard.offers.firstTimeBody"
+  | "dashboard.offers.loyaltyBody"
+  | "dashboard.offers.savedToast"
+  | "dashboard.campaigns.channelsSubtitle"
+  | "dashboard.campaigns.offersLink"
+  | "dashboard.reviewsSplit.subtitle"
+  | "dashboard.reviewsSplit.fixLine.one"
+  | "dashboard.reviewsSplit.fixLine.other"
+  | "dashboard.reviewsSplit.later"
+  | "dashboard.reviewsSplit.getMore"
+  | "dashboard.getReviews.title"
+  | "dashboard.getReviews.subtitle"
+  | "dashboard.getReviews.seeWhatTheySay"
+  | "dashboard.printKit.title"
+  | "dashboard.printKit.subtitle"
+  | "dashboard.printKit.qrLabel"
+  | "dashboard.printKit.noPlaceId"
+  | "dashboard.printKit.reviewQr"
+  | "dashboard.printKit.reviewQrBody"
+  | "dashboard.printKit.level.free"
+  | "dashboard.printKit.level.basic"
+  | "dashboard.printKit.level.full"
+  | "dashboard.printKit.sign"
+  | "dashboard.printKit.signBody"
+  | "dashboard.printKit.openSignStudio"
+  | "dashboard.printKit.coupons"
+  | "dashboard.printKit.couponsBody"
+  | "dashboard.printKit.referrals"
+  | "dashboard.printKit.referralsBody"
+  | "dashboard.printKit.openDesigner"
+  | "dashboard.printKit.firstTime"
+  | "dashboard.printKit.firstTimeBody"
+  | "dashboard.printKit.loyalty"
+  | "dashboard.printKit.loyaltyBody"
+  | "dashboard.printKit.uses.one"
+  | "dashboard.printKit.uses.other"
+  | "dashboard.printKit.scansNote"
+  | "dashboard.localEvents.line1"
+  | "dashboard.localEvents.line2"
+  | "dashboard.nav.inGrowth"
+  | "dashboard.overview.growBanner.reviews.ctaInGrowth"
   | "dashboard.nav.tab.presence"
   | "dashboard.nav.tab.growth"
   | "dashboard.nav.fixPlan"
@@ -6413,6 +6469,11 @@ export type MessageKey =
  * how a future locale with more categories, e.g. "few"/"many", would
  * still get a safe result even before every category is seeded for it). */
 export type PluralKeyBase =
+  | "dashboard.offers.summary.started"
+  | "dashboard.offers.summary.startedToday"
+  | "dashboard.offers.summary.uses"
+  | "dashboard.reviewsSplit.fixLine"
+  | "dashboard.printKit.uses"
   | "dashboard.fixPlan.thisWeekLabel"
   | "dashboard.fixPlan.websiteSummary"
   | "content.actionPlan.reviewSplit.recent.title"
@@ -6634,6 +6695,62 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.nav.competitors": "Competitors",
     "dashboard.nav.pricing": "Price check",
     "dashboard.nav.reports": "Reports",
+    "dashboard.offers.title": "Customer offers",
+    "dashboard.offers.noneRunning": "No offers running right now. Design one on the Coupons or Referrals tab and save it to start tracking.",
+    "dashboard.offers.subtitle": "Coupons, first-time offers and referral cards that bring people in, and how many times each one was used.",
+    "dashboard.offers.tab.running": "Running now",
+    "dashboard.offers.tab.firstTime": "First-time customers",
+    "dashboard.offers.tab.loyalty": "Loyalty programs",
+    "dashboard.offers.summary.none": "No offers started yet. Design a coupon or referral card to start tracking.",
+    "dashboard.offers.summary.started.one": "{count} offer started since {date}",
+    "dashboard.offers.summary.started.other": "{count} offers started since {date}",
+    "dashboard.offers.summary.startedToday.one": "{count} offer started",
+    "dashboard.offers.summary.startedToday.other": "{count} offers started",
+    "dashboard.offers.summary.uses.one": "{uses} use logged",
+    "dashboard.offers.summary.uses.other": "{uses} uses logged",
+    "dashboard.offers.campaignsLine": "Email, text and social campaigns are in",
+    "dashboard.offers.campaignsLink": "Campaigns →",
+    "dashboard.offers.firstTimeBody": "A welcome offer for people trying you for the first time, with its own card and code.",
+    "dashboard.offers.loyaltyBody": "A punch card or reward for regulars, tracked here like your coupons.",
+    "dashboard.offers.savedToast": "Saved: track it on Running now",
+    "dashboard.campaigns.channelsSubtitle": "Email, text message and social campaigns to send your offers to customers.",
+    "dashboard.campaigns.offersLink": "Running coupons and referrals are in Customer offers →",
+    "dashboard.reviewsSplit.subtitle": "What customers say about you on Google, your replies, and the points reviews earn.",
+    "dashboard.reviewsSplit.fixLine.one": "Fix this 1 and Visibility & Reputation goes {from} → {to} pts (score {score} → {after}).",
+    "dashboard.reviewsSplit.fixLine.other": "Fix these {count} and Visibility & Reputation goes {from} → {to} pts (score {score} → {after}).",
+    "dashboard.reviewsSplit.later": "The rest comes as your reviews grow.",
+    "dashboard.reviewsSplit.getMore": "Get more reviews (in Growth)",
+    "dashboard.getReviews.title": "Get more reviews",
+    "dashboard.getReviews.subtitle": "Your review link and QR code, signs to print, and the right way to ask.",
+    "dashboard.getReviews.seeWhatTheySay": "See what customers say",
+    "dashboard.printKit.title": "Print kit & QR",
+    "dashboard.printKit.subtitle": "Everything you can print, each with its QR code.",
+    "dashboard.printKit.qrLabel": "Scan to review us",
+    "dashboard.printKit.noPlaceId": "Your review QR appears once we have your Google listing.",
+    "dashboard.printKit.reviewQr": "Review QR code",
+    "dashboard.printKit.reviewQrBody": "Opens your Google review form. Put it at the register, on receipts or on your door.",
+    "dashboard.printKit.level.free": "Free",
+    "dashboard.printKit.level.basic": "Basic",
+    "dashboard.printKit.level.full": "Full designer",
+    "dashboard.printKit.sign": "Review sign",
+    "dashboard.printKit.signBody": "A printable sign with your review QR (Sign Studio).",
+    "dashboard.printKit.openSignStudio": "Open Sign Studio",
+    "dashboard.printKit.coupons": "Coupon cards",
+    "dashboard.printKit.couponsBody": "Cards for your running coupons, with their code and QR.",
+    "dashboard.printKit.referrals": "Referral cards",
+    "dashboard.printKit.referralsBody": "Cards your customers hand to friends, with your referral code.",
+    "dashboard.printKit.openDesigner": "Open the designer",
+    "dashboard.printKit.firstTime": "First-time customer cards",
+    "dashboard.printKit.firstTimeBody": "A welcome card for people trying you for the first time.",
+    "dashboard.printKit.loyalty": "Loyalty cards",
+    "dashboard.printKit.loyaltyBody": "A punch card for your regulars.",
+    "dashboard.printKit.uses.one": "{count} use logged on the running ones",
+    "dashboard.printKit.uses.other": "{count} uses logged on the running ones",
+    "dashboard.printKit.scansNote": "Scan counts aren't tracked yet: these QR codes open Google or your offer directly. Uses are what you log with +1.",
+    "dashboard.localEvents.line1": "Find local events near you (markets, fairs, school and charity events) and take part with an offer or a stand.",
+    "dashboard.localEvents.line2": "Each event you join counts toward your Growth tier.",
+    "dashboard.nav.inGrowth": "(in Growth)",
+    "dashboard.overview.growBanner.reviews.ctaInGrowth": "Get your review link & QR (in Growth) →",
     "dashboard.nav.tab.presence": "Presence",
     "dashboard.nav.tab.growth": "Growth",
     "dashboard.nav.fixPlan": "Fix plan",
@@ -13474,6 +13591,62 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.nav.competitors": "Competencia",
     "dashboard.nav.pricing": "Revisión de precios",
     "dashboard.nav.reports": "Informes",
+    "dashboard.offers.title": "Ofertas para clientes",
+    "dashboard.offers.noneRunning": "No hay ofertas activas ahora. Diseñe una en la pestaña Cupones o Referidos y guárdela para empezar a llevar la cuenta.",
+    "dashboard.offers.subtitle": "Cupones, ofertas para clientes nuevos y tarjetas de referidos que atraen clientes, y cuántas veces se usó cada una.",
+    "dashboard.offers.tab.running": "Activas ahora",
+    "dashboard.offers.tab.firstTime": "Clientes nuevos",
+    "dashboard.offers.tab.loyalty": "Programas de lealtad",
+    "dashboard.offers.summary.none": "Aún no ha iniciado ninguna oferta. Diseñe un cupón o una tarjeta de referidos para empezar a llevar la cuenta.",
+    "dashboard.offers.summary.started.one": "{count} oferta iniciada desde el {date}",
+    "dashboard.offers.summary.started.other": "{count} ofertas iniciadas desde el {date}",
+    "dashboard.offers.summary.startedToday.one": "{count} oferta iniciada",
+    "dashboard.offers.summary.startedToday.other": "{count} ofertas iniciadas",
+    "dashboard.offers.summary.uses.one": "{uses} uso registrado",
+    "dashboard.offers.summary.uses.other": "{uses} usos registrados",
+    "dashboard.offers.campaignsLine": "Las campañas por correo, texto y redes sociales están en",
+    "dashboard.offers.campaignsLink": "Campañas →",
+    "dashboard.offers.firstTimeBody": "Una oferta de bienvenida para quienes le visitan por primera vez, con su propia tarjeta y código.",
+    "dashboard.offers.loyaltyBody": "Una tarjeta de sellos o recompensa para clientes frecuentes, registrada aquí como sus cupones.",
+    "dashboard.offers.savedToast": "Guardada: lleve la cuenta en Activas ahora",
+    "dashboard.campaigns.channelsSubtitle": "Campañas por correo, mensajes de texto y redes sociales para enviar sus ofertas a sus clientes.",
+    "dashboard.campaigns.offersLink": "Los cupones y referidos activos están en Ofertas para clientes →",
+    "dashboard.reviewsSplit.subtitle": "Lo que dicen sus clientes en Google, sus respuestas y los puntos que ganan sus reseñas.",
+    "dashboard.reviewsSplit.fixLine.one": "Haga esta corrección y Visibilidad y reputación pasa de {from} a {to} pts (puntuación {score} → {after}).",
+    "dashboard.reviewsSplit.fixLine.other": "Haga estas {count} correcciones y Visibilidad y reputación pasa de {from} a {to} pts (puntuación {score} → {after}).",
+    "dashboard.reviewsSplit.later": "El resto llega a medida que crecen sus reseñas.",
+    "dashboard.reviewsSplit.getMore": "Consiga más reseñas (en Crecimiento)",
+    "dashboard.getReviews.title": "Consiga más reseñas",
+    "dashboard.getReviews.subtitle": "Su enlace y código QR de reseñas, letreros para imprimir y la forma correcta de pedirlas.",
+    "dashboard.getReviews.seeWhatTheySay": "Vea lo que dicen sus clientes",
+    "dashboard.printKit.title": "Kit de impresión y QR",
+    "dashboard.printKit.subtitle": "Todo lo que puede imprimir, cada cosa con su código QR.",
+    "dashboard.printKit.qrLabel": "Escanee para dejarnos una reseña",
+    "dashboard.printKit.noPlaceId": "Su QR de reseñas aparece cuando tengamos su ficha de Google.",
+    "dashboard.printKit.reviewQr": "Código QR de reseñas",
+    "dashboard.printKit.reviewQrBody": "Abre su formulario de reseñas de Google. Póngalo en la caja, en los recibos o en la puerta.",
+    "dashboard.printKit.level.free": "Gratis",
+    "dashboard.printKit.level.basic": "Básico",
+    "dashboard.printKit.level.full": "Diseñador completo",
+    "dashboard.printKit.sign": "Letrero de reseñas",
+    "dashboard.printKit.signBody": "Un letrero imprimible con su QR de reseñas (Sign Studio).",
+    "dashboard.printKit.openSignStudio": "Abrir Sign Studio",
+    "dashboard.printKit.coupons": "Tarjetas de cupón",
+    "dashboard.printKit.couponsBody": "Tarjetas para sus cupones activos, con su código y QR.",
+    "dashboard.printKit.referrals": "Tarjetas de referidos",
+    "dashboard.printKit.referralsBody": "Tarjetas que sus clientes entregan a sus amigos, con su código de referidos.",
+    "dashboard.printKit.openDesigner": "Abrir el diseñador",
+    "dashboard.printKit.firstTime": "Tarjetas para clientes nuevos",
+    "dashboard.printKit.firstTimeBody": "Una tarjeta de bienvenida para quienes le visitan por primera vez.",
+    "dashboard.printKit.loyalty": "Tarjetas de lealtad",
+    "dashboard.printKit.loyaltyBody": "Una tarjeta de sellos para sus clientes frecuentes.",
+    "dashboard.printKit.uses.one": "{count} uso registrado en las activas",
+    "dashboard.printKit.uses.other": "{count} usos registrados en las activas",
+    "dashboard.printKit.scansNote": "Todavía no contamos los escaneos: estos códigos QR abren Google o su oferta directamente. Los usos son los que usted registra con +1.",
+    "dashboard.localEvents.line1": "Encuentre eventos locales cerca de usted (mercados, ferias, eventos escolares y benéficos) y participe con una oferta o un puesto.",
+    "dashboard.localEvents.line2": "Cada evento en el que participe cuenta para su nivel de crecimiento.",
+    "dashboard.nav.inGrowth": "(en Crecimiento)",
+    "dashboard.overview.growBanner.reviews.ctaInGrowth": "Obtenga su enlace y QR de reseñas (en Crecimiento) →",
     "dashboard.nav.tab.presence": "Presencia",
     "dashboard.nav.tab.growth": "Crecimiento",
     "dashboard.nav.fixPlan": "Plan de correcciones",

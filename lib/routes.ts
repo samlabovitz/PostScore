@@ -21,10 +21,11 @@ export function newDesignPreview(env: { NODE_ENV?: string; NEXT_PUBLIC_NEW_DESIG
 
 /** The new pages built so far (Day 25B steps 2–3). A link or redirect to a
  * page not built yet keeps today's URL until its step (5–6). */
-export const BUILT_NEW_PAGES: ReadonlySet<string> = new Set(["fix-plan", "google-listing", "google-results"]);
+export const BUILT_NEW_PAGES: ReadonlySet<string> = new Set(["fix-plan", "google-listing", "google-results", "get-reviews", "offers", "print-kit", "local-events"]);
 const built = (page: string) => NEW_PAGES_LIVE && BUILT_NEW_PAGES.has(page);
 
-export type OffersTab = "all" | "coupons" | "referrals";
+/** Customer offers' tabs ("all" = Running now). First-time and Loyalty are Coming soon until Day 25D. */
+export type OffersTab = "all" | "coupons" | "referrals" | "first-time" | "loyalty";
 
 export interface RouteOptions {
   /** With or without the leading "#". */
@@ -81,8 +82,19 @@ export function getReviewsHref(businessId: string, opts?: RouteOptions): string 
 
 /** Growth → Customer offers, on a tab. Today: the Campaigns page's tabs. */
 export function offersHref(businessId: string, tab: OffersTab = "all", opts?: RouteOptions): string {
-  const base: Record<string, string> = tab === "all" ? {} : { tab };
-  return built("offers") ? build(`${biz(businessId)}/offers`, base, opts) : build(`${biz(businessId)}/campaigns`, base, opts);
+  if (built("offers")) return build(`${biz(businessId)}/offers`, tab === "all" ? {} : { tab }, opts);
+  // Today's Campaigns page has only the coupon and referral tabs.
+  return build(`${biz(businessId)}/campaigns`, tab === "coupons" || tab === "referrals" ? { tab } : {}, opts);
+}
+
+/** Growth → Print kit & QR (every printable, with its QR). Today: the review QR on the Reviews page. */
+export function printKitHref(businessId: string, opts?: RouteOptions): string {
+  return built("print-kit") ? build(`${biz(businessId)}/print-kit`, {}, opts) : build(`${biz(businessId)}/website-reviews`, {}, { hash: "get-more-reviews", ...opts });
+}
+
+/** Growth → Local events ("Coming soon" until Day 25D). Null where the page isn't live yet. */
+export function localEventsHref(businessId: string, opts?: RouteOptions): string | null {
+  return built("local-events") ? build(`${biz(businessId)}/local-events`, {}, opts) : null;
 }
 
 /** Growth → Campaigns (email, text, social). The URL stays /campaigns. */

@@ -1,5 +1,6 @@
 import { notFound, redirect } from "next/navigation";
-import { campaignsPageHref, legacyRedirectIfLive } from "@/lib/routes";
+import { NEW_PAGES_LIVE, campaignsPageHref, legacyRedirectIfLive } from "@/lib/routes";
+import { CampaignChannels } from "./CampaignChannels";
 import { ownerPrintPhone } from "@/lib/ownerDetails.server";
 import { freeShowroom } from "@/components/plan/freeShowroom";
 import { DashboardShell } from "@/components/layout/DashboardShell";
@@ -34,6 +35,15 @@ export default async function CampaignsPage({ params, searchParams = {} }: { par
   const summary = await getBusinessSummary(params.id);
   if (summary.status === "unauthenticated") redirect("/login");
   if (summary.status === "not_found") notFound();
+  // Day 25B step 5 (new-design preview): email, text and social only; offers live in Customer offers.
+  if (NEW_PAGES_LIVE) {
+    const [plan, upgrade] = await Promise.all([getPlan(), loadUpgradeContext(params.id, "campaigns")]);
+    return (
+      <DashboardShell upgrade={upgrade} business={summary.business}>
+        <CampaignChannels businessId={params.id} plan={plan} />
+      </DashboardShell>
+    );
+  }
 
   const { business } = summary;
   const locale = viewLocale(business.language);

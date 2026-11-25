@@ -7,7 +7,7 @@ import { endPromo, incrementPromoRedemption } from "@/app/actions/promos";
 import { endReferral, incrementReferralRedemption } from "@/app/actions/referrals";
 import { MAX_ACTIVE_PROMOS, type PromoRow } from "@/lib/promos";
 import { MAX_ACTIVE_REFERRALS, type ReferralRow } from "@/lib/referrals";
-import { t, useLocale } from "@/lib/i18n";
+import { t, useLocale, type MessageKey } from "@/lib/i18n";
 
 /** "All campaigns" — the tracking home (Grow and up): every running coupon
  * and referral card with its type, code, start date, times used, +1, Share
@@ -23,6 +23,7 @@ export function AllCampaigns({
   onPromosChange,
   onReferralChange,
   highlightId = null,
+  emptyKey = "dashboard.campaigns.noneRunning",
 }: {
   businessName: string;
   businessPhone: string | null;
@@ -34,6 +35,8 @@ export function AllCampaigns({
   onReferralChange: (update: (prev: ReferralRow | null) => ReferralRow | null) => void;
   /** Just saved: highlighted for a few seconds. */
   highlightId?: string | null;
+  /** Nothing running yet (Customer offers words it as offers). */
+  emptyKey?: MessageKey;
 }) {
   const locale = useLocale();
   const setPromos = onPromosChange;
@@ -65,7 +68,7 @@ export function AllCampaigns({
   if (!showPromos && !showReferral) {
     return (
       <Card className="p-5 text-sm text-ink-soft" data-testid="campaigns-empty">
-        {t(locale, "dashboard.campaigns.noneRunning")}
+        {t(locale, emptyKey)}
       </Card>
     );
   }

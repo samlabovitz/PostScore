@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { offerIsTest } from "@/lib/offerTesting";
 import { MAX_ACTIVE_PROMOS, type PromoRow } from "@/lib/promos";
 
 const PROMO_COLUMNS =
@@ -99,6 +100,8 @@ export async function startPromo(businessId: string, input: StartPromoInput): Pr
       expiry: input.expiry || null,
       redemptions: 0,
       active: true,
+      // Day 25B: made by an internal account → a test offer (lib/offerTesting.ts).
+      is_test: offerIsTest(user.email),
     })
     .select(PROMO_COLUMNS)
     .single();

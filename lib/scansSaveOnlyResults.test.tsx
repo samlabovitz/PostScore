@@ -81,8 +81,12 @@ const PLACE = {
   listingHasParking: false,
 } as unknown as PlaceDetails;
 
-/** Distinctive Google values that must never be written anywhere. */
-const GOOGLE_VALUES = ["Zebra Nails Uniquename", "77 Zebrastreet", "302-555-0177", "9:17 AM", "nail_salon_zebra", "Zebra nail salon", "cid=777177", "PRICE_LEVEL_MODERATE", "4.37", "173"];
+/** Distinctive Google values that must never be written anywhere: text
+ * found inside any written string, numbers matched as values. (Never a
+ * substring search of the numbers: a write's own timestamp — e.g.
+ * lat_lng_fetched_at "…:05.173Z" — would match "173" by chance.) */
+const GOOGLE_TEXT = ["Zebra Nails Uniquename", "77 Zebrastreet", "302-555-0177", "9:17 AM", "nail_salon_zebra", "Zebra nail salon", "cid=777177", "PRICE_LEVEL_MODERATE"];
+const GOOGLE_NUMBERS = [4.37, 173];
 const ALLOWED_GOOGLE_KEYS = new Set(["place_id", "lat", "lng", "lat_lng_fetched_at", "biz_type_resolved"]);
 
 type Row = Record<string, unknown>;
@@ -187,10 +191,25 @@ function googleInWrites(): string[] {
     for (const p of payloads as Row[]) {
       for (const k of Object.keys(p)) if ((LISTING_SCORING_COLUMN_NAMES as readonly string[]).includes(k) && !ALLOWED_GOOGLE_KEYS.has(k)) out.push(`${w.table}.${k}`);
     }
-    const json = JSON.stringify(w.payload);
-    for (const v of GOOGLE_VALUES) if (json.includes(v)) out.push(`${w.table} has "${v}"`);
+    for (const v of leafValues(w.payload)) {
+      if (typeof v === "string") for (const g of GOOGLE_TEXT) if (v.includes(g)) out.push(`${w.table} has "${g}"`);
+      if (typeof v === "number" && GOOGLE_NUMBERS.includes(v)) out.push(`${w.table} has ${v}`);
+      // The numbers inside text ("4.37★ from 173 reviews") count too — as whole
+      // numbers, and never inside a timestamp.
+      if (typeof v === "string" && !ISO_TIME.test(v)) for (const n of GOOGLE_NUMBERS) if (wholeNumber(n).test(v)) out.push(`${w.table} has ${n} in "${v.slice(0, 60)}"`);
+    }
   }
   return out;
+}
+
+const ISO_TIME = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/;
+const wholeNumber = (n: number) => new RegExp(`(?<![\\d.,])${String(n).replace(".", "\\.")}(?![\\d])`);
+
+/** Every string and number inside a written payload (objects, arrays, JSON columns). */
+function leafValues(v: unknown): unknown[] {
+  if (Array.isArray(v)) return v.flatMap(leafValues);
+  if (v && typeof v === "object") return Object.values(v as Record<string, unknown>).flatMap(leafValues);
+  return [v];
 }
 
 beforeEach(() => {
@@ -210,6 +229,24 @@ describe("a scan saves only results (Day 23 2d-4)", () => {
     expect(googleInWrites()).toEqual([]);
     // The scan's Google values come back for its score — in memory only.
     expect(r.status === "saved" && r.listing).toEqual(listingScoringRow(PLACE));
+  });
+
+  test("the check doesn't depend on the clock: a write's own timestamp ending in .173 is never 'Google's 173 reviews'", async () => {
+    // The old check searched the JSON text for "173", so a lat_lng_fetched_at
+    // like "…:05.173Z" failed it about once in a few hundred runs.
+    vi.useFakeTimers({ toFake: ["Date"] });
+    try {
+      vi.setSystemTime(new Date("2026-11-24T12:00:05.173Z"));
+      db = memDb({ businesses: [], scores: [] });
+      expect((await saveBusinessWithClient(db.client, "u1", PLACE)).status).toBe("saved");
+      expect(JSON.stringify(db.writes)).toContain(".173Z");
+      expect(googleInWrites()).toEqual([]);
+      // A real leak is still caught, as a value or inside text.
+      db.writes.push({ table: "scores", op: "insert", payload: { review_count: 173 } }, { table: "notes", op: "insert", payload: { body: "4.37★ from 173 reviews" } });
+      expect(googleInWrites()).toEqual(["scores.review_count", "scores has 173", 'notes has 4.37 in "4.37★ from 173 reviews"', 'notes has 173 in "4.37★ from 173 reviews"']);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   for (const kind of ["owner_rescan", "monthly", "rescan_all"] as const) {

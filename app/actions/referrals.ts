@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { offerIsTest } from "@/lib/offerTesting";
 import { MAX_ACTIVE_REFERRALS, type ReferralRow } from "@/lib/referrals";
 
 const REFERRAL_COLUMNS = "id, business_id, referrer_reward, friend_reward, code, redemptions, active, created_at";
@@ -99,6 +100,8 @@ export async function startReferral(
       code: input.code,
       redemptions: 0,
       active: true,
+      // Day 25B: made by an internal account → a test offer (lib/offerTesting.ts).
+      is_test: offerIsTest(user.email),
     })
     .select(REFERRAL_COLUMNS)
     .single();

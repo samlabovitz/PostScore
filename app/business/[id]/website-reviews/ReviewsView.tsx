@@ -23,10 +23,13 @@ import type { ReviewsPageData } from "@/app/actions/reviews";
 import { isPremiumPlan, type Plan } from "@/lib/plan";
 import { reviewGoalText } from "@/lib/reviewGoal";
 import type { ReviewGoal } from "@/lib/competitorComparison";
-import { formatCount, t, useLocale } from "@/lib/i18n";
+import { formatCount, t, tPlural, useLocale } from "@/lib/i18n";
 import { googleWritesCopy } from "@/lib/googleWritesLaunch";
 import { useScrollToHash } from "@/lib/useScrollToHash";
 import { ReviewReplyDrafter } from "@/components/reviews/ReviewReplyDrafter";
+import type { reviewsFixSummary } from "@/lib/fixPlan";
+import { fixPlanHref, getReviewsHref } from "@/lib/routes";
+import { IconArrowRight } from "@tabler/icons-react";
 import { GoogleReviewsInbox } from "@/components/reviews/GoogleReviewsInbox";
 import { LockedPreview } from "@/components/plan/LockedPreview";
 import { GoogleMapsAttribution } from "@/components/google/GoogleMapsAttribution";
@@ -172,9 +175,17 @@ export function ReviewsView({
   replyDrafts = null,
   reviewRepliesPractice = false,
   gbpReplyCheck = null,
+  split = false,
+  fixLine = null,
 }: {
   businessId: string;
   reviews: ReviewsPageData;
+  /** Day 25B step 5 (new design): Presence → Reviews — what customers say
+   * and your replies. The asking (link, QR, guide, counter tools, signs)
+   * is on Growth → Get more reviews (GetReviewsView). */
+  split?: boolean;
+  /** "Fix these 2 and Visibility & Reputation goes 21 → 32 pts (score 78 → 89)" (lib/fixPlan.ts reviewsFixSummary). */
+  fixLine?: ReturnType<typeof reviewsFixSummary>;
   plan?: Plan;
   /** The shared review goal and its comparison group, or null. */
   nearby?: { goal: ReviewGoal | null; group: string } | null;
@@ -206,24 +217,30 @@ export function ReviewsView({
         <h1 className="mt-1.5 font-serif text-2xl font-semibold text-ink nav:text-[27px]">
           {t(locale, "dashboard.websiteReviews.pageTitle")}
         </h1>
-        <p className="mt-1 text-sm text-ink-soft">{t(locale, "dashboard.websiteReviews.subtitle")}</p>
+        <p className="mt-1 text-sm text-ink-soft">{t(locale, split ? "dashboard.reviewsSplit.subtitle" : "dashboard.websiteReviews.subtitle")}</p>
       </div>
 
-      <div id="get-more-reviews" className="scroll-mt-20">
-        <GetMoreReviews
-          businessId={businessId}
-          businessName={reviews.businessName}
-          placeId={reviews.placeId}
-          verifiedSocials={reviews.verifiedSocials}
-          plan={plan}
-        />
-      </div>
+      {split ? (
+        <ReviewsFixLine businessId={businessId} fixLine={fixLine} />
+      ) : (
+        <>
+          <div id="get-more-reviews" className="scroll-mt-20">
+            <GetMoreReviews
+              businessId={businessId}
+              businessName={reviews.businessName}
+              placeId={reviews.placeId}
+              verifiedSocials={reviews.verifiedSocials}
+              plan={plan}
+            />
+          </div>
 
-      <div id="review-guide" className="scroll-mt-20">
-        <ReviewGuide placeId={reviews.placeId} locked={plan === "free"} />
-      </div>
+          <div id="review-guide" className="scroll-mt-20">
+            <ReviewGuide placeId={reviews.placeId} locked={plan === "free"} />
+          </div>
 
-      <CounterTools plan={plan} />
+          <CounterTools plan={plan} />
+        </>
+      )}
 
       <div>
         {reviews.liveUnavailable && <LiveUnavailableNote />}
@@ -233,7 +250,7 @@ export function ReviewsView({
 
       <div>
         <SectionHeading title={t(locale, "dashboard.websiteReviews.rubricHeading")} className="mb-4" />
-        <CategoryCard category={reviews.visibilityCategory} />
+        <CategoryCard category={reviews.visibilityCategory} gainPoints={split} />
         {/* Grow: connect Google for the read-only "Replying to reviews"
             check (null when switched off, and on Premium — Premium
             connects from the Google Profile page). */}
@@ -312,6 +329,30 @@ export function ReviewsView({
           />
         </div>
       </div>
+    </div>
+  );
+}
+
+/** Presence → Reviews (new design): the review fixes' line — "Fix these 2 and
+ * Visibility & Reputation goes 21 → 32 pts (score 78 → 89)", the rest as
+ * reviews grow — and the one link into Growth, "Get more reviews (in Growth) →". */
+function ReviewsFixLine({ businessId, fixLine }: { businessId: string; fixLine: ReturnType<typeof reviewsFixSummary> }) {
+  const locale = useLocale();
+  return (
+    <div className="-mt-3 flex flex-col gap-2 rounded-xl border border-paper-deep bg-white px-4 py-3 text-[13.5px] text-ink" data-testid="reviews-fix-line">
+      {fixLine && (
+        <p>
+          <b>{tPlural(locale, "dashboard.reviewsSplit.fixLine", fixLine.count, { count: fixLine.count, from: fixLine.from, to: fixLine.to, score: fixLine.score, after: fixLine.after })}</b>
+          {fixLine.later && <span className="text-ink-soft"> {t(locale, "dashboard.reviewsSplit.later")}</span>}{" "}
+          <Link href={fixPlanHref(businessId)} className="font-semibold underline decoration-brass underline-offset-2 hover:decoration-ink">
+            {t(locale, "dashboard.fixPlan.link")}
+          </Link>
+        </p>
+      )}
+      <Link href={getReviewsHref(businessId)} data-testid="reviews-get-more" className="inline-flex w-fit items-center gap-1 font-semibold text-ink hover:text-brass">
+        {t(locale, "dashboard.reviewsSplit.getMore")}
+        <IconArrowRight size={14} aria-hidden />
+      </Link>
     </div>
   );
 }

@@ -1,5 +1,8 @@
 "use client";
 
+import { NEW_PAGES_LIVE } from "@/lib/routes";
+import { tabForPath } from "@/lib/navTabs";
+
 // "More customers, whatever your score" — Reviews is the featured tile
 // (the business's real review count, and the nearby average when a saved
 // competitor scan has one), with the review link & QR sign as its button;
@@ -23,6 +26,9 @@ export function reviewStatLine(reviewCount: number | null, nearbyAverage: number
     ? tPlural(locale, "dashboard.overview.growBanner.reviews.vsNearby", reviewCount, { count, average: formatCount(nearbyAverage, locale) })
     : tPlural(locale, "dashboard.overview.growBanner.reviews.countOnly", reviewCount, { count });
 }
+
+/** New design: a link from the Overview (Presence) into a Growth page — it says "(in Growth)". */
+const inGrowth = (href: string) => NEW_PAGES_LIVE && tabForPath(href.split(/[?#]/)[0]) === "growth";
 
 export function GrowMoreCustomers({
   businessId,
@@ -96,7 +102,8 @@ export function GrowMoreCustomers({
             href={reviewToolHref(businessId)}
             className="inline-flex w-fit max-w-full items-center rounded-lg bg-brass px-3.5 py-2 text-[13.5px] font-semibold text-ink transition-colors hover:bg-[color:color-mix(in_srgb,var(--color-brass)_85%,white)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
           >
-            {t(locale, "dashboard.overview.growBanner.reviews.cta")}
+            {/* New design: the Overview (Presence) linking into Growth says so. */}
+            {NEW_PAGES_LIVE ? t(locale, "dashboard.overview.growBanner.reviews.ctaInGrowth") : t(locale, "dashboard.overview.growBanner.reviews.cta")}
           </Link>
           </GoogleMapsAttribution>
           )}
@@ -133,7 +140,10 @@ export function GrowMoreCustomers({
                   </span>
                   <span className="flex min-w-0 flex-1 flex-col gap-0.5">
                     <span className="flex items-center justify-between gap-2 text-[13.5px] font-semibold text-ink">
-                      <span className="min-w-0 break-words">{t(locale, tool.labelKey)}</span>
+                      <span className="min-w-0 break-words">
+                        {t(locale, tool.labelKey)}
+                        {inGrowth(tool.href) && <span className="font-normal text-ink-mute"> {t(locale, "dashboard.nav.inGrowth")}</span>}
+                      </span>
                       <IconArrowRight size={14} className="shrink-0 text-ink-mute transition-colors group-hover:text-brass" aria-hidden />
                     </span>
                     <span className="break-words text-[12.5px] leading-snug text-ink-soft">{t(locale, tool.descKey)}</span>
