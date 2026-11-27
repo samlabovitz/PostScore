@@ -3,6 +3,7 @@
 // data isn't there, the result says so ("none", null) and the UI shows
 // an honest empty state instead.
 
+import { LISTING_GREEN_ID } from "@/lib/listingGreen";
 import { fixPlanHref } from "@/lib/routes";
 import { isScoringUpdate } from "@/lib/websiteRecheckPolicy";
 import { checkOutcome } from "@/lib/checkOutcome";
@@ -211,7 +212,8 @@ export function topRecommendations(
     // "Marked done" items stay until a scan confirms them: their points
     // aren't earned yet (they're still in the projected score).
     // Day 25B step 3: the rows that take months live only on Fix plan.
-    .filter((task) => (task.status === "open" || task.status === "pending_verification") && task.effort !== "setup" && task.weightedPoints > 0 && task.when !== "months")
+    // "Get your Google listing to all green" shows whenever anything is non-green, even with no points left in it.
+    .filter((task) => (task.status === "open" || task.status === "pending_verification") && task.effort !== "setup" && (task.weightedPoints > 0 || task.checkId === LISTING_GREEN_ID) && task.when !== "months")
     .map((task) => {
       const link = linkForCheck(task.checkId, businessId, options);
       const urgent = task.urgent === true;

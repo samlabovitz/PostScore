@@ -85,7 +85,7 @@ describe("Overview on the preview", () => {
     const input = { businessId: "b1", checks, phone: "+1 908-555-0100", website: "https://x.example", category: "Hair salon", openingHours: ["Monday: 9 AM–5 PM"], photoCount: 20, rating: 4.7, reviewCount: 30, messagingOn: true, replies: null, booking: null, media: null, extras: null };
     const plain = row({ connected: true, data: { input: input as never, saved: null, syncedAt: null } });
     const mismatch = row({ connected: true, hoursMismatch: true, data: { input: input as never, saved: null, syncedAt: null } });
-    const counts = (html: string) => text(html).match(/\d+ OK · \d+ to fix · \d+ to improve/)![0];
+    const counts = (html: string) => text(html).match(/(?:\d+ of \d+ green|all green ✓) · ● \d+ OK · ● \d+ to improve · ● \d+ to fix/)![0];
     expect(plain).toContain('data-state="connected"');
     expect(counts(plain)).not.toBe(counts(mismatch));
     expect(Number(counts(mismatch).match(/(\d+) to improve/)![1])).toBe(Number(counts(plain).match(/(\d+) to improve/)![1]) + 1);
@@ -126,14 +126,14 @@ describe("Free: the compact listing row", () => {
   const free = (locale: Locale = "en") =>
     renderToStaticMarkup(
       <LocaleProvider locale={locale}>
-        <GoogleListingRow businessId="b1" connected={false} needsReconnect={false} canStart={false} hoursMismatch free data={{ input: { businessId: "b1", checks: [], phone: "+1 908-555-0100", website: null, category: "Hair salon", openingHours: ["Monday: 9 AM–5 PM"], photoCount: 3, rating: 4.7, reviewCount: 30, messagingOn: null, replies: null, booking: null, media: null, extras: null } as never, saved: null, syncedAt: null }} />
+        <GoogleListingRow businessId="b1" connected={false} needsReconnect={false} canStart={false} hoursMismatch free data={{ input: { businessId: "b1", checks: [{ id: "completeness.phone", earnedPoints: 4, maxPoints: 4, status: "pass", explanation: "" }, { id: "completeness.hours", earnedPoints: 4, maxPoints: 4, status: "pass", explanation: "" }], phone: "+1 908-555-0100", website: null, category: "Hair salon", openingHours: ["Monday: 9 AM–5 PM"], photoCount: 3, rating: 4.7, reviewCount: 30, messagingOn: null, replies: null, booking: null, media: null, extras: null } as never, saved: null, syncedAt: null }} />
       </LocaleProvider>
     );
   test("the scan's counts, 'Open your Google listing →', and 'Connect Google with Grow →' in place of the connection (EN + ES)", () => {
     const html = free();
     expect(html).toContain('data-state="free"');
     expect(html).toContain('data-testid="google-listing-counts"');
-    expect(text(html)).toMatch(/\d+ OK · \d+ to fix · \d+ to improve/);
+    expect(text(html)).toMatch(/\d+ of \d+ green · ● \d+ OK · ● \d+ to improve · ● \d+ to fix/);
     expect(text(html)).toContain("Connect Google with Grow →");
     expect(text(html)).toContain("Open your Google listing");
     expect(html).not.toMatch(/Connected|synced/);

@@ -192,8 +192,12 @@ export default async function BusinessPage({ params, searchParams = {} }: { para
   const linkOptions = { referralOk: profile.referralOk, couponsOk: profile.couponsOk, pricingOk: profile.pricingOk };
   // The scored hours check as it is now; waiting on Google → "Takes a few weeks".
   const hoursCheck = actionPlan.status === "ok" ? await loadHoursCheck(params.id, scored.scoringBusiness ?? scored.business, actionPlan.tasks).catch(() => null) : null;
+  // New design: every Google listing item is ONE recommendation, "Get your Google listing to all green" — the same
+  // count and list as Fix plan and the Google listing page (lib/listingGreen.ts). Today's Overview keeps its items.
+  const listingGreen = NEW_PAGES_LIVE && actionPlan.status === "ok" ? await (await import("@/lib/listingGreen.server")).loadListingGreen(params.id).catch(() => null) : null;
+  const recTasks = actionPlan.status === "ok" ? (await import("@/lib/listingGreen")).foldListingTasks(actionPlan.tasks, listingGreen) : [];
   const recommendations =
-    actionPlan.status === "ok" ? topRecommendations(actionPlan.tasks, actionPlan.websiteBanner, params.id, linkOptions, Infinity, actionPlan.urgentIssues) : null;
+    actionPlan.status === "ok" ? topRecommendations(recTasks, actionPlan.websiteBanner, params.id, linkOptions, Infinity, actionPlan.urgentIssues) : null;
   // The Website page's own fix count (same builder rule, same plan).
   const websiteAnalysis = parseWebsiteAnalysis(scored.business.website_analysis_json);
   const websiteChecks = scored.result.breakdown.categories.find((c) => c.id === "website")?.checks ?? [];
@@ -296,6 +300,7 @@ export default async function BusinessPage({ params, searchParams = {} }: { para
             : null
         }
         growthCount={NEW_PAGES_LIVE && upgrade.plan !== "free" ? await growthPlanCount() : null}
+        listingGreen={listingGreen}
         googleListingRow={
           // Day 25B step 4 (new-design preview): one compact row on every paid plan.
           NEW_PAGES_LIVE && upgrade.plan === "free"

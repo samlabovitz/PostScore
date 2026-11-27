@@ -127,6 +127,24 @@ const CATEGORY_MAP: Record<IdeaType, Array<[string[], string]>> = {
   home: [],
 };
 
+/** With no search to point to one: the closest second categories for the type (the owner picks; never set for them). */
+const SECOND_CATEGORIES: Record<IdeaType, string[]> = {
+  hair: ["Hair stylist", "Beauty salon"],
+  barber: ["Men's hair salon", "Hair salon"],
+  nails: ["Beauty salon", "Day spa"],
+  restaurant: [],
+  art: ["Art studio", "Art school"],
+  home: [],
+};
+
+/** The town in a one-line address ("9 S Broadway, Tarrytown, NY 10591, USA" → "Tarrytown"); null when unclear. */
+export function townOf(address: string | null | undefined): string | null {
+  const parts = (address ?? "").split(",").map((p) => p.trim()).filter(Boolean);
+  const state = parts.findIndex((p) => /^[A-Z]{2}( \d{5}(-\d{4})?)?$/.test(p));
+  const town = state > 0 ? parts[state - 1] : null;
+  return town && /^[A-Za-zÀ-ÿ][A-Za-zÀ-ÿ .'-]{1,40}$/.test(town) && !/\d/.test(town) ? town : null;
+}
+
 const has = (term: string, word: string) => new RegExp(`(^|[^a-z])${word.replace(/[.*+?^${}()|[\]\\/]/g, "\\$&")}`, "i").test(term);
 
 /** Search terms summed over the stored months, as a monthly average. */
@@ -188,7 +206,10 @@ export type Idea =
   | { id: "details"; missing: Array<"parking" | "accessibility">; action: IdeaAction }
   | { id: "messaging"; action: IdeaAction }
   | { id: "extras"; names: string[]; action: IdeaAction }
-  | { id: "category"; category: string; terms: string[]; searches: number; action: IdeaAction }
+  /** `also`: a second suggestion (no search behind either: "e.g. Hair stylist or Beauty salon"). */
+  | { id: "category"; category: string; also?: string | null; terms: string[]; searches: number; action: IdeaAction }
+  /** The description is there but never says the town. */
+  | { id: "town"; town: string; terms: string[]; searches: number; action: IdeaAction }
   | { id: "booking"; provider: string; action: IdeaAction };
 
 export interface IdeaInputs {
@@ -204,6 +225,8 @@ export interface IdeaInputs {
   messagingOn: boolean | null;
   /** Case B: a partner booking link Google doesn't count. */
   bookingTurnOn: { provider: string } | null;
+  /** The town, from the address read live (null: unknown — no town idea). */
+  town?: string | null;
 }
 
 export const THIN_DESCRIPTION = 250;
@@ -211,11 +234,11 @@ export const MAX_IDEAS = 5;
 const DAY = 86_400_000;
 
 /** Known impact, for ideas without a search count (higher first). */
-const IMPACT: Record<Idea["id"], number> = { booking: 60, photos: 50, description: 45, holiday: 40, details: 35, posts: 30, extras: 25, messaging: 20, services: 0, category: 0 };
+const IMPACT: Record<Idea["id"], number> = { booking: 60, photos: 50, description: 45, town: 42, holiday: 40, details: 35, category: 32, posts: 30, extras: 25, messaging: 20, services: 0 };
 
 function score(i: Idea): number {
   if (i.id === "holiday" && i.daysAway <= 14) return 1e6;
-  if (i.id === "services" || i.id === "category") return 100 + i.searches;
+  if (i.id === "services" || ((i.id === "category" || i.id === "town") && i.searches > 0)) return 100 + i.searches;
   return IMPACT[i.id];
 }
 
@@ -246,7 +269,19 @@ export function listingIdeas(input: IdeaInputs): Idea[] {
     const d = l.details;
     if (d && d.payment && d.parking && d.accessibility && d.suggest.length > 0) ideas.push({ id: "extras", names: d.suggest.slice(0, 3).map((s) => s.label), action: { kind: "editor", hash: "#edit-customer-details" } });
     const cat = relatedCategory(input.type, terms, l.categories);
-    if (cat) ideas.push({ id: "category", ...cat, action: { kind: "link", href: "https://business.google.com/", external: true } });
+    const google = { kind: "link" as const, href: "https://business.google.com/", external: true };
+    if (cat) ideas.push({ id: "category", ...cat, action: google });
+    else if (input.type && l.categories.length === 1) {
+      // No search points to one: the closest ones for the type, as examples — the owner picks, if any fits.
+      const pick = SECOND_CATEGORIES[input.type].filter((c) => !l.categories.some((x) => looseMatch(c, x) || looseMatch(x, c)));
+      if (pick.length > 0) ideas.push({ id: "category", category: pick[0], also: pick[1] ?? null, terms: [], searches: 0, action: google });
+    }
+    // The town: in searches ("hair salon tarrytown") and missing from a description that's there.
+    const town = input.town?.trim();
+    if (town && text.length > 0 && !text.toLowerCase().includes(town.toLowerCase())) {
+      const hits = terms.filter((k) => k.term.toLowerCase().includes(town.toLowerCase()));
+      ideas.push({ id: "town", town, terms: hits.slice(0, 2).map((k) => k.term), searches: hits.reduce((n, k) => n + k.count, 0), action: { kind: "editor", hash: "#edit-description" } });
+    }
   }
   if (input.posts && input.posts.last30 === 0) ideas.push({ id: "posts", topic: POST_TOPIC[input.type ?? "default"], action: { kind: "editor", hash: "#google-tab-this-week" } });
   if (input.photos && (input.photos.count === 0 || !input.photos.newestAt || !isFresh(input.photos.newestAt, input.now)))

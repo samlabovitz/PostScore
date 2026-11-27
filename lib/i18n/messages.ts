@@ -15,6 +15,18 @@ export type MessageKey =
   | "dashboard.fixPlan.thisWeekLabel.one"
   | "dashboard.fixPlan.thisWeekLabel.other"
   | "dashboard.fixPlan.everyFix"
+  | "dashboard.googlePages.listing.goal"
+  | "dashboard.googlePages.listing.allGreen"
+  | "dashboard.googlePages.listing.helps"
+  | "dashboard.googlePages.listing.reviewing"
+  | "dashboard.googlePages.listing.reviewingCount"
+  | "dashboard.googlePages.listing.fixAll"
+  | "dashboard.fixPlan.green.title"
+  | "dashboard.fixPlan.green.todo"
+  | "dashboard.fixPlan.green.itemPts"
+  | "dashboard.fixPlan.green.itemHelps"
+  | "dashboard.fixPlan.green.button"
+  | "dashboard.fixPlan.green.reviewing"
   | "dashboard.overview.sinceCard.gained"
   | "dashboard.overview.sinceCard.lost"
   | "dashboard.overview.sinceCard.byUpdate"
@@ -3235,6 +3247,15 @@ export type MessageKey =
   | "dashboard.googleTab.ideas.category.title"
   | "dashboard.googleTab.ideas.category.reason"
   | "dashboard.googleTab.ideas.category.button"
+  | "dashboard.googleTab.ideas.category.titleAny"
+  | "dashboard.googleTab.ideas.category.reasonAny"
+  | "dashboard.googleTab.ideas.category.reasonAnyTwo"
+  | "dashboard.googleTab.ideas.town.title"
+  | "dashboard.googleTab.ideas.town.reason"
+  | "dashboard.googleTab.ideas.town.reasonNone"
+  | "dashboard.googleTab.ideas.town.button"
+  | "dashboard.googleTab.ideas.town.pill"
+  | "dashboard.googleTab.ideas.done.town"
   | "dashboard.googleTab.ideas.done.services"
   | "dashboard.googleTab.ideas.done.holiday"
   | "dashboard.googleTab.ideas.done.description"
@@ -6960,6 +6981,18 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.fixPlan.thisWeekLabel.one": "This week · 1 fix you can finish yourself, today",
     "dashboard.fixPlan.thisWeekLabel.other": "This week · {count} fixes you can finish yourself, today",
     "dashboard.fixPlan.everyFix": "When every fix is done",
+    "dashboard.googlePages.listing.goal": "{green} of {total} green",
+    "dashboard.googlePages.listing.allGreen": "Your Google listing is all green ✓",
+    "dashboard.googlePages.listing.helps": "Helps customers · no points",
+    "dashboard.googlePages.listing.reviewing": "Google reviewing",
+    "dashboard.googlePages.listing.reviewingCount": "{count} Google reviewing",
+    "dashboard.googlePages.listing.fixAll": "Fix all ({count})",
+    "dashboard.fixPlan.green.title": "Get your Google listing to all green",
+    "dashboard.fixPlan.green.todo": "Still to do: {list}",
+    "dashboard.fixPlan.green.itemPts": "{label} +{points} pts",
+    "dashboard.fixPlan.green.itemHelps": "{label} (helps customers)",
+    "dashboard.fixPlan.green.button": "Open your Google listing",
+    "dashboard.fixPlan.green.reviewing": "Google is still reviewing: {list}",
     "dashboard.overview.sinceCard.gained": "Gained",
     "dashboard.overview.sinceCard.lost": "Lost",
     "dashboard.overview.sinceCard.byUpdate": "Started counting with PostScore's scoring update.",
@@ -10125,6 +10158,15 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.googleTab.ideas.category.title": "Add “{category}” as a second category",
     "dashboard.googleTab.ideas.category.reason": "Searches like {terms} point to {category}, and your listing has only one category.",
     "dashboard.googleTab.ideas.category.button": "How to ↗",
+    "dashboard.googleTab.ideas.category.titleAny": "Add a second category",
+    "dashboard.googleTab.ideas.category.reasonAny": "Your listing has one category. If “{category}” also describes you, adding it helps Google show you in more searches. You choose; PostScore never sets it.",
+    "dashboard.googleTab.ideas.category.reasonAnyTwo": "Your listing has one category. If “{category}” or “{also}” also describes you, adding it helps Google show you in more searches. You choose; PostScore never sets it.",
+    "dashboard.googleTab.ideas.town.title": "Mention {town} in your description",
+    "dashboard.googleTab.ideas.town.reason": "People searched {terms} about {count} times a month, and your description never says {town}.",
+    "dashboard.googleTab.ideas.town.reasonNone": "Customers often search by town, and your description never says {town}.",
+    "dashboard.googleTab.ideas.town.button": "Add it",
+    "dashboard.googleTab.ideas.town.pill": "Local searches",
+    "dashboard.googleTab.ideas.done.town": "Your town is in your description",
     "dashboard.googleTab.ideas.done.services": "Services added",
     "dashboard.googleTab.ideas.done.holiday": "Holiday hours set",
     "dashboard.googleTab.ideas.done.description": "Description updated",
@@ -14216,6 +14258,18 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.fixPlan.thisWeekLabel.one": "Esta semana · 1 corrección que puede terminar usted mismo, hoy",
     "dashboard.fixPlan.thisWeekLabel.other": "Esta semana · {count} correcciones que puede terminar usted mismo, hoy",
     "dashboard.fixPlan.everyFix": "Cuando termine todas las correcciones",
+    "dashboard.googlePages.listing.goal": "{green} de {total} en verde",
+    "dashboard.googlePages.listing.allGreen": "Su ficha de Google está toda en verde ✓",
+    "dashboard.googlePages.listing.helps": "Ayuda a sus clientes · sin puntos",
+    "dashboard.googlePages.listing.reviewing": "Google lo está revisando",
+    "dashboard.googlePages.listing.reviewingCount": "{count} en revisión por Google",
+    "dashboard.googlePages.listing.fixAll": "Corregir todo ({count})",
+    "dashboard.fixPlan.green.title": "Ponga su ficha de Google toda en verde",
+    "dashboard.fixPlan.green.todo": "Falta: {list}",
+    "dashboard.fixPlan.green.itemPts": "{label} +{points} pts",
+    "dashboard.fixPlan.green.itemHelps": "{label} (ayuda a sus clientes)",
+    "dashboard.fixPlan.green.button": "Abrir su ficha de Google",
+    "dashboard.fixPlan.green.reviewing": "Google aún está revisando: {list}",
     "dashboard.overview.sinceCard.gained": "Ganó",
     "dashboard.overview.sinceCard.lost": "Perdió",
     "dashboard.overview.sinceCard.byUpdate": "Empezó a contar con la actualización de la puntuación de PostScore.",
@@ -17272,6 +17326,15 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.googleTab.ideas.category.title": "Agregue «{category}» como segunda categoría",
     "dashboard.googleTab.ideas.category.reason": "Búsquedas como {terms} apuntan a {category}, y su ficha tiene solo una categoría.",
     "dashboard.googleTab.ideas.category.button": "Cómo hacerlo ↗",
+    "dashboard.googleTab.ideas.category.titleAny": "Agregue una segunda categoría",
+    "dashboard.googleTab.ideas.category.reasonAny": "Su ficha tiene una sola categoría. Si «{category}» también lo describe, agregarla ayuda a que Google lo muestre en más búsquedas. Usted decide; PostScore nunca la cambia.",
+    "dashboard.googleTab.ideas.category.reasonAnyTwo": "Su ficha tiene una sola categoría. Si «{category}» o «{also}» también lo describe, agregarla ayuda a que Google lo muestre en más búsquedas. Usted decide; PostScore nunca la cambia.",
+    "dashboard.googleTab.ideas.town.title": "Mencione {town} en su descripción",
+    "dashboard.googleTab.ideas.town.reason": "Se buscó {terms} unas {count} veces al mes, y su descripción no menciona {town}.",
+    "dashboard.googleTab.ideas.town.reasonNone": "Los clientes suelen buscar por ciudad, y su descripción no menciona {town}.",
+    "dashboard.googleTab.ideas.town.button": "Agregarlo",
+    "dashboard.googleTab.ideas.town.pill": "Búsquedas locales",
+    "dashboard.googleTab.ideas.done.town": "Su ciudad está en su descripción",
     "dashboard.googleTab.ideas.done.services": "Servicios agregados",
     "dashboard.googleTab.ideas.done.holiday": "Horario festivo indicado",
     "dashboard.googleTab.ideas.done.description": "Descripción actualizada",

@@ -15,7 +15,9 @@ import Link from "next/link";
 import { IconArrowRight, IconMapPin } from "@tabler/icons-react";
 import { googleListingHref } from "@/lib/routes";
 import { gbpConnectHref } from "@/lib/gbpLanding";
-import { listingCounts, listingGroups, syncedAgo, type GoogleTabSaved, type ListingInput } from "@/lib/googleProfileTab";
+import { listingGroups, syncedAgo, type GoogleTabSaved, type ListingInput } from "@/lib/googleProfileTab";
+import { listingGreen, reviewingRows } from "@/lib/listingGreen";
+import { GreenCount } from "@/components/gbp/listingGreenText";
 import { t, useLocale, type MessageKey } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
@@ -58,7 +60,7 @@ export function GoogleListingRow({
         <Link href={`/business/${businessId}/settings#compare-plans`} data-testid="google-listing-grow" className="whitespace-nowrap text-[12.5px] font-semibold text-ink underline decoration-brass underline-offset-2 hover:decoration-ink">
           {t(locale, R("connectWithGrow"))} →
         </Link>
-        <Counts counts={listingCounts(listingGroups({ ...data.input, hoursMismatch }))} />
+        <Counts data={data} hoursMismatch={hoursMismatch} />
         <OpenLink businessId={businessId} />
       </section>
     );
@@ -89,7 +91,6 @@ export function GoogleListingRow({
     );
   }
 
-  const counts = listingCounts(listingGroups({ ...data.input, hoursMismatch }));
   const ago = syncedAgo(data.syncedAt, Date.now());
   const agoText = ago ? t(locale, G(ago.unit === "days" && ago.count === 1 ? "ago.daysOne" : `ago.${ago.unit}`), { count: ago.count }) : null;
   return (
@@ -97,20 +98,20 @@ export function GoogleListingRow({
       {pin}
       {title}
       <span className="whitespace-nowrap text-[12.5px] font-semibold text-green">● {agoText ? t(locale, G("strip.synced"), { ago: agoText }) : t(locale, G("strip.connected"))}</span>
-      <Counts counts={counts} />
+      <Counts data={data} hoursMismatch={hoursMismatch} />
       <OpenLink businessId={businessId} />
     </section>
   );
 }
 
-/** "5 OK · 1 to fix · 7 to improve" — the Google listing page header's numbers. */
-function Counts({ counts }: { counts: { ok: number; fix: number; improve: number } }) {
+/** "9 of 12 green · ● 9 OK · ● 2 to improve · ● 1 to fix" — the Google listing page header's count (lib/listingGreen.ts). */
+function Counts({ data, hoursMismatch }: { data: { input: ListingInput; saved: GoogleTabSaved | null }; hoursMismatch: boolean }) {
   const locale = useLocale();
+  const green = listingGreen(listingGroups({ ...data.input, hoursMismatch }), data.input.checks, { reviewing: reviewingRows(data.saved?.made ?? null) });
   return (
-    // Phones: its own line, each count kept whole.
-    <span className="min-w-0 basis-full text-[12.5px] text-ink-mute sm:flex-1 sm:basis-0" data-testid="google-listing-counts">
-      <span className="whitespace-nowrap">{t(locale, G("count.ok"), { count: counts.ok })}</span> · <b className="whitespace-nowrap text-red">{t(locale, G("count.fix"), { count: counts.fix })}</b> ·{" "}
-      <b className="whitespace-nowrap text-amber">{t(locale, G("count.improve"), { count: counts.improve })}</b>
+    // Phones: its own line.
+    <span className="min-w-0 basis-full text-[12.5px] sm:flex-1 sm:basis-0" data-testid="google-listing-counts">
+      <GreenCount green={green} locale={locale} />
     </span>
   );
 }

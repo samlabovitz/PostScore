@@ -89,6 +89,7 @@ export function BusinessScoreView({
   googleListing = null,
   googleListingRow = null,
   growthCount = null,
+  listingGreen = null,
   detailsMismatch = null,
   hoursCheck = null,
   monthlyReportsLive = false,
@@ -145,6 +146,8 @@ export function BusinessScoreView({
   googleListingRow?: ComponentProps<typeof GoogleListingRow> | null;
   /** New design: this week's Growth plan size ("4 tasks this week"). */
   growthCount?: number | null;
+  /** New design: "Get your Google listing to all green" (lib/listingGreen.ts). */
+  listingGreen?: import("@/lib/listingGreen").ListingGreen | null;
   /** Day 23B: confirmed details that differ from Google or the website (lib/detailsMismatch.ts). */
   detailsMismatch?: DetailsMismatchState | null;
   /** Day 23B: the scored hours check as it is now (lib/hoursCheck.ts). */
@@ -367,7 +370,7 @@ export function BusinessScoreView({
           breakdown → "More customers" → the rest. PostAI is the "Ask
           PostAI" button on every page (components/assistant/PostAIDock.tsx). */}
       <div data-testid="overview-recs-row" className="grid grid-cols-1 gap-4 nav:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]">
-        <TopRecommendations businessId={businessId} recommendations={recommendations ?? null} limit={TOP_RECOMMENDATIONS} detailsMismatch={detailsMismatch} hoursCheck={hoursCheck} lastScanAt={lastScanAt} growthCount={growthCount} />
+        <TopRecommendations businessId={businessId} recommendations={recommendations ?? null} limit={TOP_RECOMMENDATIONS} detailsMismatch={detailsMismatch} hoursCheck={hoursCheck} lastScanAt={lastScanAt} growthCount={growthCount} green={listingGreen} />
         <SinceLastScanCard businessId={businessId} snapshots={recentSnapshots} liveBreakdown={breakdown} gbpConnected={gbpConnected} now={{ rating: business.rating, reviewCount: business.review_count }} />
       </div>
 

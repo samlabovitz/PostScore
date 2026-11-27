@@ -6,6 +6,9 @@
 // tab's 4–6.
 
 import { fixPlanHref, googleResultsHref, growthPlanHref } from "@/lib/routes";
+import { listingGreen, listingInputFrom, NOT_IN_GREEN, reviewingRows } from "@/lib/listingGreen";
+import { FixAllListing } from "@/components/fixPlan/SendToGoogle";
+import { GreenCount } from "@/components/gbp/listingGreenText";
 import { checkHowTo } from "@/lib/actionPlan";
 import { isPremiumPlan, type Plan } from "@/lib/plan";
 import { gbpResultText } from "@/components/gbp/GbpResultMessage";
@@ -74,7 +77,11 @@ function ideaText(idea: Idea, locale: Locale): { title: string; pill: string; re
     case "extras":
       return { title: k("title"), pill: k("pill"), reason: k("reason", { list: idea.names.map((n) => n.toLowerCase()).join(", ") }), button: k("button") };
     case "category":
+      // No search behind it: examples the owner picks from, if one fits.
+      if (idea.searches === 0) return { title: k("titleAny"), pill: "", reason: k(idea.also ? "reasonAnyTwo" : "reasonAny", { category: idea.category, also: idea.also ?? "" }), button: k("button") };
       return { title: k("title", { category: idea.category }), pill: t(locale, K("ideas.reach"), { count: formatCount(idea.searches, locale) }), reason: k("reason", { terms: idea.terms.slice(0, 2).map((x) => `“${x}”`).join(", "), category: idea.category }), button: k("button") };
+    case "town":
+      return { title: k("title", { town: idea.town }), pill: "", reason: idea.searches > 0 ? k("reason", { town: idea.town, terms: idea.terms.map((x) => `“${x}”`).join(", "), count: formatCount(idea.searches, locale) }) : k("reasonNone", { town: idea.town }), button: k("button") };
     case "booking":
       return { title: t(locale, K("booking.ideaTitle")), pill: t(locale, K("booking.ideaPill")), reason: t(locale, K("booking.ideaBody"), { partner: idea.provider }), button: t(locale, K("action.turnOnBooking")) };
   }
@@ -83,12 +90,17 @@ function ideaText(idea: Idea, locale: Locale): { title: string; pill: string; re
 /** `howTo` (the Google listing page on Grow or Free): a fix PostScore would
  * make opens its row's steps ("How to", outlined; locked on Free) — never a
  * button that looks like it does it in one click. */
-function IdeaCard({ idea, n, rec = null, type = null, canEdit = false, howTo = null }: { idea: Idea; n: number; rec?: Rec | null; type?: ReturnType<typeof ideaTypeOf>; canEdit?: boolean; howTo?: "steps" | "locked" | null }) {
+function IdeaCard({ idea, n, rec = null, type = null, canEdit = false, howTo = null, page = null }: { idea: Idea; n: number; rec?: Rec | null; type?: ReturnType<typeof ideaTypeOf>; canEdit?: boolean; howTo?: "steps" | "locked" | null; page?: { businessId: string; points: number } | null }) {
   const locale = useLocale();
   const plain = ideaText(idea, locale);
   const base = howTo && idea.action.kind === "editor" ? { ...plain, button: t(locale, K("action.howTo")) } : plain;
+  // The Google listing page: Premium's button says PostScore does it whenever its editor writes it.
+  const oneClick = ONE_CLICK_IDEAS.includes(idea.id);
   // Day 23C: Premium's one button says PostScore does it, when it can write for this place.
-  const x = rec && canEdit && DOES_FOR_YOU.includes(rec.kind) ? { ...base, button: t(locale, rec.kind === "photos" ? "dashboard.googleTab.w.photos.upload" : "dashboard.breakdown.action.doItForYou") } : base;
+  const x =
+    (rec && canEdit && DOES_FOR_YOU.includes(rec.kind)) || (page && canEdit && !howTo && oneClick)
+      ? { ...base, button: t(locale, idea.id === "photos" ? "dashboard.googleTab.w.photos.upload" : "dashboard.breakdown.action.doItForYou") }
+      : base;
   const a = idea.action;
   const cls =
     howTo && a.kind === "editor"
@@ -100,7 +112,20 @@ function IdeaCard({ idea, n, rec = null, type = null, canEdit = false, howTo = n
       <div className="min-w-0">
         <h3 className="flex flex-wrap items-center gap-2 text-[14px] font-semibold leading-snug">
           {x.title}
-          <span className="rounded-full bg-[color:color-mix(in_srgb,var(--color-green)_12%,white)] px-2 py-0.5 text-[11px] font-bold text-green">{x.pill}</span>
+          {page ? (
+            // "+N pts" when a score check is behind it, else it helps customers with no points.
+            page.points > 0 ? (
+              <span className="whitespace-nowrap rounded-full border border-[color:color-mix(in_srgb,var(--color-brass)_35%,white)] bg-[color:color-mix(in_srgb,var(--color-brass)_10%,white)] px-2 py-0.5 text-[11.5px] font-semibold text-brass" data-testid={`idea-pts-${idea.id}`}>
+                {t(locale, "dashboard.googlePages.listing.rowPts", { points: pointsText(page.points) })}
+              </span>
+            ) : (
+              <span className="whitespace-nowrap rounded-full border border-paper-deep bg-paper px-2 py-0.5 text-[11.5px] font-semibold text-ink-soft" data-testid={`idea-helps-${idea.id}`}>
+                {t(locale, "dashboard.googlePages.listing.helps")}
+              </span>
+            )
+          ) : (
+            x.pill && <span className="rounded-full bg-[color:color-mix(in_srgb,var(--color-green)_12%,white)] px-2 py-0.5 text-[11px] font-bold text-green">{x.pill}</span>
+          )}
         </h3>
         {rec && (
           <p className="mt-0.5 text-[12.5px] font-semibold leading-snug text-ink" data-testid={`idea-plan-${idea.id}`}>
@@ -108,6 +133,12 @@ function IdeaCard({ idea, n, rec = null, type = null, canEdit = false, howTo = n
           </p>
         )}
         <p className="mt-0.5 line-clamp-2 text-[12.5px] leading-snug text-ink-soft">{x.reason}</p>
+        {/* Grow: the steps, and what Premium would do. */}
+        {page && howTo === "steps" && oneClick && (
+          <Link href={`/business/${page.businessId}/settings#compare-plans`} data-testid={`idea-premium-${idea.id}`} className="mt-1 inline-block text-[12px] font-medium text-ink-mute underline decoration-brass/60 underline-offset-2 hover:text-ink">
+            {t(locale, "dashboard.fix.premiumOneClick")}
+          </Link>
+        )}
       </div>
       {a.kind === "editor" ? (
         <a href={a.hash} className={cls} data-testid={`idea-action-${idea.id}`}>
@@ -127,6 +158,12 @@ function IdeaCard({ idea, n, rec = null, type = null, canEdit = false, howTo = n
   );
 }
 
+/** Ideas PostScore's editors make for Premium (the rest are steps on Google: the category, messaging, booking). */
+const ONE_CLICK_IDEAS: Array<Idea["id"]> = ["services", "description", "town", "holiday", "details", "extras", "photos"];
+
+/** Each idea's Google listing row: its "+N pts" (lib/googleProfileTab.ts rowPoints) and "still with Google". */
+const IDEA_ROW: Record<Idea["id"], string> = { services: "services", description: "description", town: "description", holiday: "holiday", posts: "posts", photos: "photos", details: "customerDetails", extras: "customerDetails", messaging: "messaging", category: "category", booking: "booking" };
+
 /** Section 5's idea → its Day 23C recommendation (the "how many / when" line). */
 const IDEA_REC: Partial<Record<Idea["id"], Rec["kind"]>> = { photos: "photos", holiday: "holiday", posts: "posts", description: "description", details: "details", services: "services" };
 
@@ -141,8 +178,16 @@ export function NextSection(props: GoogleProfileTabProps & { sample: boolean; pa
   // Already in section 1's "This week" (photos, the post): not repeated here.
   const thisWeek = new Set(thisWeekRecs(recs).map((r) => r.kind));
   // The answers item covers the description, customer details and services.
-  const answered = (id: Idea["id"]) => thisWeek.has("answers") && (id === "description" || id === "details" || id === "services");
-  const open = ideas.filter((i) => !done.includes(i.id) && !(IDEA_REC[i.id] && thisWeek.has(IDEA_REC[i.id]!)) && !answered(i.id));
+  // The Google listing page always offers "Write a fuller description" while it's under 250 characters (not when a
+  // description change was just sent: `done`).
+  const answered = (id: Idea["id"]) => thisWeek.has("answers") && !(props.page && id === "description") && (id === "description" || id === "details" || id === "services");
+  // The Google listing page: every listing idea the data supports (it has no "This week" of its own; posts are a
+  // Growth plan habit), minus the ones done
+  // or still with Google (a sent description hides "fuller description" and "mention your town").
+  const waiting = props.page ? reviewingRows(props.saved?.made ?? null) : [];
+  const open = props.page
+    ? ideas.filter((i) => i.id !== "posts" && !done.includes(i.id) && !(i.id === "town" && done.includes("description")) && !waiting.includes(IDEA_ROW[i.id]))
+    : ideas.filter((i) => !done.includes(i.id) && !(IDEA_REC[i.id] && thisWeek.has(IDEA_REC[i.id]!)) && !answered(i.id));
   const shown = more ? open : open.slice(0, MAX_IDEAS);
   // Practice mode with no real numbers yet: the labelled samples.
   const sample = props.sample && !extras && open.length === 0;
@@ -169,7 +214,16 @@ export function NextSection(props: GoogleProfileTabProps & { sample: boolean; pa
       ) : (
         <div className="mt-3 flex flex-col gap-2" data-testid="google-tab-ideas">
           {shown.map((idea, i) => (
-            <IdeaCard key={idea.id} idea={idea} n={i + 1} rec={recs.find((r) => r.kind === IDEA_REC[idea.id]) ?? null} type={type} canEdit={props.canEditGoogle === true} howTo={props.howTo ?? null} />
+            <IdeaCard
+              key={idea.id}
+              idea={idea}
+              n={i + 1}
+              rec={recs.find((r) => r.kind === IDEA_REC[idea.id]) ?? null}
+              type={type}
+              canEdit={props.canEditGoogle === true}
+              howTo={props.howTo ?? null}
+              page={props.page ? { businessId: props.businessId, points: rowPoints(IDEA_ROW[idea.id], props.checks) } : null}
+            />
           ))}
           {done.map((id) => (
             <Box key={`done-${id}`} className="flex items-center justify-between gap-3 px-3.5 py-2.5 text-[13px]" data-testid={`google-tab-idea-done-${id}`}>
@@ -292,24 +346,10 @@ export function ListingSection(props: GoogleProfileTabProps & { page?: ListingPa
   const locale = useLocale();
   const page = props.page ?? null;
   const timeZone = useTimeZone();
-  const groups = listingGroups({
-    businessId: props.businessId,
-    checks: props.checks,
-    phone: props.listing.phone,
-    website: props.listing.website,
-    category: props.listing.category,
-    openingHours: props.listing.openingHours,
-    photoCount: props.listing.photoCount,
-    rating: props.listing.rating,
-    reviewCount: props.listing.reviewCount,
-    messagingOn: props.messagingOn,
-    replies: props.replyCounts ? { replied: props.replyCounts.replied, inWindow: props.replyCounts.reviewsInWindow } : null,
-    booking: props.booking ?? null,
-    media: props.media ?? null,
-    extras: props.extras ?? null,
-    // The page only: a website hours mismatch makes the Hours row ! ("to improve").
-    hoursMismatch: page ? props.hoursMismatch === true : undefined,
-  });
+  // The rows, built the one way Fix plan and the Overview build them too (lib/listingGreen.ts).
+  const groups = listingGroups(listingInputFrom(props, !!page));
+  // The page's goal: "{green} of {total} green" — the same count as Fix plan's row and the Overview's recommendation.
+  const goal = page ? listingGreen(groups, props.checks, { reviewing: reviewingRows(props.saved?.made ?? null) }) : null;
   const counts = listingCounts(groups);
   const live = useLiveValues(props.businessId, props.extras ? props.extras.description : undefined, page?.readOnly === true);
   const [open, setOpen] = useState<Editor | null>(null);
@@ -380,16 +420,28 @@ export function ListingSection(props: GoogleProfileTabProps & { page?: ListingPa
               {t(locale, K("strip.practiceFallback"))}
             </span>
           )}
-          <span className="text-[12.5px] text-ink-mute" data-testid="google-tab-counts">
-            {t(locale, K("count.ok"), { count: counts.ok })} · <b className="text-red">{t(locale, K("count.fix"), { count: counts.fix })}</b> ·{" "}
-            <b className="text-amber">{t(locale, K("count.improve"), { count: counts.improve })}</b>
-          </span>
+          {goal ? (
+            <span className="text-[13px]" data-testid="listing-goal" data-green={goal.green} data-total={goal.total}>
+              <GreenCount green={goal} locale={locale} />
+            </span>
+          ) : (
+            <span className="text-[12.5px] text-ink-mute" data-testid="google-tab-counts">
+              {t(locale, K("count.ok"), { count: counts.ok })} · <b className="text-red">{t(locale, K("count.fix"), { count: counts.fix })}</b> ·{" "}
+              <b className="text-amber">{t(locale, K("count.improve"), { count: counts.improve })}</b>
+            </span>
+          )}
           {props.listing.googleMapsUri && /^https:\/\//.test(props.listing.googleMapsUri) && (
             <a href={props.listing.googleMapsUri} target="_blank" rel="noopener noreferrer" className="inline-flex h-8 items-center whitespace-nowrap rounded-lg border border-paper-line bg-white px-2.5 text-[12.5px] font-semibold text-ink">
               {t(locale, K("strip.open"))}
             </a>
           )}
         </div>
+        {/* Premium: every change PostScore has ready, in one confirm step (before → after). */}
+        {page?.mode === "edit" && !page.readOnly && (
+          <div className={cn("border-b border-paper-line/70 px-3 py-2", CREAM)}>
+            <FixAllListing businessId={props.businessId} canEdit={props.canEditGoogle === true} practice={props.practice} />
+          </div>
+        )}
         {groups.map((g, gi) => (
           <div key={g.id}>
             <div className={cn("px-3 py-1.5 text-[10.5px] font-bold uppercase tracking-[0.12em] text-ink-mute", CREAM, gi > 0 && "border-t border-paper-line/70")}>{t(locale, K(`group.${g.id}`))}</div>
@@ -545,6 +597,7 @@ function ListingRowView({ row, props, page = null, live, open, onToggle, prefill
   const locale = useLocale();
   // The page: "+N pts" from the saved scan; Grow's steps or Free's lock instead of an editor.
   const points = page ? rowPoints(row.id, props.checks, { hoursMismatchPoints: row.id === "hours" && props.hoursMismatch ? page.hoursMismatchPoints : null }) : 0;
+  const reviewing = !!page && reviewingRows(props.saved?.made ?? null).includes(row.id);
   const editing = !page || page.mode === "edit";
   const gbpEdit = useGbpEdit();
   const replyNote =
@@ -615,9 +668,21 @@ function ListingRowView({ row, props, page = null, live, open, onToggle, prefill
           )}
           data-testid={page ? `listing-actions-${row.id}` : undefined}
         >
-          {points > 0 && (
+          {/* A change Google is still reviewing: not a to-do until Google decides. */}
+          {page && reviewing && (
+            <span className="whitespace-nowrap rounded-full border border-paper-deep bg-paper px-2 py-0.5 text-[12px] font-semibold text-ink-mute" data-testid={`listing-reviewing-${row.id}`}>
+              {t(locale, "dashboard.googlePages.listing.reviewing")}
+            </span>
+          )}
+          {points > 0 && !reviewing && (
             <span className="whitespace-nowrap rounded-full border border-[color:color-mix(in_srgb,var(--color-brass)_35%,white)] bg-[color:color-mix(in_srgb,var(--color-brass)_10%,white)] px-2 py-0.5 text-[12px] font-semibold text-brass" data-testid={`listing-pts-${row.id}`}>
               {t(locale, "dashboard.googlePages.listing.rowPts", { points: pointsText(points) })}
+            </span>
+          )}
+          {/* Not green, no score check behind it: still worth doing for customers. */}
+          {page && points === 0 && !reviewing && (row.status === "warn" || row.status === "bad") && !NOT_IN_GREEN.has(row.id) && (
+            <span className="whitespace-nowrap rounded-full border border-paper-deep bg-paper px-2 py-0.5 text-[12px] font-semibold text-ink-soft" data-testid={`listing-helps-${row.id}`}>
+              {t(locale, "dashboard.googlePages.listing.helps")}
             </span>
           )}
           {compare && (

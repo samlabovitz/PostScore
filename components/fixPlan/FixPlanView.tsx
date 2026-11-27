@@ -26,15 +26,14 @@ import Link from "next/link";
 import { createContext, useContext, type ReactNode } from "react";
 import { IconWorld } from "@tabler/icons-react";
 import { TaskCard, CompletedTasksCard, FixPriorityTag, ReviewGoalLinesContext, type FixRowExtra, type WebsiteRecheckProps } from "@/app/business/[id]/ActionPlanSection";
-import { answersReady } from "@/components/gbp/ApproveAll";
 import { SendToGoogle } from "@/components/fixPlan/SendToGoogle";
 import { useWeekReplies, type WeekRepliesState } from "@/components/gbp/RepliesPreview";
 import { useAnswers, type AnswersState } from "@/components/gbp/AnswersPreview";
 import { useGbpEdit } from "@/components/gbp/CustomerDetailsGoogleEdit";
-import { ListingAnswersEditor } from "@/components/gbp/MoreWaysCards";
 import { MERGED_REVIEW_CHECK_ID } from "@/lib/actionPlan";
 import { isReviewGrowthRow } from "@/lib/overviewTiles";
-import type { HolidayId } from "@/lib/gbpListingFields";
+import { LISTING_GREEN_ID, type ListingGreen } from "@/lib/listingGreen";
+import { GreenCount, greenTodoText, listingRowLabel } from "@/components/gbp/listingGreenText";
 import { googleListingHref, growthPlanHref, reviewsHref } from "@/lib/routes";
 import { WeeklyPlanCelebration } from "@/app/business/[id]/growth/WeeklyPlanCelebration";
 import { DetailsMismatchTasks } from "@/components/overview/DetailsMismatchTasks";
@@ -239,16 +238,6 @@ function useRowExtra(businessId: string, task: ActionPlanTask, free: boolean): F
       panel: <RepliesPanel businessId={businessId} />,
     };
   }
-  if (task.checkId === "completeness.customer_details") {
-    const inApprove = week.oneClick && answersReady(week.answers);
-    return {
-      title: t(locale, "dashboard.fixPlan.listing.title"),
-      why: t(locale, "dashboard.fixPlan.listing.why"),
-      badge: inApprove ? <span className={cn(TAG, "border-[#cfe3d5] bg-[#eaf3ec] text-green")} data-testid="in-approve">✓ {t(locale, "dashboard.fixPlan.inApprove.listing")}</span> : null,
-      label: week.answers ? t(locale, "dashboard.fixPlan.readDrafts") : undefined,
-      panel: week.answers ? <ListingAnswersEditor businessId={businessId} premium={week.premium} state={week.answers} /> : null,
-    };
-  }
   if (task.checkId === MERGED_REVIEW_CHECK_ID || isReviewGrowthRow(task)) {
     return {
       habit: (
@@ -272,26 +261,32 @@ function PlanRow(props: Parameters<typeof TaskCard>[0] & { free: boolean }) {
   return <TaskCard {...card} fixPlan={card.fixPlan ? { ...card.fixPlan, compact: card.fixPlan.compact ? { ...card.fixPlan.compact, extra } : undefined } : null} />;
 }
 
-/** A holiday within 30 days with no hours on the listing: set them. No points — it protects customers. */
-function HolidayRow({ businessId, holiday }: { businessId: string; holiday: { holiday: HolidayId; date: string } }) {
+/** "Get your Google listing to all green" (lib/listingGreen.ts): "{green} of {total} green", the points the scored
+ * rows are worth (no-point rows never change the projection), "Still to do: …", Google's pending reviews, and one
+ * button to the Google listing — the same count and list as that page and the Overview. */
+function ListingGreenRow({ businessId, green, step, running }: { businessId: string; green: ListingGreen; step: number; running: number }) {
   const locale = useLocale();
-  const name = t(locale, `dashboard.googleTab.fields.holiday.${holiday.holiday}` as Parameters<typeof t>[1]);
-  const date = formatShortDate(`${holiday.date}T12:00:00Z`, locale, "UTC");
+  const label = (rowId: string) => listingRowLabel(rowId, locale);
+  const todo = greenTodoText(green, locale);
   return (
-    <li className="border-t border-paper-line first:border-t-0" data-testid="fix-plan-holiday">
+    <li className="border-t border-paper-line first:border-t-0" data-testid="fix-plan-listing-green" data-green={green.green} data-total={green.total}>
       <div className="grid grid-cols-[26px_minmax(0,1fr)] items-center gap-x-3 gap-y-2 px-4 py-3.5 sm:px-5 nav:grid-cols-[26px_112px_minmax(0,1fr)_auto]">
-        <span aria-hidden className="flex h-6 w-6 items-center justify-center rounded-full border border-dashed border-paper-deep text-[12px] text-ink-mute">–</span>
+        <span aria-hidden className="flex h-6 w-6 items-center justify-center rounded-full font-serif text-[12.5px] font-semibold text-ink ps-icon-tile">{step}</span>
         <span className="hidden nav:block" />
         <div className="col-start-2 min-w-0 nav:col-start-3">
-          <p className="text-[14.5px] font-semibold text-ink">{t(locale, "dashboard.fixPlan.holiday.title", { holiday: name, date })}</p>
-          <p className="mt-0.5 text-[12.5px] leading-snug text-ink-mute">{t(locale, "dashboard.fixPlan.holiday.why")}</p>
-          <span className={cn(TAG, "mt-1.5 border-paper-deep bg-paper text-ink-soft")} data-testid="holiday-tag">
-            {t(locale, "dashboard.fixPlan.holiday.tag")}
-          </span>
+          <p className="text-[14.5px] font-semibold text-ink">{t(locale, "dashboard.fixPlan.green.title")}</p>
+          <GreenCount green={green} locale={locale} className="mt-0.5 block text-[12.5px] leading-snug" />
+          {todo && <p className="mt-0.5 text-[12.5px] leading-snug text-ink-mute" data-testid="listing-green-todo">{todo}</p>}
+          {green.reviewing.length > 0 && <p className="mt-0.5 text-[12.5px] leading-snug text-ink-mute">{t(locale, "dashboard.fixPlan.green.reviewing", { list: green.reviewing.map(label).join(", ") })}</p>}
         </div>
-        <div className="col-start-2 flex items-center justify-end gap-3 nav:col-start-4">
-          <Link href={googleListingHref(businessId, { hash: "edit-holiday" })} data-testid="fix-button" data-kind="holiday" className={FIX_BUTTON_CLASS}>
-            {t(locale, "dashboard.fixPlan.holiday.button")} →
+        <div className="col-start-2 flex items-center justify-between gap-3 nav:col-start-4 nav:justify-end">
+          {green.points > 0 && (
+            <span className="whitespace-nowrap text-[13px] font-semibold text-ink-soft">
+              {t(locale, "dashboard.fixPlan.pts", { points: round1(green.points) })} → <b className="font-serif text-[16px] text-ink">{running}</b>
+            </span>
+          )}
+          <Link href={googleListingHref(businessId)} data-testid="fix-button" data-kind="listing" className={FIX_BUTTON_CLASS}>
+            {t(locale, "dashboard.fixPlan.green.button")} →
           </Link>
           <span className="w-4" aria-hidden />
         </div>
@@ -341,10 +336,10 @@ export function FixPlanView({
   detailsMismatch = null,
   hoursCheck = null,
   reviewGoalLines = [],
-  holiday = null,
+  green = null,
 }: {
-  /** A holiday within 30 days with no hours set (Business Profile read; null when unknown or none). */
-  holiday?: { holiday: HolidayId; date: string } | null;
+  /** "Get your Google listing to all green" (lib/listingGreen.server.ts; null: the listing couldn't be read). */
+  green?: ListingGreen | null;
   businessId: string;
   plan: FixPlan;
   /** The Overview's projection: every fix done. */
@@ -378,6 +373,11 @@ export function FixPlanView({
         {!free && <WeeklyPlanCelebration businessId={businessId} weekStart={weekStart} today={plan.today} weeklyTasks={weekTasks} completed={completed} gbpConnected={gbpConnected} lastScanAt={lastScanAt} />}
         <TopCard plan={plan} every={every} lastScanAt={lastScanAt} />
         <ApproveWeek businessId={businessId} />
+        {green?.allGreen && (
+          <p className="rounded-xl border border-[color:color-mix(in_srgb,var(--color-green)_30%,white)] bg-[color:color-mix(in_srgb,var(--color-green)_7%,white)] px-4 py-2.5 text-[13.5px] font-semibold text-green" data-testid="listing-all-green">
+            {t(locale, "dashboard.googlePages.listing.allGreen")}
+          </p>
+        )}
 
         {standalone.length > 0 && <DetailsMismatchTasks businessId={businessId} mismatches={standalone} owner={detailsMismatch?.owner ?? null} />}
 
@@ -405,6 +405,7 @@ export function FixPlanView({
                     {g.rows.map((row) => {
                       step++;
                       const outline = g.when === "months";
+                      if (row.kind === "task" && row.task.checkId === LISTING_GREEN_ID && green) return <ListingGreenRow key={row.key} businessId={businessId} green={green} step={step} running={row.running} />;
                       return row.kind === "website" ? (
                         <WebsiteRow key={row.key} row={row} step={step} businessId={businessId} outline={outline} />
                       ) : (
@@ -424,7 +425,6 @@ export function FixPlanView({
                         />
                       );
                     })}
-                    {g.when === "this_week" && holiday && <HolidayRow businessId={businessId} holiday={holiday} />}
                     {g.when === "weeks" && plan.speed && (
                       <li className="grid grid-cols-[26px_minmax(0,1fr)] items-center gap-x-3 gap-y-1 border-t border-dashed border-paper-deep bg-paper/60 px-4 py-3.5 first:border-t-0 sm:px-5 nav:grid-cols-[26px_112px_minmax(0,1fr)_auto]" data-testid="fix-plan-speed">
                         <span aria-hidden className="flex h-6 w-6 items-center justify-center rounded-full border border-dashed border-paper-deep text-[12px] text-ink-mute">–</span>

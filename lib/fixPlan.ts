@@ -174,11 +174,3 @@ export function reviewsFixSummary(input: {
     later: mine.some((t) => t.when === "months"),
   };
 }
-
-/** The holiday-hours Fix plan row — a holiday within HOLIDAY_ROW_DAYS that the listing has no hours for. */
-export const HOLIDAY_ROW_DAYS = 30;
-export function holidayRowFor(plan: { holiday: import("@/lib/gbpListingFields").HolidayId; date: string } | null, now: Date): { holiday: import("@/lib/gbpListingFields").HolidayId; date: string } | null {
-  if (!plan) return null;
-  const days = (Date.parse(`${plan.date}T12:00:00Z`) - Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())) / 86_400_000;
-  return days >= 0 && days <= HOLIDAY_ROW_DAYS ? { holiday: plan.holiday, date: plan.date } : null;
-}

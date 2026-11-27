@@ -3,7 +3,7 @@
 // Day 25B step 6). components/gbp/googleTabParts.tsx useTabIdeas wraps it.
 
 import type { GoogleProfileTabProps } from "@/components/gbp/googleTabParts";
-import { ideaTypeOf, listingIdeas, type Idea } from "@/lib/listingIdeas";
+import { ideaTypeOf, listingIdeas, townOf, type Idea } from "@/lib/listingIdeas";
 import { recommendations, type Rec, type RecInputs } from "@/lib/googleRecommendations";
 import { answersPlan } from "@/lib/googleAnswers";
 
@@ -20,6 +20,7 @@ export function tabIdeasFor(props: GoogleProfileTabProps, timeZone: string, now:
     posts: props.media?.posts ?? null,
     messagingOn: props.messagingOn,
     bookingTurnOn: props.booking?.tracking.kind === "turn_on" ? { provider: props.booking.tracking.provider } : null,
+    town: townOf(props.business?.address),
   });
   const details = ideas.find((i): i is Extract<Idea, { id: "details" }> => i.id === "details");
   const services = ideas.find((i): i is Extract<Idea, { id: "services" }> => i.id === "services");

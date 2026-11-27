@@ -16,7 +16,6 @@ import { HabitChecklist } from "@/components/growth/HabitChecklist";
 import { SendToGoogle, listingChanges, reviewerList } from "@/components/fixPlan/SendToGoogle";
 import type { WeekRepliesState } from "@/components/gbp/RepliesPreview";
 import type { AnswersState } from "@/components/gbp/AnswersPreview";
-import { holidayRowFor, HOLIDAY_ROW_DAYS } from "@/lib/fixPlan";
 
 const text = (html: string) => html.replace(/<[^>]+>/g, " ").replace(/&#x27;/g, "'").replace(/&amp;/g, "&").replace(/&quot;/g, '"').replace(/\s+/g, " ").trim();
 const wrap = (node: ReactNode, locale: Locale = "en") => renderToStaticMarkup(<LocaleProvider locale={locale} timeZone="America/New_York">{node}</LocaleProvider>);
@@ -125,7 +124,8 @@ describe("Growth plan: tier card on top, then the checklist, More ways, Google r
     expect(order.every((i) => i > 0)).toBe(true);
     expect([...order].sort((a, b) => a - b)).toEqual(order);
     expect(readFileSync("components/gbp/MoreWaysCards.tsx", "utf8")).toContain("return <ListingAnswersEditor businessId={businessId} premium={premium} state={state} />;");
-    expect(readFileSync("components/fixPlan/FixPlanView.tsx", "utf8")).toContain("<ListingAnswersEditor businessId={businessId} premium={week.premium} state={week.answers} />");
+    // The listing's changes: the same answers draft on the Google listing page's "Fix all" and Fix plan's send.
+    expect(readFileSync("components/fixPlan/SendToGoogle.tsx", "utf8")).toContain("const answers = useAnswers(businessId, { auto: canEdit, suggest: [] });");
   });
 });
 
@@ -188,13 +188,10 @@ describe("Fix plan v3", () => {
     expect(view).toContain("const items = (week.replies?.items ?? []).filter((i) => i.reply);");
     expect(view).not.toMatch(/Yadira|Angelica/);
   });
-  test("a holiday in the next 30 days with no hours set: its row, 'Protects customers · no points' (EN + ES)", () => {
-    expect(HOLIDAY_ROW_DAYS).toBe(30);
-    expect(holidayRowFor({ holiday: "christmasEve", date: "2026-12-24" } as never, NOV27)).toEqual({ holiday: "christmasEve", date: "2026-12-24" });
-    expect(holidayRowFor({ holiday: "newYear", date: "2027-01-01" } as never, NOV27)).toBeNull();
-    const msgs = readFileSync("lib/i18n/messages.ts", "utf8");
-    expect(msgs).toContain('"dashboard.fixPlan.holiday.tag": "Protects customers · no points"');
-    expect(msgs).toContain('"dashboard.fixPlan.holiday.tag": "Protege a sus clientes · sin puntos"');
+  test("holiday hours are no longer their own row: they're in 'Get your Google listing to all green' (lib/listingGreen.test.tsx)", () => {
+    const view = readFileSync("components/fixPlan/FixPlanView.tsx", "utf8");
+    expect(view).not.toContain("HolidayRow");
+    expect(view).toContain("<ListingGreenRow");
   });
   test("the review rows name the habit that earns them, on the Growth checklist", () => {
     expect(readFileSync("components/fixPlan/FixPlanView.tsx", "utf8")).toContain('href={growthPlanHref(businessId, { hash: "this-week" })}');

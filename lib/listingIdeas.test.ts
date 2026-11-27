@@ -8,7 +8,8 @@ import { editorFromHash } from "@/lib/googleProfileTab";
 const NOW = Date.parse("2026-11-15T12:00:00Z"); // Thanksgiving: Nov 26 (11 days)
 const FULL: IdeaInputs["listing"] = {
   services: ["Haircut", "Balayage", "Hair coloring"],
-  categories: ["Hair salon"],
+  // Two categories: no second-category idea (lib/listingIdeasMore.test.tsx covers it).
+  categories: ["Hair salon", "Beauty salon"],
   description: "x".repeat(300),
   specialPeriods: [
     { startDate: { year: 2026, month: 11, day: 26 }, closed: true },
@@ -112,7 +113,7 @@ describe("each rule", () => {
 describe("ranking", () => {
   const all = base({
     months: [{ topKeywords: [{ term: "keratin", count: 40 }, { term: "barber", count: 5 }] }],
-    listing: { ...FULL!, description: "Hair salon", specialPeriods: [], attributeIds: [] },
+    listing: { ...FULL!, categories: ["Hair salon"], description: "Hair salon", specialPeriods: [], attributeIds: [] },
     photos: { count: 0, newestAt: null },
     posts: { last30: 0 },
     messagingOn: false,

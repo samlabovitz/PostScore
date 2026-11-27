@@ -152,7 +152,8 @@ describe("order, not points", () => {
 
   test("the Overview and PostAI hand Biggest boost the full list", () => {
     const src = (p: string) => readFileSync(p, "utf8");
-    expect(src("app/business/[id]/page.tsx")).toContain("topRecommendations(actionPlan.tasks, actionPlan.websiteBanner, params.id, linkOptions, Infinity, actionPlan.urgentIssues)");
+    // The whole list (the new design folds the Google listing items into one first: lib/listingGreen.ts).
+    expect(src("app/business/[id]/page.tsx")).toContain("topRecommendations(recTasks, actionPlan.websiteBanner, params.id, linkOptions, Infinity, actionPlan.urgentIssues)");
     // Day 23B: the full list, cut to 3 inside (after the merged details task moves first).
     expect(src("app/business/[id]/BusinessScoreView.tsx")).toContain("recommendations={recommendations ?? null} limit={TOP_RECOMMENDATIONS}");
     expect(src("app/actions/assistant.ts")).toContain("topRecommendations(actionPlanResult.tasks, actionPlanResult.websiteBanner, businessId, {}, Infinity, actionPlanResult.urgentIssues)");

@@ -5,12 +5,14 @@
 // (lib/urgency.ts), otherwise from their real points on the 0–100 total —
 // High 5+, Medium 2+ (lib/overviewTiles.ts) — and ONE button to where each is fixed.
 
-import { NEW_PAGES_LIVE, fixPlanHref, growthPlanHref } from "@/lib/routes";
+import { NEW_PAGES_LIVE, fixPlanHref, googleListingHref, growthPlanHref } from "@/lib/routes";
 import { useShellData } from "@/components/layout/ShellData";
 import { TIER_NAME_KEYS } from "@/lib/navTabs";
 import Link from "next/link";
 import { IconArrowRight, IconMapPin, IconStar, IconWorld } from "@tabler/icons-react";
-import { pointsText, recRangeText, websiteRangeText, wholePointRange } from "@/lib/pointRange";
+import { displayPoints, pointsText, recRangeText, websiteRangeText, wholePointRange } from "@/lib/pointRange";
+import { LISTING_GREEN_ID, type ListingGreen } from "@/lib/listingGreen";
+import { GreenCount, greenTodoText } from "@/components/gbp/listingGreenText";
 import { FixButton, FIX_BUTTON_CLASS } from "@/components/scoring/FixButton";
 import { DetailsMismatchTasks, DetailsVersions, MergedActions, mergedTitle } from "@/components/overview/DetailsMismatchTasks";
 import { mergedKind, mismatchesCoveredBy, URGENT_DETAILS, type DetailsMismatch } from "@/lib/detailsMismatch";
@@ -102,7 +104,10 @@ export function TopRecommendations({
   limit = Infinity,
   lastScanAt = null,
   growthCount = null,
+  green = null,
 }: {
+  /** New design: "Get your Google listing to all green" — the one Google listing recommendation (lib/listingGreen.ts). */
+  green?: ListingGreen | null;
   businessId: string;
   /** New design: this week's plan size for the Growth line ("4 tasks this week"). */
   growthCount?: number | null;
@@ -137,6 +142,9 @@ export function TopRecommendations({
           ...allRecommendations.filter((r) => covered(r).length === 0 && !staleHours(r)),
           ...allRecommendations.filter(staleHours),
         ].slice(0, limit);
+  // The listing goal always shows while anything is non-green: in the last place when its points didn't rank it in.
+  const greenRec = allRecommendations?.find((r) => r.key === LISTING_GREEN_ID) ?? null;
+  if (recommendations && greenRec && green && !green.allGreen && !recommendations.includes(greenRec)) recommendations.splice(Math.max(0, Math.min(recommendations.length, limit) - 1), recommendations.length >= limit ? 1 : 0, greenRec);
   const coveredFields = new Set((recommendations ?? []).flatMap((r) => covered(r).map((m) => m.field)));
   const standalone = mismatches.filter((m) => !coveredFields.has(m.field));
   return (
@@ -183,6 +191,7 @@ export function TopRecommendations({
               const stale = hours?.kind === "stale";
               const waiting = hoursWaitingOnGoogle(hours);
               const priority = merged.some((m) => URGENT_DETAILS.includes(m.field)) ? "urgent" : rec.priority;
+              if (rec.key === LISTING_GREEN_ID && green) return <ListingGreenRec key={rec.key} businessId={businessId} green={green} />;
               return (
               <li key={rec.key} data-merged={merged.length > 0 ? merged.map((m) => m.field).join(",") : undefined} className="flex gap-3 py-3 first:pt-1 last:pb-1">
                 <RecIcon rec={rec} />
@@ -295,5 +304,32 @@ export function GrowthLine({ businessId, count = null }: { businessId: string; c
       </span>
       <IconArrowRight size={16} className="shrink-0 text-brass" aria-hidden />
     </Link>
+  );
+}
+
+/** "Get your Google listing to all green · 9 of 12 green": the one Google listing recommendation — "Still to do: …"
+ * (scored rows "+N pts", the rest "helps customers"), its points, one button to the Google listing. */
+function ListingGreenRec({ businessId, green }: { businessId: string; green: ListingGreen }) {
+  const locale = useLocale();
+  const todo = greenTodoText(green, locale);
+  return (
+    <li className="flex gap-3 py-3 first:pt-1 last:pb-1" data-testid="rec-listing-green" data-green={green.green} data-total={green.total}>
+      <span aria-hidden className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ps-icon-tile">
+        <IconMapPin size={16} />
+      </span>
+      <div className="flex min-w-0 flex-1 flex-col gap-1">
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+            <span className="text-sm font-semibold text-ink">{t(locale, "dashboard.fixPlan.green.title")}</span>
+            <GreenCount green={green} locale={locale} className="text-[12.5px] leading-snug" />
+            {todo && <span className="text-[12.5px] leading-snug text-ink-soft">{todo}</span>}
+          </div>
+          {green.points > 0 && <span className="shrink-0 whitespace-nowrap text-[12px] font-semibold tabular-nums text-ink">+{displayPoints(green.points)} {t(locale, "dashboard.website.ptsAbbrev")}</span>}
+        </div>
+        <Link href={withFromScore(googleListingHref(businessId))} data-testid="fix-button" data-kind="listing" className={FIX_BUTTON_CLASS}>
+          {t(locale, "dashboard.fixPlan.green.button")} →
+        </Link>
+      </div>
+    </li>
   );
 }

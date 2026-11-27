@@ -14,7 +14,7 @@ import { useState } from "react";
 import { approveListingAll } from "@/app/actions/approveAll";
 import { answersReady } from "@/components/gbp/ApproveAll";
 import { useLocalWriteGuard } from "@/components/gbp/LocalWriteGuard";
-import type { AnswersState } from "@/components/gbp/AnswersPreview";
+import { useAnswers, type AnswersState } from "@/components/gbp/AnswersPreview";
 import type { WeekRepliesState } from "@/components/gbp/RepliesPreview";
 import { W_BUTTON } from "@/components/gbp/PostPreview";
 import { detailLabel } from "@/lib/googleAnswers";
@@ -171,5 +171,58 @@ export function SendToGoogle({ businessId, replies, answers, canEdit, practice }
         </p>
       )}
     </section>
+  );
+}
+
+/** Google listing page (Premium): "Fix all ({n})" — every listing change PostScore has ready (the description,
+ * services and customer details it drafted), one confirm step showing each as before → after, Cancel focused, the
+ * localhost name for a real send. The same editor and draft as each row's own button and Fix plan's listing send. */
+export function FixAllListing({ businessId, canEdit, practice }: { businessId: string; canEdit: boolean; practice: boolean }) {
+  const locale = useLocale();
+  const answers = useAnswers(businessId, { auto: canEdit, suggest: [] });
+  const [open, setOpen] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [result, setResult] = useState<{ sent: number; failed: number } | null>(null);
+  const changes = canEdit && answersReady(answers) && answers.data ? listingChanges(answers.data.listing, answers.payload, locale) : [];
+  if (!canEdit || (changes.length === 0 && !result)) return null;
+  const run = async () => {
+    setOpen(false);
+    setBusy(true);
+    const r = await approveListingAll(businessId, { post: null, answers: answers.payload }).catch(() => null);
+    setBusy(false);
+    if (r?.status === "ok" && r.answers) {
+      answers.setResults({ ...(answers.results ?? {}), ...r.answers });
+      const parts = Object.values(r.answers);
+      const ok = parts.filter((p) => p && (p.status === "sent" || p.status === "pending_review" || p.status === "no_change")).length;
+      setResult({ sent: ok, failed: parts.length - ok });
+    } else setResult({ sent: 0, failed: changes.length || 1 });
+  };
+  return (
+    <div className="flex w-full flex-col gap-2" data-testid="listing-fix-all">
+      {changes.length > 0 && (
+        <button type="button" className={`${W_BUTTON} w-fit`} disabled={busy} onClick={() => setOpen(!open)} aria-expanded={open} data-testid="listing-fix-all-button" data-count={changes.length}>
+          {busy ? t(locale, "dashboard.fixPlan.send.sending") : t(locale, "dashboard.googlePages.listing.fixAll", { count: changes.length })}
+        </button>
+      )}
+      {open && (
+        <Confirm title={t(locale, "dashboard.fixPlan.send.listingConfirm")} sendLabel={t(locale, "dashboard.fixPlan.send.update")} onSend={() => void run()} onCancel={() => setOpen(false)} practice={practice}>
+          <ul className="flex flex-col gap-2" data-testid="send-changes">
+            {changes.map((c) => (
+              <li key={c.key} className="text-[13px]" data-testid="send-change">
+                <p className="font-semibold text-ink">{c.label}</p>
+                <p className="text-ink-mute line-through decoration-ink-mute/40">{c.before}</p>
+                <p className="text-ink">→ {c.after}</p>
+              </li>
+            ))}
+          </ul>
+        </Confirm>
+      )}
+      {result && (
+        <p className="text-[13px]" role="status" data-testid="listing-fix-all-result">
+          <b className="text-green">{tPlural(locale, "dashboard.fixPlan.send.sent", result.sent, { count: result.sent })}</b>
+          {result.failed > 0 && <span className="text-red"> {t(locale, "dashboard.fixPlan.send.failed", { count: result.failed })}</span>}
+        </p>
+      )}
+    </div>
   );
 }
