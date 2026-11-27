@@ -168,7 +168,9 @@ describe("9. review replies", () => {
     expect(starOnlyReply("Bari", 5, "en")).toBe("Thank you for the 5 stars, Bari! It made my day.");
     const first = { text: starOnlyReply("Melissa", 5, "en"), firstName: "Melissa" };
     const second = starOnlyReply("Bari", 5, "en", [first]);
-    expect(second).toBe("Thank you for the 5 stars, Bari! I really appreciate it.");
+    // A second star-only reply in the batch opens differently and shares no 4-word phrase.
+    expect(second).toBe("Bari, I'm grateful for your 5-star rating! I really appreciate it.");
+    expect(sharedPhrases(second, [first], "Bari")).toEqual([]);
     expect(starOnlyReply("Ana", 4, "es")).toBe("¡Gracias por las 4 estrellas, Ana! Me alegró el día.");
     expect(starOnlyReply(null, 5, "en")).toBe("Thank you for the 5 stars! It made my day.");
     for (const r of [first.text, second]) expect(replyAcceptable(r, null, { review: "[The reviewer left a star rating with no text.]", locale: "en" }), r).toBe(true);
@@ -180,11 +182,14 @@ describe("9. review replies", () => {
     expect(isStarOnlyReview("The reviewer left a 5-star rating with no written review.")).toBe(true);
     expect(isStarOnlyReview("Great cut!")).toBe(false);
     const ctx = { voice: "me" as const, review: stars, businessName: "Hair express on Broadway", locale: "en" as const };
-    expect(replyAcceptable("Thank you for the 5 stars, Bari! It means a lot to me.", "Bari", ctx)).toBe(true);
+    expect(replyAcceptable("Thank you for the 5 stars, Bari! It made my day.", "Bari", ctx)).toBe(true);
+    // The owner's pet phrases are banned outright now, not just once per batch.
+    expect(replyAcceptable("Thank you for the 5 stars, Bari! It means a lot to me.", "Bari", ctx)).toBe(false);
     expect(replyAcceptable("Hi Bari, I'm truly grateful for the five stars. It means a lot that you'd recommend Hair Express on Broadway to others.", "Bari", ctx)).toBe(false);
     expect(replyAcceptable("Thank you for the 5 stars, Melissa! I look forward to seeing you again soon.", "Melissa", { ...ctx })).toBe(false);
     expect(replyAcceptable("Thank you so much, Bari! It means a lot to me.", "Bari", ctx)).toBe(false);
-    expect(replyAcceptable("¡Gracias por las 5 estrellas, Bari! Significa mucho para mí.", "Bari", { ...ctx, locale: "es" })).toBe(true);
+    expect(replyAcceptable("¡Gracias por las 5 estrellas, Bari! Me alegró el día.", "Bari", { ...ctx, locale: "es" })).toBe(true);
+    expect(replyAcceptable("¡Gracias por las 5 estrellas, Bari! Significa mucho para mí.", "Bari", { ...ctx, locale: "es" })).toBe(false);
   });
   test("checked, not just asked: the owner never in the third person, never 'we' as Me, the review's language in usted", () => {
     const review = "I had a great experience at Hair express on Broadway. Angelica really took her time with my hair. Thank you Angelica!";
@@ -197,9 +202,13 @@ describe("9. review replies", () => {
     expect(replyAcceptable("It means so much, Yadira. I'm so glad Angelica made you feel comfortable.", "Yadira", ctx)).toBe(false);
     expect(replyAcceptable("Thank you, Yadira! I'm so glad you felt comfortable in my chair.", "Yadira", ctx)).toBe(true);
     expect(replyAcceptable("Thank you, Bari! We really appreciate your five stars.", "Bari", { ...ctx, review: "x" })).toBe(false);
-    expect(replyAcceptable("Thank you, Bari! We really appreciate your five stars.", "Bari", { ...ctx, voice: "team", review: "x" })).toBe(true);
+    expect(replyAcceptable("Thank you, Bari! We really appreciate your kind words.", "Bari", { ...ctx, voice: "team", review: "x" })).toBe(true);
+    // A review with words: never the star-only thanks (the real "J" case, Nov 25).
+    expect(replyAcceptable("Thank you, Bari! We really appreciate your five stars.", "Bari", { ...ctx, voice: "team", review: "x" })).toBe(false);
+    expect(replyAcceptable("I'm grateful for the 5 stars. It's wonderful to hear you're happy with your haircuts.", null, { ...ctx, review: "Love my haircuts here, always comfortable." })).toBe(false);
     expect(replyAcceptable("Gracias, Melissa, por esa calificación de cinco estrellas. Me alegra mucho que hayas tenido una buena experiencia.", "Melissa", { ...ctx, review: "x" })).toBe(false);
-    expect(replyAcceptable("Gracias, Melissa, por sus cinco estrellas. Me alegra mucho que haya tenido una buena experiencia en el salón.", "Melissa", { ...ctx, review: "x", locale: "es" })).toBe(true);
+    expect(replyAcceptable("Gracias, Melissa, por sus amables palabras. Me alegra mucho que haya tenido una buena experiencia en el salón.", "Melissa", { ...ctx, review: "x", locale: "es" })).toBe(true);
+    expect(replyAcceptable("Gracias, Melissa, por sus cinco estrellas. Me alegra mucho que haya tenido una buena experiencia en el salón.", "Melissa", { ...ctx, review: "x", locale: "es" })).toBe(false);
     expect(replyAcceptable("Gracias, Melissa. Me alegra que hayas venido y espero verte pronto en el salón.", "Melissa", { ...ctx, review: "x", locale: "es" })).toBe(false);
   });
   test("the setting: 'Replies are written as: Me (I) / My team (we)'; the batch redrafts under the new rules", () => {
@@ -207,7 +216,7 @@ describe("9. review replies", () => {
     // The default shows as chosen before anything is saved.
     expect(wrap(<ReplyVoicePicker businessId="b1" />)).toMatch(/aria-checked="true"[^>]*data-testid="reply-voice-me"/);
     expect(readFileSync("supabase/reply-voice.sql", "utf8")).toMatch(/reply_voice text check \(reply_voice in \('me', 'team'\)\)[\s\S]*notify pgrst, 'reload schema';\s*$/);
-    expect(REPLY_RULES_VERSION).toBe(11);
+    expect(REPLY_RULES_VERSION).toBe(18);
     expect(replySystemPrompt("en", "HX", {})).toContain('never "for all my clients"');
     expect(replySystemPrompt("en", "HX", {})).toContain('Thank you for the 5 stars, NAME!');
     // One set of saved drafts, written in the background (lib/replyBatch.server.ts); pages only read them.

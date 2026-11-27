@@ -6,6 +6,7 @@ import { businessTimeZone } from "@/lib/businessTimeZone";
 import {
   autoChecks,
   buildWeeklyChecklistStateWithAuto,
+  isWeeklyChecklistItemId,
   weekStartFor,
   type AutoCheck,
   type AutoCheckSource,
@@ -125,6 +126,8 @@ export async function setWeeklyCheckItem(
   if (!user) {
     return { status: "unauthenticated" };
   }
+  // Only the app's own item ids are ever written.
+  if (!isWeeklyChecklistItemId(itemId)) return { status: "error", message: "unknown item" };
 
   // The week resets at Monday 12:00 AM in the business's OWN time zone.
   const weekStart = weekStartFor(new Date(), await checklistTimeZone(supabase, businessId));

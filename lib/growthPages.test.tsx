@@ -7,6 +7,7 @@ import { afterAll, describe, expect, test, vi } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 import { readFileSync } from "node:fs";
 import type { ReactNode } from "react";
+import { checkOutcome } from "@/lib/checkOutcome";
 
 // The new-design preview's links (npm run dev:new): the switch reads this at load.
 vi.hoisted(() => {
@@ -169,7 +170,8 @@ describe("Reviews split", () => {
     expect(html).not.toContain('data-testid="review-guide"');
     // The review checks with "+N pts" (the points each still has to win).
     const gains = Array.from(html.matchAll(/data-testid="check-gain"[^>]*>([^<]+)</g)).map((m) => m[1]);
-    const missing = visibility.checks.filter((c) => c.earnedPoints !== null && c.maxPoints > c.earnedPoints);
+    // Only the checks that need work show; the passed ones (even a 12.6 / 14 "Excellent") fold into one line.
+    const missing = visibility.checks.filter((c) => c.earnedPoints !== null && c.maxPoints > c.earnedPoints && !["done", "excellent", "good"].includes(checkOutcome(c)));
     expect(gains.length).toBe(missing.length);
     for (const g of gains) expect(g).toMatch(/^\+[\d.]+ pts$/);
     const es = text(wrap(<ReviewsView businessId="b1" reviews={DATA} plan="grow" split fixLine={fixLine} />, "es"));

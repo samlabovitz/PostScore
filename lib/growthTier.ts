@@ -350,19 +350,48 @@ export function computeTiers(facts: GrowthFacts, firstMonday: string, lastMonday
 }
 
 /** What it takes to reach the next tier, from the current state (for "To reach Growing: …"). */
-export function nextTierNeeds(facts: GrowthFacts, monday: string, tier: TierNumber): { tier: TierNumber; activeWeeks: number; of: number; activeNow: number; results: number; resultsNow: number; needsR1ThreeMonths: boolean } | null {
+export interface TierNeeds {
+  tier: TierNumber;
+  activeWeeks: number;
+  of: number;
+  activeNow: number;
+  results: number;
+  resultsNow: number;
+  /** How many of the results must be measured ones (MEASURED), and how many of the met ones are. */
+  measured: number;
+  measuredNow: number;
+  /** Each requirement row's ✓: met only when the whole rule holds (count and measured). */
+  activeMet: boolean;
+  resultsMet: boolean;
+  needsR1ThreeMonths: boolean;
+}
+
+/** Whether met results satisfy a rule's count and measured parts (Local favorite's three months aside). */
+export function resultsRuleMet(results: Record<ResultId, ResultStatus>, rule: { results: number; measured: number }): { now: number; measuredNow: number; met: boolean } {
+  const met = (Object.keys(results) as ResultId[]).filter((id) => results[id] === "met");
+  const measuredNow = met.filter((id) => MEASURED[id]).length;
+  return { now: met.length, measuredNow, met: met.length >= rule.results && measuredNow >= rule.measured };
+}
+
+export function nextTierNeeds(facts: GrowthFacts, monday: string, tier: TierNumber): TierNeeds | null {
   if (tier >= 5) return null;
   const next = (tier + 1) as 2 | 3 | 4 | 5;
   const rule = TIER_RULES[next];
   const weeks = lastWeeks(facts, monday, rule.of, new Map());
   const results = resultsAt(facts, monday);
+  const activeNow = weeks.filter((w) => w.active).length;
+  const r = resultsRuleMet(results, rule);
   return {
     tier: next,
     activeWeeks: rule.active,
     of: rule.of,
-    activeNow: weeks.filter((w) => w.active).length,
+    activeNow,
     results: rule.results,
-    resultsNow: (Object.keys(results) as ResultId[]).filter((id) => results[id] === "met").length,
+    resultsNow: r.now,
+    measured: rule.measured,
+    measuredNow: r.measuredNow,
+    activeMet: activeNow >= rule.active,
+    resultsMet: r.met,
     needsR1ThreeMonths: next === 5,
   };
 }

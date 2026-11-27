@@ -24,6 +24,8 @@ export interface SpeedSample {
   measuredUrl: string;
   /** Seconds to show the page on a phone (LCP), when Google gave it. */
   lcpSeconds: number | null;
+  /** v1.18.0: the same test's Speed Index, when the main content (LCP) couldn't be measured. */
+  speedIndexSeconds?: number | null;
   /** The band this one measurement alone would give. */
   category: FieldSpeedCategory;
   /** v1.16.0: how many of that scan's test runs measured the page (absent: one). */
@@ -69,8 +71,9 @@ const RANK: Record<FieldSpeedCategory, number> = { FAST: 0, AVERAGE: 1, SLOW: 2 
 const BY_RANK: FieldSpeedCategory[] = ["FAST", "AVERAGE", "SLOW"];
 
 /** The band one measurement gives — the same lines as the check. */
-export function sampleCategory(m: Pick<MobilePerformanceMeasurement, "lcpSeconds" | "method" | "fieldCategory" | "labScore">): FieldSpeedCategory {
-  if (typeof m.lcpSeconds === "number") return m.lcpSeconds <= FAST_LINE_SECONDS ? "FAST" : m.lcpSeconds <= SLOW_LINE_SECONDS ? "AVERAGE" : "SLOW";
+export function sampleCategory(m: Pick<MobilePerformanceMeasurement, "lcpSeconds" | "method" | "fieldCategory" | "labScore" | "speedIndexSeconds">): FieldSpeedCategory {
+  const secs = typeof m.lcpSeconds === "number" ? m.lcpSeconds : typeof m.speedIndexSeconds === "number" ? m.speedIndexSeconds : null;
+  if (secs !== null) return secs <= FAST_LINE_SECONDS ? "FAST" : secs <= SLOW_LINE_SECONDS ? "AVERAGE" : "SLOW";
   if (m.method === "field" && m.fieldCategory) return m.fieldCategory;
   const score = m.labScore ?? 0;
   return score >= 90 ? "FAST" : score >= 50 ? "AVERAGE" : "SLOW";
@@ -80,12 +83,13 @@ export function sampleCategory(m: Pick<MobilePerformanceMeasurement, "lcpSeconds
  * never one without a site or a date. */
 export function sampleFrom(m: MobilePerformanceMeasurement | null | undefined): SpeedSample | null {
   if (!m || m.carriedForward || !m.measuredAt || !m.measuredUrl) return null;
-  const usable = m.method === "field" ? m.fieldCategory !== null : m.labScore !== null;
+  const usable = m.method === "field" ? m.fieldCategory !== null : m.labScore !== null || typeof m.speedIndexSeconds === "number";
   if (!usable) return null;
   return {
     measuredAt: m.measuredAt,
     measuredUrl: m.measuredUrl,
     lcpSeconds: typeof m.lcpSeconds === "number" ? m.lcpSeconds : null,
+    ...(typeof m.lcpSeconds !== "number" && typeof m.speedIndexSeconds === "number" ? { speedIndexSeconds: m.speedIndexSeconds } : {}),
     category: sampleCategory(m),
     ...(m.method === "lab" && typeof m.labRuns === "number" ? { runs: m.labRuns } : {}),
   };
@@ -134,7 +138,9 @@ export function smoothSpeed(history: SpeedSample[], previous: SpeedSmoothed | nu
   if (history.length === 0) return null;
   const siteUrl = history[0].measuredUrl;
   const prevBand = previous && sameMeasuredSite(previous.measuredUrl, siteUrl) ? previous.category : null;
-  const withSeconds = history.filter((s) => typeof s.lcpSeconds === "number").map((s) => s.lcpSeconds as number);
+  // v1.18.0: a sample without the main-content time counts its Speed Index.
+  const secondsOf = (s: SpeedSample) => (typeof s.lcpSeconds === "number" ? s.lcpSeconds : typeof s.speedIndexSeconds === "number" ? s.speedIndexSeconds : null);
+  const withSeconds = history.map(secondsOf).filter((v): v is number => v !== null);
   if (withSeconds.length > 0) {
     const seconds = Math.round(median(withSeconds) * 100) / 100;
     return { category: bufferedBand(seconds, prevBand), seconds, samples: withSeconds.length, measuredUrl: siteUrl };

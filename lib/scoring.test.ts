@@ -875,7 +875,7 @@ describe("businessRowToScoringInput adapter", () => {
     expect(input.mostRecentReviewDaysAgo).toBeNull();
     expect(input.httpsStatus).toBe("https");
     const breakdown = scoreBusiness(input);
-    expect(breakdown.scoringVersion).toBe("1.17.0");
+    expect(breakdown.scoringVersion).toBe("1.18.0");
   });
 
   test("degrades an unexpected https_status value to null (excluded) rather than trusting a bad cast", () => {
@@ -1915,6 +1915,13 @@ describe("Step 2d additions: Website weights, social links, map evidence, contac
       address: "209 E Main St",
     }).checks.find((c) => c.id === "website.info_consistency")!;
     expect(conflict.explanation).toBe("The map on your website shows 45 market st; Google says 209 E Main St.");
+    // Google's listing not at hand (couldn't be read, or a cold cache): never "Google says ." with nothing after it.
+    const noGoogle = (finding: WebsiteTrustAnalysis["infoConflicts"][number], locale?: "es") =>
+      scoreBusiness({ ...withContent({}, { websiteTrust: trust(finding) }), address: null, phone: null, openingHours: null, ...(locale ? { locale } : {}) } as never).checks.find((c) => c.id === "website.info_consistency")!.explanation;
+    expect(noGoogle({ field: "address", comparison: "conflicts", siteValue: "45 market st", googleValue: null })).toBe("Your website says 45 market st, which doesn't match your Google listing.");
+    const hours = { field: "hours" as const, comparison: "conflicts" as const, siteValue: "Thursday: 9:30 AM–6:00 PM", siteLabel: "Hours", googleValue: null };
+    expect(noGoogle(hours)).toBe("Your website's Hours say Thursday 9:30 AM–6:00 PM, which doesn't match your Google listing.");
+    expect(noGoogle(hours)).not.toContain("Google says");
     const match = scoreBusiness(
       withContent({}, { websiteTrust: trust({ field: "address", comparison: "matches", siteValue: "209 e main", googleValue: "209 E Main St", source: "map" }) })
     ).checks.find((c) => c.id === "website.info_consistency")!;

@@ -63,7 +63,13 @@ describe("Overview", () => {
     expect(item).toContain('data-kind="rescan"');
     expect(text(item)).not.toMatch(/\+\d+ pts?\b|show different hours/);
     expect(biggestBoostFrom(withoutStaleHours(recs, { kind: "stale" }), [], "en")?.label).not.toBe("Matches your Google listing");
+    // No live compare: the scan's own line decides — the same hours on both sides is stale too (Day 25B polish)…
+    // No live compare: the scan's own points stand (never "matches now" from the page's words); waiting on Google: out.
     expect(biggestBoostFrom(withoutStaleHours(recs, null), [], "en")?.label).toBe("Matches your Google listing");
+    expect(biggestBoostFrom(withoutStaleHours(recs, { kind: "differs", days: [], profileAhead: true }), [], "en")?.label).not.toBe("Matches your Google listing");
+    // …and a line with different hours stays a fix.
+    const differs = topRecommendations([{ ...(CHECK as object), problem: "Your website's “Hours” say Thursday 9:30 AM–6:00 PM; Google says Thursday 10:00 AM–6:00 PM." } as never, REVIEWS], null, "b1", {}, Infinity);
+    expect(biggestBoostFrom(withoutStaleHours(differs, null), [], "en")?.label).toBe("Matches your Google listing");
     expect(text(wrap(<TopRecommendations businessId="b1" recommendations={recs} limit={3} hoursCheck={{ kind: "stale" }} />, "es"))).toContain("Cambió desde su último análisis · Vuelva a analizar para actualizar");
   });
   test("a real difference: the exact days, website vs Google, and that Google Maps hasn't published the Business Profile's hours yet (EN + ES)", () => {

@@ -15,6 +15,46 @@ export type MessageKey =
   | "dashboard.fixPlan.thisWeekLabel.one"
   | "dashboard.fixPlan.thisWeekLabel.other"
   | "dashboard.fixPlan.everyFix"
+  | "dashboard.googleReviews.all.ready.one"
+  | "dashboard.googleReviews.all.ready.other"
+  | "dashboard.googleReviews.all.button"
+  | "dashboard.googleReviews.all.confirm.one"
+  | "dashboard.googleReviews.all.confirm.other"
+  | "dashboard.googleReviews.all.post"
+  | "dashboard.googleReviews.all.posting"
+  | "dashboard.googleReviews.all.sent.one"
+  | "dashboard.googleReviews.all.sent.other"
+  | "dashboard.googleReviews.all.failed"
+  | "dashboard.googleReviews.all.premium"
+  | "dashboard.googleReviews.all.posted"
+  | "dashboard.googleTab.w.post.pending"
+  | "dashboard.googleReviews.draftFailed"
+  | "dashboard.googleReviews.noDraftYet"
+  | "dashboard.googleReviews.tryAgain"
+  | "dashboard.googleReviews.draftNow"
+  | "content.checks.website.performance_mobile.explanation.speedIndexNote"
+  | "content.checks.website.performance_mobile.explanation.photosHeavy"
+  | "dashboard.breakdown.details"
+  | "dashboard.hoursCheck.profileMatches"
+  | "dashboard.hoursCheck.stillWaiting"
+  | "dashboard.hoursCheck.openProfile"
+  | "dashboard.fixPlan.row.waiting"
+  | "dashboard.breakdown.headerWaiting"
+  | "dashboard.googleReviews.postingPremiumTip"
+  | "dashboard.breakdown.headerRescan"
+  | "dashboard.googleReviews.skip"
+  | "dashboard.googleReviews.showDraft"
+  | "dashboard.googleReviews.premiumDraftsAll"
+  | "dashboard.googleReviews.premiumPosts"
+  | "dashboard.googleReviews.copyReply"
+  | "dashboard.googleReviews.copied"
+  | "dashboard.googleReviews.replyOnGoogle"
+  | "dashboard.googleReviews.growSteps"
+  | "dashboard.googleReviews.introGrow"
+  | "dashboard.fixPlan.trackNow"
+  | "dashboard.fixPlan.trackWeek"
+  | "dashboard.fixPlan.trackEvery"
+  | "dashboard.fixPlan.trackLabel"
   | "dashboard.fixPlan.nowThisWeek"
   | "dashboard.fixPlan.fromLastScan"
   | "dashboard.fixPlan.fromLastScanNoDate"
@@ -100,6 +140,30 @@ export type MessageKey =
   | "dashboard.fixPlan.when.this_week"
   | "dashboard.fixPlan.when.weeks"
   | "dashboard.fixPlan.when.months"
+  | "dashboard.fixPlan.row.found"
+  | "dashboard.fixPlan.row.todo"
+  | "dashboard.fixPlan.row.diy"
+  | "dashboard.fixPlan.row.diyHide"
+  | "dashboard.fixPlan.row.moreHelp"
+  | "dashboard.fixPlan.row.openGoogle"
+  | "dashboard.fixPlan.row.oneClick.replies"
+  | "dashboard.fixPlan.row.oneClick.hours"
+  | "dashboard.fixPlan.row.oneClick.listing"
+  | "dashboard.fixPlan.row.stale"
+  | "dashboard.fixPlan.steps.visibility.review_replies"
+  | "dashboard.fixPlan.steps.visibility.reviews_merged"
+  | "dashboard.fixPlan.steps.visibility.review_count"
+  | "dashboard.fixPlan.steps.visibility.rating"
+  | "dashboard.fixPlan.steps.visibility.review_recency"
+  | "dashboard.fixPlan.steps.completeness.phone"
+  | "dashboard.fixPlan.steps.completeness.address"
+  | "dashboard.fixPlan.steps.completeness.hours"
+  | "dashboard.fixPlan.steps.completeness.website_link"
+  | "dashboard.fixPlan.steps.completeness.categories"
+  | "dashboard.fixPlan.steps.completeness.photos"
+  | "dashboard.fixPlan.steps.completeness.business_status"
+  | "dashboard.fixPlan.steps.completeness.customer_details"
+  | "dashboard.fixPlan.steps.website.info_consistency"
   | "dashboard.overview.someFixesTakeMonths"
   | "dashboard.breakdown.action.replyInReviews"
   | "dashboard.googleTab.w.approveTasks.one"
@@ -1558,6 +1622,14 @@ export type MessageKey =
   | "dashboard.live.unavailable"
   | "dashboard.breakdown.changedOnGoogle"
   | "dashboard.breakdown.rescanToUpdate"
+  | "dashboard.breakdown.passed.one"
+  | "dashboard.breakdown.passed.other"
+  | "dashboard.breakdown.showAll"
+  | "dashboard.breakdown.showLess"
+  | "dashboard.breakdown.allPass"
+  | "dashboard.breakdown.showAllChecks"
+  | "dashboard.breakdown.changedSince"
+  | "dashboard.breakdown.rescanShort"
   | "dashboard.scan.refreshSkipped"
   | "dashboard.free.reviewGoalLocked"
   | "dashboard.competitors.headToHead.intro.one"
@@ -1806,6 +1878,8 @@ export type MessageKey =
   | "content.checks.website.info_consistency.explanation.conflictAddress"
   | "content.checks.website.info_consistency.explanation.conflictHours"
   | "content.checks.website.info_consistency.explanation.conflictHoursLabelled"
+  | "content.checks.website.info_consistency.explanation.conflictNoGoogle"
+  | "content.checks.website.info_consistency.explanation.conflictHoursLabelledNoGoogle"
   | "content.checks.website.info_consistency.explanation.hoursUnconfirmed"
   | "content.checks.website.info_consistency.explanation.allMatchHoursUnconfirmed"
   | "content.checks.website.notice_freshness.label"
@@ -6643,6 +6717,9 @@ export type MessageKey =
  * how a future locale with more categories, e.g. "few"/"many", would
  * still get a safe result even before every category is seeded for it). */
 export type PluralKeyBase =
+  | "dashboard.googleReviews.all.ready"
+  | "dashboard.googleReviews.all.confirm"
+  | "dashboard.googleReviews.all.sent"
   | "dashboard.fixPlan.websiteWhole.lastOne"
   | "dashboard.fixPlan.websiteWhole.last"
   | "dashboard.fixPlan.websiteWhole.goes"
@@ -6659,6 +6736,7 @@ export type PluralKeyBase =
   | "dashboard.reviewsSplit.fixLine"
   | "dashboard.printKit.uses"
   | "dashboard.fixPlan.thisWeekLabel"
+  | "dashboard.breakdown.passed"
   | "dashboard.fixPlan.websiteSummary"
   | "content.actionPlan.reviewSplit.recent.title"
   | "dashboard.googleTab.w.approveTasks"
@@ -6757,6 +6835,10 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.fixPlan.thisWeekLabel.one": "This week · 1 fix you can finish yourself, today",
     "dashboard.fixPlan.thisWeekLabel.other": "This week · {count} fixes you can finish yourself, today",
     "dashboard.fixPlan.everyFix": "When every fix is done",
+    "dashboard.fixPlan.trackNow": "now",
+    "dashboard.fixPlan.trackWeek": "this week",
+    "dashboard.fixPlan.trackEvery": "every fix",
+    "dashboard.fixPlan.trackLabel": "{now} now, {week} this week, {every} when every fix is done",
     "dashboard.fixPlan.nowThisWeek": "{now} now · {week} this week",
     "dashboard.fixPlan.fromLastScan": "From your last scan · {date} · points confirmed on your next scan",
     "dashboard.fixPlan.fromLastScanNoDate": "From your last scan · points confirmed on your next scan",
@@ -6838,6 +6920,30 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.fixPlan.when.this_week": "This week",
     "dashboard.fixPlan.when.weeks": "Takes a few weeks",
     "dashboard.fixPlan.when.months": "Takes months",
+    "dashboard.fixPlan.row.found": "What we found",
+    "dashboard.fixPlan.row.todo": "What to do",
+    "dashboard.fixPlan.row.diy": "Do it yourself instead",
+    "dashboard.fixPlan.row.diyHide": "Hide the steps",
+    "dashboard.fixPlan.row.moreHelp": "More help",
+    "dashboard.fixPlan.row.openGoogle": "Open Google Business Profile",
+    "dashboard.fixPlan.row.oneClick.replies": "PostScore drafts each reply; you read it, change anything and approve, and it goes to Google. (Beta)",
+    "dashboard.fixPlan.row.oneClick.hours": "PostScore shows both sets of hours; you pick the right one and approve, and it goes to Google. (Beta)",
+    "dashboard.fixPlan.row.oneClick.listing": "PostScore makes the change on Google: you check it and approve, and you can undo it. (Beta)",
+    "dashboard.fixPlan.row.stale": "Re-scan and your score catches up with Google.",
+    "dashboard.fixPlan.steps.visibility.review_replies": "Open your reviews.\nWrite a short, personal thank-you to each recent review with no reply.\nReply to at least 8 of every 10 recent reviews for full points.",
+    "dashboard.fixPlan.steps.visibility.reviews_merged": "Copy your review link or print your front-desk QR code.\nShare it with customers right after a good visit.\nAsk a few each week; a steady trickle beats one big batch.",
+    "dashboard.fixPlan.steps.visibility.review_count": "Copy your review link or print your front-desk QR code.\nAdd the link to receipts, follow-up texts or emails.\nAsk real customers only, and never offer anything in return.",
+    "dashboard.fixPlan.steps.visibility.rating": "Copy your review link or print your front-desk QR code.\nShare it with customers right after a good visit.\nReply calmly to any negative review.",
+    "dashboard.fixPlan.steps.visibility.review_recency": "Copy your review link or QR code.\nSend it to 3–5 recent happy customers by text, email or at the counter.\nAsk real customers only, and never offer anything in return.",
+    "dashboard.fixPlan.steps.completeness.phone": "Open your Google Business Profile and choose Edit profile.\nGo to Contact information → Phone number.\nEnter your business phone and save.",
+    "dashboard.fixPlan.steps.completeness.address": "Open your Google Business Profile and choose Edit profile.\nGo to Business information → Address.\nEnter or correct your address and save.",
+    "dashboard.fixPlan.steps.completeness.hours": "Open your Google Business Profile and choose Edit profile.\nGo to Business information → Hours.\nFill in every day (and holiday hours if they differ), then save.",
+    "dashboard.fixPlan.steps.completeness.website_link": "No site yet? Build one on the Website page.\nOpen your Google Business Profile → Edit profile → Business information → Website.\nPaste your website address and save.",
+    "dashboard.fixPlan.steps.completeness.categories": "Open your Google Business Profile and choose Edit profile.\nGo to Business information → Category.\nAdd every category that truly fits, the most specific one first.",
+    "dashboard.fixPlan.steps.completeness.photos": "Open your Google Business Profile and choose Photos.\nChoose Add photos.\nAdd your storefront, inside, team and your work.",
+    "dashboard.fixPlan.steps.completeness.business_status": "Open your Google Business Profile and check your listing's status.\nIf it says closed by mistake, choose Reopen this business.\nIf it was suspended, file a reinstatement request.",
+    "dashboard.fixPlan.steps.completeness.customer_details": "Open your Google Business Profile and choose Edit profile.\nGo to {path}.\nAdd only what's true, and save.",
+    "dashboard.fixPlan.steps.website.info_consistency": "Decide which one is right: your website or your Google listing.\nUpdate the other one to match.\nRe-scan and PostScore confirms they match.",
     "dashboard.overview.someFixesTakeMonths": "Some fixes take months (reviews grow over time).",
     "dashboard.breakdown.action.replyInReviews": "Reply in Reviews",
     "dashboard.googleTab.w.approveTasks.one": "Approve 1 task",
@@ -7265,6 +7371,31 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.googleReviews.approve": "Approve and post to Google",
     "dashboard.googleReviews.posting": "Posting…",
     "dashboard.googleReviews.cancel": "Cancel",
+    "dashboard.googleReviews.all.ready.one": "{count} reply ready",
+    "dashboard.googleReviews.all.ready.other": "{count} replies ready",
+    "dashboard.googleReviews.all.button": "Approve all replies ({count})",
+    "dashboard.googleReviews.all.confirm.one": "Post 1 reply to Google? You can still edit it first.",
+    "dashboard.googleReviews.all.confirm.other": "Post {count} replies to Google? You can still edit any reply first.",
+    "dashboard.googleReviews.all.post": "Post all",
+    "dashboard.googleReviews.all.posting": "Posting {done} of {count}…",
+    "dashboard.googleReviews.all.sent.one": "Posted 1 reply ✓",
+    "dashboard.googleReviews.all.sent.other": "Posted {count} replies ✓",
+    "dashboard.googleReviews.all.failed": "Couldn't post: {names}. The rest went out; try those one by one.",
+    "dashboard.googleReviews.all.premium": "Premium posts all of these in one click →",
+    "dashboard.googleReviews.all.posted": "Posted ✓",
+    "dashboard.googleReviews.draftFailed": "Couldn't write a draft that meets the rules. Try again or write your own.",
+    "dashboard.googleReviews.noDraftYet": "No draft for this review yet. Draft it now or write your own.",
+    "dashboard.googleReviews.tryAgain": "Try again",
+    "dashboard.googleReviews.draftNow": "Draft it now",
+    "dashboard.googleReviews.skip": "Skip for now",
+    "dashboard.googleReviews.showDraft": "Show draft",
+    "dashboard.googleReviews.premiumDraftsAll": "Premium drafts all of them for you →",
+    "dashboard.googleReviews.premiumPosts": "Premium posts it for you in one click →",
+    "dashboard.googleReviews.copyReply": "Copy reply",
+    "dashboard.googleReviews.copied": "Copied ✓",
+    "dashboard.googleReviews.replyOnGoogle": "Reply on Google ↗",
+    "dashboard.googleReviews.growSteps": "1. Copy the reply. 2. Open your reviews on Google. 3. Paste it under this review and post.",
+    "dashboard.googleReviews.introGrow": "Read live from your Google Business Profile — shown here, never stored. PostAI drafts your replies; you copy each one and post it on Google yourself.",
     "dashboard.googleReviews.yourReply": "Your reply on Google",
     "dashboard.googleReviews.edit": "Edit reply",
     "dashboard.googleReviews.save": "Save to Google",
@@ -7321,6 +7452,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.googleReviews.showFewer": "Show fewer",
     "dashboard.googleReviews.pasteCollapsed": "Reply to a review from somewhere else? Paste it here",
     "dashboard.googleReviews.postingOffTip": "Changes to Google are off for this business",
+    "dashboard.googleReviews.postingPremiumTip": "Editing and deleting replies from PostScore is Premium",
     "dashboard.replies.footerInbox": "For reviews from Yelp, Facebook or anywhere else, paste them here.",
     "dashboard.replies.footerConnect": "Connect Google to see and answer every review here.",
     "dashboard.gbpProfileEdits.heading": "Edit on Google",
@@ -8313,6 +8445,17 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.live.unavailable": "Couldn't load from Google right now",
     "dashboard.breakdown.changedOnGoogle": "Changed on Google since your last scan",
     "dashboard.breakdown.rescanToUpdate": "Re-scan to update your score",
+    "dashboard.breakdown.passed.one": "{count} check passed",
+    "dashboard.breakdown.passed.other": "{count} checks passed",
+    "dashboard.breakdown.showAll": "Show all",
+    "dashboard.breakdown.details": "Details",
+    "dashboard.hoursCheck.profileMatches": "Your Business Profile already matches your website; Google Maps hasn't published it yet.",
+    "dashboard.breakdown.headerRescan": "Changed since your last scan · re-scan to update",
+    "dashboard.breakdown.showLess": "Show less",
+    "dashboard.breakdown.allPass": "Everything here passes",
+    "dashboard.breakdown.showAllChecks": "Show all checks",
+    "dashboard.breakdown.changedSince": "Changed since your last scan",
+    "dashboard.breakdown.rescanShort": "Re-scan to update",
     "dashboard.scan.refreshSkipped": "Couldn't refresh from Google right now — PostScore's Google limit for this month was reached. Your score is still the one from your last scan.",
     "dashboard.free.reviewGoalLocked": "See how many reviews you need to pass them, on Grow →",
     "dashboard.competitors.headToHead.intro.one": "Only 1 business like yours within {miles} miles — here's how you compare with {names}",
@@ -8654,6 +8797,8 @@ export const messages: Record<Locale, LocaleMessages> = {
     "content.checks.website.info_consistency.explanation.conflictHours":
       "Your website says {site}; Google says {google}.",
     "content.checks.website.info_consistency.explanation.conflictHoursLabelled": "Your website's {label} say {site}; Google says {google}.",
+    "content.checks.website.info_consistency.explanation.conflictNoGoogle": "Your website says {site}, which doesn't match your Google listing.",
+    "content.checks.website.info_consistency.explanation.conflictHoursLabelledNoGoogle": "Your website's {label} say {site}, which doesn't match your Google listing.",
     "content.checks.website.info_consistency.explanation.hoursUnconfirmed": "Your site lists more than one set of opening hours, and we couldn't confirm which one is current — so we didn't compare them with Google. Excluded from your score, not counted against you.",
     "content.checks.website.info_consistency.explanation.allMatchHoursUnconfirmed": "Your website's phone and address match your Google listing. We didn't compare your hours: your site lists more than one set, and we couldn't confirm which one is current.",
 
@@ -9319,6 +9464,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.googleTab.w.post.loading": "Writing this week's post…",
     "dashboard.googleTab.w.post.failed": "Couldn't write the post right now.",
     "dashboard.googleTab.w.post.fallback": "PostAI couldn't write one right now, so this is a simple starter draft. Edit it to make it yours.",
+    "dashboard.googleTab.w.post.pending": "PostAI writes this week's post in the background; it isn't ready yet, so this is a simple starter draft. Edit it, or check back later.",
     "dashboard.googleTab.w.post.textLabel": "Post text",
     "dashboard.googleTab.w.post.count": "{count} / 1,500 characters",
     "dashboard.googleTab.w.post.photo": "Photo (from your listing)",
@@ -10057,6 +10203,10 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.hoursCheck.differ": "{day}: website {website} · Google {google}",
     "dashboard.hoursCheck.more": "+{count} more",
     "dashboard.fixPlan.waitingForGoogle": "Waiting for Google",
+    "dashboard.hoursCheck.stillWaiting": "Still not on Google Maps after a week? Check your Business Profile for an 'Under review' note, or re-save the hours.",
+    "dashboard.hoursCheck.openProfile": "Open your Business Profile ↗",
+    "dashboard.fixPlan.row.waiting": "Nothing to do: Google is updating Maps from your Business Profile. Your points come back on the first scan after Maps shows the new hours.",
+    "dashboard.breakdown.headerWaiting": "Waiting for Google: {label}",
     "dashboard.hoursCheck.profileAhead": "Your Business Profile already shows your website's hours, but Google Maps hasn't published them yet. Google may still be reviewing the change.",
     "dashboard.fix.premiumOneClick": "Premium does this for you in one click →",
     "dashboard.detailsMismatch.heading": "Your details don't match",
@@ -12670,6 +12820,8 @@ export const messages: Record<Locale, LocaleMessages> = {
     "content.checks.website.performance_mobile.explanation.reasonableV115": "Your site loads in a reasonable time on phones (about {seconds} seconds).",
     "content.checks.website.performance_mobile.explanation.tooSlowV115": "Your site takes about {seconds} seconds to load on phones — many customers leave before it shows.",
     "content.checks.website.performance_mobile.explanation.typicalOfTestsV115": "Typical of your last {count} tests.",
+    "content.checks.website.performance_mobile.explanation.speedIndexNote": "Google couldn't find your page's main content, so this is how fast the page visibly fills in (Google's Speed Index).",
+    "content.checks.website.performance_mobile.explanation.photosHeavy": "Your {count} photos are {size} MB; smaller photos load faster.",
     "content.checks.website.performance_mobile.explanation.lastMeasuredNoteV115": "Last measured {date}.",
     "content.checks.website.performance_mobile.explanation.noSecondsV115": "Not scored: Google's test didn't say how many seconds your page takes to show.",
     "content.checks.website.performance_mobile.explanation.oneTestSoFar": "We need one more speed test to be sure. Your first test took {seconds} s on Google's slow-phone test. This check doesn't count for or against your score until your next scan.",
@@ -13822,6 +13974,10 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.fixPlan.thisWeekLabel.one": "Esta semana · 1 corrección que puede terminar usted mismo, hoy",
     "dashboard.fixPlan.thisWeekLabel.other": "Esta semana · {count} correcciones que puede terminar usted mismo, hoy",
     "dashboard.fixPlan.everyFix": "Cuando termine todas las correcciones",
+    "dashboard.fixPlan.trackNow": "ahora",
+    "dashboard.fixPlan.trackWeek": "esta semana",
+    "dashboard.fixPlan.trackEvery": "todas las correcciones",
+    "dashboard.fixPlan.trackLabel": "{now} ahora, {week} esta semana, {every} cuando termine todas las correcciones",
     "dashboard.fixPlan.nowThisWeek": "{now} ahora · {week} esta semana",
     "dashboard.fixPlan.fromLastScan": "De su último análisis · {date} · los puntos se confirman en su próximo análisis",
     "dashboard.fixPlan.fromLastScanNoDate": "De su último análisis · los puntos se confirman en su próximo análisis",
@@ -13903,6 +14059,30 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.fixPlan.when.this_week": "Esta semana",
     "dashboard.fixPlan.when.weeks": "Toma algunas semanas",
     "dashboard.fixPlan.when.months": "Toma meses",
+    "dashboard.fixPlan.row.found": "Lo que encontramos",
+    "dashboard.fixPlan.row.todo": "Qué hacer",
+    "dashboard.fixPlan.row.diy": "Prefiero hacerlo yo mismo",
+    "dashboard.fixPlan.row.diyHide": "Ocultar los pasos",
+    "dashboard.fixPlan.row.moreHelp": "Más ayuda",
+    "dashboard.fixPlan.row.openGoogle": "Abrir el Perfil de Empresa en Google",
+    "dashboard.fixPlan.row.oneClick.replies": "PostScore redacta cada respuesta; usted la lee, cambia lo que quiera y la aprueba, y se publica en Google. (Beta)",
+    "dashboard.fixPlan.row.oneClick.hours": "PostScore le muestra ambos horarios; usted elige el correcto y lo aprueba, y se publica en Google. (Beta)",
+    "dashboard.fixPlan.row.oneClick.listing": "PostScore hace el cambio en Google: usted lo revisa y lo aprueba, y puede deshacerlo. (Beta)",
+    "dashboard.fixPlan.row.stale": "Vuelva a analizar y su puntuación se pondrá al día con Google.",
+    "dashboard.fixPlan.steps.visibility.review_replies": "Abra sus reseñas.\nEscriba un agradecimiento breve y personal en cada reseña reciente sin respuesta.\nResponda al menos 8 de cada 10 reseñas recientes para obtener todos los puntos.",
+    "dashboard.fixPlan.steps.visibility.reviews_merged": "Copie su enlace de reseñas o imprima su código QR para el mostrador.\nCompártalo con sus clientes justo después de una buena visita.\nPida algunas cada semana; un flujo constante es mejor que muchas de golpe.",
+    "dashboard.fixPlan.steps.visibility.review_count": "Copie su enlace de reseñas o imprima su código QR para el mostrador.\nAgregue el enlace a recibos, mensajes de seguimiento o correos.\nPida solo a clientes reales y nunca ofrezca nada a cambio.",
+    "dashboard.fixPlan.steps.visibility.rating": "Copie su enlace de reseñas o imprima su código QR para el mostrador.\nCompártalo con sus clientes justo después de una buena visita.\nResponda con calma a cualquier reseña negativa.",
+    "dashboard.fixPlan.steps.visibility.review_recency": "Copie su enlace de reseñas o su código QR.\nEnvíelo a 3–5 clientes recientes y satisfechos por mensaje, correo o en el mostrador.\nPida solo a clientes reales y nunca ofrezca nada a cambio.",
+    "dashboard.fixPlan.steps.completeness.phone": "Abra su Perfil de Empresa en Google y elija Editar perfil.\nVaya a Información de contacto → Número de teléfono.\nEscriba el teléfono de su negocio y guarde.",
+    "dashboard.fixPlan.steps.completeness.address": "Abra su Perfil de Empresa en Google y elija Editar perfil.\nVaya a Información de la empresa → Dirección.\nEscriba o corrija su dirección y guarde.",
+    "dashboard.fixPlan.steps.completeness.hours": "Abra su Perfil de Empresa en Google y elija Editar perfil.\nVaya a Información de la empresa → Horario.\nComplete cada día (y el horario festivo si es distinto) y guarde.",
+    "dashboard.fixPlan.steps.completeness.website_link": "¿Aún no tiene sitio? Cree uno en la página Sitio web.\nAbra su Perfil de Empresa en Google → Editar perfil → Información de la empresa → Sitio web.\nPegue la dirección de su sitio y guarde.",
+    "dashboard.fixPlan.steps.completeness.categories": "Abra su Perfil de Empresa en Google y elija Editar perfil.\nVaya a Información de la empresa → Categoría.\nAgregue cada categoría que de verdad corresponda, la más específica primero.",
+    "dashboard.fixPlan.steps.completeness.photos": "Abra su Perfil de Empresa en Google y elija Fotos.\nElija Agregar fotos.\nAgregue su fachada, el interior, su equipo y su trabajo.",
+    "dashboard.fixPlan.steps.completeness.business_status": "Abra su Perfil de Empresa en Google y revise el estado de su ficha.\nSi aparece cerrada por error, elija Reabrir esta empresa.\nSi fue suspendida, presente una solicitud de restablecimiento.",
+    "dashboard.fixPlan.steps.completeness.customer_details": "Abra su Perfil de Empresa en Google y elija Editar perfil.\nVaya a {path}.\nAgregue solo lo que sea cierto y guarde.",
+    "dashboard.fixPlan.steps.website.info_consistency": "Decida cuál es el correcto: su sitio web o su ficha de Google.\nActualice el otro para que coincida.\nVuelva a analizar y PostScore confirmará que coinciden.",
     "dashboard.overview.someFixesTakeMonths": "Algunas correcciones toman meses (las reseñas crecen con el tiempo).",
     "dashboard.breakdown.action.replyInReviews": "Responda en Reseñas",
     "dashboard.googleTab.w.approveTasks.one": "Aprobar 1 tarea",
@@ -14330,6 +14510,31 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.googleReviews.approve": "Aprobar y publicar en Google",
     "dashboard.googleReviews.posting": "Publicando…",
     "dashboard.googleReviews.cancel": "Cancelar",
+    "dashboard.googleReviews.all.ready.one": "{count} respuesta lista",
+    "dashboard.googleReviews.all.ready.other": "{count} respuestas listas",
+    "dashboard.googleReviews.all.button": "Aprobar todas las respuestas ({count})",
+    "dashboard.googleReviews.all.confirm.one": "¿Publicar 1 respuesta en Google? Aún puede editarla antes.",
+    "dashboard.googleReviews.all.confirm.other": "¿Publicar {count} respuestas en Google? Aún puede editar cualquier respuesta antes.",
+    "dashboard.googleReviews.all.post": "Publicar todas",
+    "dashboard.googleReviews.all.posting": "Publicando {done} de {count}…",
+    "dashboard.googleReviews.all.sent.one": "1 respuesta publicada ✓",
+    "dashboard.googleReviews.all.sent.other": "{count} respuestas publicadas ✓",
+    "dashboard.googleReviews.all.failed": "No se pudo publicar: {names}. Las demás se enviaron; inténtelas una por una.",
+    "dashboard.googleReviews.all.premium": "Premium publica todas estas con un clic →",
+    "dashboard.googleReviews.all.posted": "Publicada ✓",
+    "dashboard.googleReviews.draftFailed": "No se pudo escribir un borrador que cumpla las reglas. Inténtelo de nuevo o escriba la suya.",
+    "dashboard.googleReviews.noDraftYet": "Aún no hay borrador para esta reseña. Redáctelo ahora o escriba la suya.",
+    "dashboard.googleReviews.tryAgain": "Intentar de nuevo",
+    "dashboard.googleReviews.draftNow": "Redactarlo ahora",
+    "dashboard.googleReviews.skip": "Omitir por ahora",
+    "dashboard.googleReviews.showDraft": "Ver borrador",
+    "dashboard.googleReviews.premiumDraftsAll": "Premium las redacta todas por usted →",
+    "dashboard.googleReviews.premiumPosts": "Premium la publica por usted con un clic →",
+    "dashboard.googleReviews.copyReply": "Copiar respuesta",
+    "dashboard.googleReviews.copied": "Copiada ✓",
+    "dashboard.googleReviews.replyOnGoogle": "Responder en Google ↗",
+    "dashboard.googleReviews.growSteps": "1. Copie la respuesta. 2. Abra sus reseñas en Google. 3. Péguela debajo de esta reseña y publíquela.",
+    "dashboard.googleReviews.introGrow": "Se leen en vivo de su Perfil de Empresa en Google: se muestran aquí, nunca se guardan. PostAI redacta sus respuestas; usted copia cada una y la publica en Google.",
     "dashboard.googleReviews.yourReply": "Su respuesta en Google",
     "dashboard.googleReviews.edit": "Editar respuesta",
     "dashboard.googleReviews.save": "Guardar en Google",
@@ -14386,6 +14591,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.googleReviews.showFewer": "Ver menos",
     "dashboard.googleReviews.pasteCollapsed": "¿Responder a una reseña de otro sitio? Péguela aquí",
     "dashboard.googleReviews.postingOffTip": "Los cambios en Google están desactivados para este negocio",
+    "dashboard.googleReviews.postingPremiumTip": "Editar y eliminar respuestas desde PostScore es parte de Premium",
     "dashboard.replies.footerInbox": "Para reseñas de Yelp, Facebook o cualquier otro sitio, péguelas aquí.",
     "dashboard.replies.footerConnect": "Conecte Google para ver y responder todas sus reseñas aquí.",
     "dashboard.gbpProfileEdits.heading": "Editar en Google",
@@ -15383,6 +15589,17 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.live.unavailable": "No se pudo cargar desde Google en este momento",
     "dashboard.breakdown.changedOnGoogle": "Cambió en Google desde su último escaneo",
     "dashboard.breakdown.rescanToUpdate": "Vuelva a escanear para actualizar su puntuación",
+    "dashboard.breakdown.passed.one": "{count} comprobación aprobada",
+    "dashboard.breakdown.passed.other": "{count} comprobaciones aprobadas",
+    "dashboard.breakdown.showAll": "Mostrar todas",
+    "dashboard.breakdown.details": "Detalles",
+    "dashboard.hoursCheck.profileMatches": "Su Perfil de Empresa ya coincide con su sitio web; Google Maps aún no lo ha publicado.",
+    "dashboard.breakdown.headerRescan": "Cambió desde su último análisis · vuelva a analizar para actualizar",
+    "dashboard.breakdown.showLess": "Mostrar menos",
+    "dashboard.breakdown.allPass": "Todo aquí está aprobado",
+    "dashboard.breakdown.showAllChecks": "Mostrar todas las comprobaciones",
+    "dashboard.breakdown.changedSince": "Cambió desde su último análisis",
+    "dashboard.breakdown.rescanShort": "Vuelva a analizar para actualizar",
     "dashboard.scan.refreshSkipped": "No se pudo actualizar desde Google en este momento: se alcanzó el límite mensual de PostScore con Google. Su puntuación sigue siendo la de su último escaneo.",
     "dashboard.free.reviewGoalLocked": "Vea cuántas reseñas necesita para superarlos, en Grow →",
     "dashboard.competitors.headToHead.intro.one": "Solo hay 1 negocio como el suyo a menos de {miles} millas: así se compara con {names}",
@@ -15625,6 +15842,8 @@ export const messages: Record<Locale, LocaleMessages> = {
     "content.checks.website.info_consistency.explanation.conflictAddress": "Su sitio web dice {site}; Google dice {google}.",
     "content.checks.website.info_consistency.explanation.conflictHours": "Su sitio web dice {site}; Google dice {google}.",
     "content.checks.website.info_consistency.explanation.conflictHoursLabelled": "El apartado «{label}» de su sitio web dice {site}; Google dice {google}.",
+    "content.checks.website.info_consistency.explanation.conflictNoGoogle": "Su sitio web dice {site}, lo cual no coincide con su ficha de Google.",
+    "content.checks.website.info_consistency.explanation.conflictHoursLabelledNoGoogle": "El apartado «{label}» de su sitio web dice {site}, lo cual no coincide con su ficha de Google.",
     "content.checks.website.info_consistency.explanation.hoursUnconfirmed": "Su sitio indica más de un horario de apertura y no pudimos confirmar cuál es el actual, así que no lo comparamos con Google. Se excluye de su puntuación, no se cuenta en su contra.",
     "content.checks.website.info_consistency.explanation.allMatchHoursUnconfirmed": "El teléfono y la dirección de su sitio web coinciden con su ficha de Google. No comparamos su horario: su sitio indica más de uno y no pudimos confirmar cuál es el actual.",
     "content.checks.website.notice_freshness.label": "Avisos actualizados",
@@ -16275,6 +16494,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.googleTab.w.post.loading": "Escribiendo la publicación de esta semana…",
     "dashboard.googleTab.w.post.failed": "No se pudo escribir la publicación en este momento.",
     "dashboard.googleTab.w.post.fallback": "PostAI no pudo escribir una ahora, así que este es un borrador sencillo. Edítelo a su gusto.",
+    "dashboard.googleTab.w.post.pending": "PostAI escribe la publicación de esta semana en segundo plano; aún no está lista, así que este es un borrador sencillo. Edítelo o vuelva más tarde.",
     "dashboard.googleTab.w.post.textLabel": "Texto de la publicación",
     "dashboard.googleTab.w.post.count": "{count} / 1.500 caracteres",
     "dashboard.googleTab.w.post.photo": "Foto (de su ficha)",
@@ -17013,6 +17233,10 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.hoursCheck.differ": "{day}: sitio web {website} · Google {google}",
     "dashboard.hoursCheck.more": "+{count} más",
     "dashboard.fixPlan.waitingForGoogle": "Esperando a Google",
+    "dashboard.hoursCheck.stillWaiting": "¿Todavía no aparece en Google Maps después de una semana? Revise si su Perfil de Empresa tiene una nota de 'En revisión', o vuelva a guardar el horario.",
+    "dashboard.hoursCheck.openProfile": "Abrir su Perfil de Empresa ↗",
+    "dashboard.fixPlan.row.waiting": "No tiene que hacer nada: Google está actualizando Maps con su Perfil de Empresa. Sus puntos vuelven en el primer análisis después de que Maps muestre el nuevo horario.",
+    "dashboard.breakdown.headerWaiting": "Esperando a Google: {label}",
     "dashboard.hoursCheck.profileAhead": "Su Perfil de Empresa ya muestra el horario de su sitio web, pero Google Maps aún no lo ha publicado. Es posible que Google todavía esté revisando el cambio.",
     "dashboard.fix.premiumOneClick": "Premium lo hace por usted con un clic →",
     "dashboard.detailsMismatch.heading": "Sus datos no coinciden",
@@ -19839,6 +20063,8 @@ export const messages: Record<Locale, LocaleMessages> = {
     "content.checks.website.performance_mobile.explanation.reasonableV115": "Su sitio carga en un tiempo razonable en teléfonos (unos {seconds} segundos).",
     "content.checks.website.performance_mobile.explanation.tooSlowV115": "Su sitio tarda unos {seconds} segundos en cargar en teléfonos; muchos clientes se van antes de que aparezca.",
     "content.checks.website.performance_mobile.explanation.typicalOfTestsV115": "Lo habitual en sus últimas {count} pruebas.",
+    "content.checks.website.performance_mobile.explanation.speedIndexNote": "Google no pudo encontrar el contenido principal de su página, así que esto es lo rápido que la página se llena a la vista (el Speed Index de Google).",
+    "content.checks.website.performance_mobile.explanation.photosHeavy": "Sus {count} fotos pesan {size} MB; las fotos más livianas cargan más rápido.",
     "content.checks.website.performance_mobile.explanation.lastMeasuredNoteV115": "Última medición: {date}.",
     "content.checks.website.performance_mobile.explanation.noSecondsV115": "No se califica: la prueba de Google no indicó cuántos segundos tarda su página en mostrarse.",
     "content.checks.website.performance_mobile.explanation.oneTestSoFar": "Necesitamos una prueba de velocidad más para estar seguros. Su primera prueba tardó {seconds} s en la prueba de Google con un teléfono lento. Esta comprobación no cuenta a favor ni en contra de su puntuación hasta su próximo escaneo.",

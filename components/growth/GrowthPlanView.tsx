@@ -95,25 +95,34 @@ function Track({ tier }: { tier: TierNumber }) {
   );
 }
 
+/** A requirement row's mark: a green ✓ only when it's met, an empty circle when it isn't. */
+function MetMark({ met }: { met: boolean }) {
+  return met ? (
+    <IconCheck size={13} aria-hidden className="mr-1 inline text-green" data-mark="met" />
+  ) : (
+    <span aria-hidden data-mark="open" className="mr-1 inline-block h-[13px] w-[13px] translate-y-[2px] rounded-full border-[1.5px] border-ink-mute" />
+  );
+}
+
 function Needs({ title, needs, have, active, results, nextResult }: { title: string; needs: NonNullable<GrowthState["next"]>; have: string; active: string; results: string | null; nextResult: string | null }) {
   const locale = useLocale();
   const parts = needs.results > 0 ? 2 : 1;
-  const done = (needs.activeNow >= needs.activeWeeks ? 1 : 0) + (needs.results > 0 && needs.resultsNow >= needs.results ? 1 : 0);
+  const done = (needs.activeMet ? 1 : 0) + (needs.results > 0 && needs.resultsMet ? 1 : 0);
   return (
-    <Card className="flex flex-col gap-2 p-4" data-testid="tier-needs">
+    <Card className="flex flex-col gap-2 p-4" data-testid="tier-needs" data-tier={needs.tier}>
       <div className="flex items-baseline justify-between gap-2">
         <h3 className="text-[14px] font-semibold text-ink">{title}</h3>
-        <span className="text-[12px] font-semibold text-ink-mute">{t(locale, G("needs.progress"), { done, of: parts })}</span>
+        <span className="text-[12px] font-semibold text-ink-mute" data-testid="needs-progress">{t(locale, G("needs.progress"), { done, of: parts })}</span>
       </div>
-      <p className="text-[13px] text-ink">
-        <IconCheck size={13} aria-hidden className={cn("mr-1 inline", needs.activeNow >= needs.activeWeeks ? "text-green" : "text-ink-mute")} />
+      <p className="text-[13px] text-ink" data-testid="needs-active" data-met={needs.activeMet || undefined}>
+        <MetMark met={needs.activeMet} />
         {active}
       </p>
       <p className="-mt-1 pl-[18px] text-[12.5px] text-ink-soft">{have}</p>
       {results && (
         <>
-          <p className="text-[13px] text-ink">
-            <IconCheck size={13} aria-hidden className={cn("mr-1 inline", needs.resultsNow >= needs.results ? "text-green" : "text-ink-mute")} />
+          <p className="text-[13px] text-ink" data-testid="needs-results" data-met={needs.resultsMet || undefined}>
+            <MetMark met={needs.resultsMet} />
             {results}
           </p>
           {nextResult && <p className="-mt-1 pl-[18px] text-[12.5px] text-ink-soft">{nextResult}</p>}
@@ -219,7 +228,7 @@ function TopCard({ stay }: { stay: NonNullable<GrowthState["stay"]> }) {
   const row = (ok: boolean, text: string, sub: string, id: string) => (
     <li className="flex flex-col" data-testid={`top-${id}`} data-met={ok || undefined}>
       <span className="text-[13px] text-ink">
-        <IconCheck size={13} aria-hidden className={cn("mr-1 inline", ok ? "text-green" : "text-ink-mute")} />
+        <MetMark met={ok} />
         {text}
       </span>
       <span className="pl-[18px] text-[12.5px] text-ink-soft">{sub}</span>
@@ -231,7 +240,7 @@ function TopCard({ stay }: { stay: NonNullable<GrowthState["stay"]> }) {
       <p className="text-[13.5px] text-ink-soft">{t(locale, G("top.body"))}</p>
       <ul className="flex flex-col gap-1.5">
         {row(stay.activeOk, t(locale, G("top.active")), t(locale, G("top.activeHave"), { n: stay.activeNow, of: stay.of }), "active")}
-        {row(stay.resultsNow >= stay.results, t(locale, G("top.results")), t(locale, G("top.resultsHave"), { n: stay.resultsNow }), "results")}
+        {row(stay.resultsOk, t(locale, G("top.results")), t(locale, G("top.resultsHave"), { n: stay.resultsNow }), "results")}
       </ul>
     </Card>
   );
@@ -332,7 +341,7 @@ export function WeekPlanCard({
       : t(locale, G(target === "next" ? "top.nextWeek" : "top.thisWeek"));
   const sub = state?.thisWeekCounts ? t(locale, G("top.alreadyCounts")) : null;
   // The next result is for the first tier above whose results aren't in hand yet.
-  const resultTier = state?.next ? (state.next.results > 0 && state.next.resultsNow < state.next.results ? state.next.tier : state.after?.tier ?? null) : null;
+  const resultTier = state?.next ? (state.next.results > 0 && !state.next.resultsMet ? state.next.tier : state.after?.tier ?? null) : null;
   const nextResult = state?.nextResult && resultTier ? t(locale, G("top.nextResult"), { tier: tierName(locale, resultTier), result: t(locale, G(`${RESULT_KEY[state.nextResult]}.goal`)) }) : null;
   const extras = routine.filter((r) => ROUTINE_EXTRAS.includes(r.id));
   return (

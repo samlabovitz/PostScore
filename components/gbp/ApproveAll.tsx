@@ -88,7 +88,8 @@ export function ApproveAll({
     items.post ? t(locale, W("approveAll.what.post")) : null,
     items.answers ? t(locale, W("approveAll.what.answers")) : null,
   ].filter(Boolean);
-  const loading = [replies, post, answers].some((s) => s && (s.status === "idle" || s.status === "loading"));
+  // A saved post draft isn't "getting ready": only a part with nothing to show yet is.
+  const loading = [replies, post, answers].some((s) => s && (s.status === "idle" || s.status === "loading") && !(s === post && post?.text));
 
   const run = async () => {
     const replyIds = replies?.canPost ? Array.from(new Set(replies.ready)) : [];

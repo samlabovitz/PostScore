@@ -191,10 +191,10 @@ describe("on the page (EN + ES)", () => {
     expect(a).toContain('data-testid="reply-waiting"');
     expect(a).toContain("Waiting for Google to show your reply…");
     expect(a).not.toContain("text-red");
-    expect(a).not.toContain("draft-google-reply");
+    expect(a).not.toContain("draft-try-again");
     expect(a).not.toContain("Write my own");
-    // The other review keeps its buttons.
-    expect(rowOf(html, "b")).toContain("draft-google-reply");
+    // The other review keeps its reply box (Premium: never the old buttons).
+    expect(rowOf(html, "b")).toContain("draft-try-again");
     expect(render([review("a")], [pendingFor("post", "a", "Thanks!", Date.now())], "es")).toContain("Esperando a que Google muestre su respuesta…");
   });
 
@@ -210,7 +210,7 @@ describe("on the page (EN + ES)", () => {
     expect(a).toContain('data-testid="reply-timed-out"');
     expect(a).toContain("Google hasn&#x27;t shown it yet. Check Google Maps before trying again.");
     expect(a).toContain("--color-amber");
-    expect(a).toContain("draft-google-reply");
+    expect(a).toContain("draft-try-again");
     expect(render([review("a")], [pendingFor("post", "a", "Thanks!", Date.now() - PENDING_TIMEOUT_MS - 1000)], "es")).toContain("Google aún no la muestra. Revise Google Maps antes de intentarlo de nuevo.");
   });
 

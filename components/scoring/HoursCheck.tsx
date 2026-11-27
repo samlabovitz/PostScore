@@ -10,7 +10,8 @@ import { RESCAN_BUTTON_ID } from "@/components/scoring/ScanStatusStrip";
 import { FIX_BUTTON_CLASS } from "@/components/scoring/FixButton";
 import { formatTime, type DayHours } from "@/lib/gbpProfileEdits";
 import { dayName } from "@/lib/hoursEditor";
-import type { HoursCheckState } from "@/lib/hoursCheck";
+import { waitingLong, type HoursCheckState } from "@/lib/hoursCheck";
+import { GOOGLE_BUSINESS_URL } from "@/lib/googleProfileTab";
 import { formatShortDate, t, useLocale, useTimeZone, type Locale, type MessageKey } from "@/lib/i18n";
 import { rescanAvailability } from "@/lib/rescanPolicy";
 
@@ -39,7 +40,22 @@ export function HoursDiffLines({ state }: { state: Extract<HoursCheckState, { ki
       ))}
       {state.days.length > shown.length && <span>{t(locale, K("more"), { count: state.days.length - shown.length })}</span>}
       {state.profileAhead && <span data-testid="hours-profile-ahead" className="text-ink-mute">{t(locale, K("profileAhead"))}</span>}
+      <StillWaitingLine state={state} />
     </div>
+  );
+}
+
+/** Waiting on Google for more than a week: what the owner can check. */
+export function StillWaitingLine({ state }: { state: HoursCheckState | null | undefined }) {
+  const locale = useLocale();
+  if (!waitingLong(state)) return null;
+  return (
+    <span data-testid="hours-still-waiting" className="text-[12.5px] leading-snug text-ink-soft">
+      {t(locale, K("stillWaiting"))}{" "}
+      <a href={GOOGLE_BUSINESS_URL} target="_blank" rel="noopener noreferrer" className="font-medium text-ink underline decoration-brass underline-offset-2 hover:text-ink-soft">
+        {t(locale, K("openProfile"))}
+      </a>
+    </span>
   );
 }
 

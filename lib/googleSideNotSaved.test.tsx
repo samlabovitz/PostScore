@@ -39,7 +39,9 @@ describe("website vs Google: Google's side is never saved, and rebuilt when show
     const saved = withoutGoogleSide({ websiteTrust: { infoConflicts: [{ field: "phone", comparison: "conflicts", siteValue: "908-555-0100", googleValue: "(908) 555-0199" }] } });
     expect(JSON.stringify(saved)).not.toContain("googleValue");
     expect(JSON.stringify(saved)).toContain("908-555-0100");
-    expect(src("lib/scoring.ts")).toContain("google: googleSideOf(first, input) ?? \"\"");
+    // Rebuilt from the listing at hand; not at hand → the sentence without Google's side (never "Google says .").
+    expect(src("lib/scoring.ts")).toContain("const google = googleSideOf(first, input);");
+    expect(src("lib/scoring.ts")).toContain("explanation.conflictNoGoogle");
     expect(src("lib/monthlyReportExtras.ts")).toContain("google: googleSideOf(f, input)");
   });
 

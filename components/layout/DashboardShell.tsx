@@ -158,7 +158,9 @@ export function DashboardShell({
           />
           )}
 
-          <main className="min-w-0 p-4 sm:p-8 nav:ml-[250px] nav:p-10">
+          {/* Bottom room for the floating "Ask PostAI" button (components/assistant/PostAIDock.tsx: 128px up on
+              phones, 68px from sm), so the page's last buttons always scroll clear of it. */}
+          <main className="min-w-0 p-4 pb-40 sm:p-8 sm:pb-28 nav:ml-[250px] nav:p-10 nav:pb-28">
             {/* Day 23B: arrived from the Overview's fix buttons. */}
             <Suspense fallback={null}>
               <BackToScore />

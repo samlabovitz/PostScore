@@ -8,7 +8,7 @@ import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Locale } from "@/lib/i18n";
-import { isReplyVoice, namedInReview, replyAcceptable, replyBreaksRules, replyHasStockPhrase, cleanReply, replySystemPrompt, replyUserMessage, type ReplyStyle, type ReplyVoice, type ReviewInput } from "@/lib/reviewReplies";
+import { isReplyVoice, namedInReview, nameNotFirst, replyRejection, sharedPhrases, cleanReply, replySystemPrompt, replyUserMessage, type ReplyStyle, type ReplyVoice, type ReviewInput } from "@/lib/reviewReplies";
 import type { AnthropicUsage } from "@/lib/anthropicClient";
 
 /** The owner's "Replies are written as" choice; "me" until they choose (or before supabase/reply-voice.sql). */
@@ -29,7 +29,8 @@ export async function draftReplyText(input: ReviewInput, locale: Locale, busines
   const { callAnthropicMessage } = await import("@/lib/anthropicClient");
   let fallback: string | null = null;
   style = { ...style, named: namedInReview(input.review, style.firstName ?? null, businessName) };
-  for (let attempt = 0; attempt < 3; attempt++) {
+  const attempts = Math.max(1, Math.min(8, style.attempts ?? 3));
+  for (let attempt = 0; attempt < attempts; attempt++) {
     let reply: string;
     try {
       reply = cleanReply(
@@ -42,12 +43,19 @@ export async function draftReplyText(input: ReviewInput, locale: Locale, busines
       );
     } catch (e) {
       // One busy or rate-limited answer (ten drafts run at once) doesn't end the draft: try again.
-      if (attempt === 2 && fallback === null) throw e;
+      if (attempt === attempts - 1 && fallback === null) throw e;
       continue;
     }
-    if (replyAcceptable(reply, style.firstName ?? null, { voice: style.voice ?? "me", review: input.review, businessName, locale, avoid: style.avoidPhrases, batch: style.batch })) return reply;
-    // Only the name's place was off: usable if no later try is better (never one that misses the voice or language).
-    if (reply && !replyBreaksRules(reply) && !replyHasStockPhrase(reply) && replyAcceptable(reply, null, { voice: style.voice ?? "me", review: input.review, businessName, locale, avoid: style.avoidPhrases })) fallback ??= reply;
+    const problem = replyRejection(reply, style.firstName ?? null, { voice: style.voice ?? "me", review: input.review, businessName, locale, avoid: style.avoidPhrases, batch: style.batch });
+    if (problem === null) return reply;
+    // Only the name's place was off: usable if no later try is better (never one that misses the voice or the
+    // language, or repeats the rest of the batch).
+    if (reply && style.firstName && problem === nameNotFirst(style.firstName)) fallback ??= reply;
+    // The next try fixes this one, told exactly what was wrong (the owner's own "Different wording" etc. aside), and
+    // every phrase the tries so far repeated stays off-limits, so a fix doesn't trade one repeat for another.
+    const repeated = reply && style.batch?.length ? sharedPhrases(reply, style.batch, style.firstName ?? null) : [];
+    if (repeated.length) style = { ...style, avoidPhrases: Array.from(new Set([...(style.avoidPhrases ?? []), ...repeated])).slice(-24) };
+    if (reply && (!style.previous || style.previous.mode === "fix")) style = { ...style, previous: { text: reply, mode: "fix", problem } };
   }
   return fallback;
 }

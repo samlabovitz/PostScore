@@ -15,7 +15,7 @@ import { t } from "@/lib/i18n";
 
 describe("service options: shown, never scored", () => {
   test("no “Takeout & delivery on Google” check in any version", () => {
-    expect(SCORING_VERSION).toBe("1.17.0");
+    expect(SCORING_VERSION).toBe("1.18.0");
     expect(checksFor(SCORING_VERSION)).toBe(CHECKS_V112);
     expect(checksFor(SCORING_VERSION).some((c) => c.id === "completeness.order_options")).toBe(false);
     expect(scoreBusiness(scoringInput()).checks.some((c) => c.id === "completeness.order_options")).toBe(false);

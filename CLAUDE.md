@@ -61,6 +61,7 @@ Next.js 14 + Supabase. These rules are standing: follow them in every session.
 - **New design (Presence/Growth):** it goes live for owners (`NEW_PAGES_LIVE` true in production, `lib/routes.ts`) only after Sam approves the full version in person on localhost:3001. Never flip it without that OK.
   - Preview: `npm run dev:new` runs the same code on localhost:3001 with the new design on (`NEXT_PUBLIC_NEW_DESIGN_PREVIEW=true`, its own `.next-new` build folder). `npm run dev` on :3000 and production stay as today.
   - Claude Code's own dev servers and screenshots use port 3100 (its own build folder), never 3000 or 3001.
+- **Reply drafts follow the plan once checkout exists:** until then, production's daily job (and the run after a scan or voice change) drafts replies for every connected business as Premium (pilots get Premium free for 30 days). When real plans exist, set `PLAN_BASED_DRAFTING = true` in `lib/replyBatch.server.ts`: Premium drafts every unanswered review, Grow up to its weekly allowance, Free none.
 - Until then: test and practice rows never count toward a real owner's tier. Only the dev test login's businesses count their own test activity, shown with a "Test account" tag.
 
 ## Committing

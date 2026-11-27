@@ -45,7 +45,8 @@ export function repliesState(s: WeekRepliesState, failed = false): ItemState {
 }
 
 export function postState(s: PostDraftState, failed = false): ItemState {
-  if (s.status === "idle" || s.status === "loading") return "loading";
+  // A saved draft is ready to read while the rest loads: never "Getting drafts ready…" then.
+  if (s.status === "idle" || s.status === "loading") return s.text ? "ready" : "loading";
   if (s.latest && s.latest.state !== "rejected") return "done";
   if (s.blockedToday) return "tomorrow";
   if (failed) return "failed";
@@ -120,7 +121,8 @@ export function WeekItem({ rec, state, type, businessId, canEdit, children, fail
           <TierLineNote kind={rec.kind} />
         </div>
         <div className="flex shrink-0 flex-wrap items-center gap-2.5">
-          <Badge state={state} minutes={needsMinutes(rec)} tomorrow={tomorrow} />
+          {/* The replies' line already says "drafted and ready": no "Ready" pill beside it. */}
+          {!(line && state === "ready") && <Badge state={state} minutes={needsMinutes(rec)} tomorrow={tomorrow} />}
           {line ? (
             line
           ) : rec.kind === "photos" ? (
@@ -188,7 +190,7 @@ export function itemText(rec: Rec, locale: ReturnType<typeof useLocale>, type: I
 
 /** Section 1's "What to do this week" card: the title with Approve all at the top right, the levers as
  * status chips (`chips`), then one row per to-do — a preview opens under its row, one at a time. */
-export function ThisWeekList({ businessId, recs, type, canEdit, practice, title, chips }: { businessId: string; recs: Rec[]; type: IdeaType | null; canEdit: boolean; practice: boolean; title?: React.ReactNode; chips?: React.ReactNode }) {
+export function ThisWeekList({ businessId, recs, type, canEdit, practice, title, chips, savedPost = null }: { businessId: string; recs: Rec[]; type: IdeaType | null; canEdit: boolean; practice: boolean; title?: React.ReactNode; chips?: React.ReactNode; savedPost?: string | null }) {
   const locale = useLocale();
   const timeZone = useTimeZone();
   // Growth plan (Day 25B step 6): ranked by what each task does for the tier.
@@ -198,7 +200,8 @@ export function ThisWeekList({ businessId, recs, type, canEdit, practice, title,
   const answersRec = list.find((r): r is Extract<Rec, { kind: "answers" }> => r.kind === "answers");
   const day = postRec && postRec.plan.weekday !== null && postRec.plan.date ? `${weekdayName(postRec.plan.weekday, "en")}, ${shortDate(postRec.plan.date, "en")}` : null;
   const replies = useWeekReplies(businessId, { auto: has("replies") });
-  const post = usePostDraft(businessId, { day, auto: has("posts") });
+  // A saved draft shows at once (the background run wrote it); the rest of the post (photos, Google's state) loads.
+  const post = usePostDraft(businessId, { day, auto: has("posts"), initialText: savedPost });
   const answers = useAnswers(businessId, { auto: has("answers"), suggest: answersRec?.plan.suggest ?? [] });
   const [failures, setFailures] = useState<ItemFailures>({});
   const [openKind, setOpenKind] = useState<Rec["kind"] | null>(null);

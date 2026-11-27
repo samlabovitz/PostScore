@@ -268,7 +268,7 @@ export function BusinessScoreView({
         {/* C. What's behind the score: the breakdown (collapsed), then the
             competitor rank. */}
         <FreeSection id="behind" title={t(locale, freeSection("behind").titleKey)} body={t(locale, freeSection("behind").bodyKey)}>
-          <ScoreBreakdownPanel businessId={businessId} categories={breakdown.categories} hasWebsite={hasWebsite} scoreBasis={scoreBasis} audit websiteFixCount={null} lastScanAt={lastScanAt} accountCollapsed={uiPrefs.breakdownCollapsed} serviceOptions={serviceOptions} />
+          <ScoreBreakdownPanel hoursCheck={hoursCheck} businessId={businessId} categories={breakdown.categories} hasWebsite={hasWebsite} scoreBasis={scoreBasis} audit websiteFixCount={null} lastScanAt={lastScanAt} accountCollapsed={uiPrefs.breakdownCollapsed} serviceOptions={serviceOptions} />
           <Card className="p-5" data-testid="free-rank">
             <h3 className="mb-3 font-serif text-[15px] font-semibold text-ink">{t(locale, "dashboard.free.rankHeading")}</h3>
             {/* No live competitor read on Free: 1–2 competitors get the locked line, not "—" names. */}
@@ -362,6 +362,7 @@ export function BusinessScoreView({
       </div>
 
       <ScoreBreakdownPanel
+        hoursCheck={hoursCheck}
         businessId={businessId}
         categories={breakdown.categories}
         hasWebsite={hasWebsite}

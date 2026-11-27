@@ -57,6 +57,8 @@ export interface PostDraftState {
   /** Grow: new drafts left this week; null: unlimited. */
   left: number | null;
   fallback: boolean;
+  /** This week's PostAI draft is still being written in the background: the plain draft for now. */
+  pending?: boolean;
   /** Premium on a connected listing (or practice mode). */
   publish: { canEdit: boolean; practice: boolean } | null;
   /** Can't go to Google today: one post a day, or the day's approval limit. */
@@ -101,6 +103,7 @@ export function usePostDraft(businessId: string, opts: { day: string | null; aut
   const left = useDraftsLeft(businessId);
   const setLeft = useCallback((v: number | null) => setDraftsLeft(businessId, v), [businessId]);
   const [fallback, setFallback] = useState(false);
+  const [pending, setPending] = useState(false);
   const [anotherBusy, setAnotherBusy] = useState(false);
   const [anotherLimit, setAnotherLimit] = useState(false);
   const [blockedToday, setBlockedToday] = useState<PostDraftState["blockedToday"]>(null);
@@ -118,6 +121,7 @@ export function usePostDraft(businessId: string, opts: { day: string | null; aut
         setTexts((m) => ({ update: m.update || r.drafts.update, qa: m.qa || r.drafts.qa || "", offer: m.offer || r.drafts.offer || "" }));
         if (!opts.initialType) setType(r.defaultType);
         setFallback(!opts.initialText && r.fallback);
+        setPending(!opts.initialText && !!r.pending);
         setLeft(r.left);
         setCta(r.ctas[0]?.type ?? "NONE");
         setPhotoName(r.publish?.photos[0]?.name ?? null);
@@ -164,6 +168,7 @@ export function usePostDraft(businessId: string, opts: { day: string | null; aut
     setPhotoName,
     left,
     fallback,
+    pending,
     publish: data?.publish ? { canEdit: data.publish.canEdit, practice: data.publish.practice } : null,
     blockedToday,
     setBlockedToday,
@@ -300,6 +305,11 @@ export function PostPreview({ businessId, state, kind = "week", standalonePublis
     <div className="flex flex-col gap-4" data-testid={`post-preview-${kind}`}>
       <TypePicker state={state} disabled={!!live} />
       {state.fallback && <p className="text-[13px] text-ink-mute">{t(locale, W("post.fallback"))}</p>}
+      {state.pending && !state.fallback && (
+        <p className="text-[13px] text-ink-mute" data-testid="post-pending">
+          {t(locale, W("post.pending"))}
+        </p>
+      )}
       {state.offer && (
         <p className="rounded-lg bg-paper px-3 py-2.5 text-[13px] text-ink-soft" data-testid="post-offer">
           {t(locale, W(state.publish ? "post.offer.premium" : "post.offer.grow"), { offer: state.offer.offer, code: state.offer.code })}

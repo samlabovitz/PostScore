@@ -2,7 +2,6 @@ import { GOOGLE_MISMATCH_CHECK_ID } from "@/lib/actionPlan";
 import { loadHoursCheck } from "@/lib/hoursCheck.server";
 import { NEW_PAGES_LIVE } from "@/lib/routes";
 import { GrowthPlanPage } from "./GrowthPlanPage";
-import { withHoursWhen } from "@/lib/hoursCheck";
 import { loadDetailsMismatches, loadNowMatchPrompts } from "@/lib/detailsMismatch.server";
 import { googleWritesAllowed } from "@/lib/gbpReviewPractice";
 import { parseGbpResult } from "@/lib/gbpLanding";
@@ -296,6 +295,14 @@ export default async function GrowthPage({ params, searchParams = {} }: { params
             booking: bookingState,
             media: media ? { photos: media.photos, posts: media.posts, checkedAt: media.checkedAt } : null,
             extras,
+            savedPostDraft: await (async () => {
+              // This week's post draft, as the background run saved it (in the business's own week and language).
+              const [{ savedDraft }, { weekStartOf }, { viewLocale }] = await Promise.all([import("@/lib/postDrafts.server"), import("@/lib/gbpPosts"), import("@/lib/viewLocale.server")]);
+              const { createAdminClient } = await import("@/lib/supabase/admin");
+              const week = weekStartOf(Date.now(), business.time_zone ?? DEFAULT_BUSINESS_TIMEZONE);
+              const text = await savedDraft(createAdminClient(), params.id, week, viewLocale((row as { language?: string | null }).language ?? null)).catch(() => null);
+              return typeof text === "string" ? text : null;
+            })(),
             // "Change it back" / Undo from PostScore: practice, or on the live list.
             nicheId: (row as { niche_id?: string | null }).niche_id ?? null,
             // The website's hours from the last scan (section 6's hours card, "Website's version").
@@ -321,16 +328,11 @@ export default async function GrowthPage({ params, searchParams = {} }: { params
         })()
       : null;
 
-  // The scored hours check as it is now; waiting on Google → "Takes a few weeks".
+  // The scored hours check as it is now (waiting on Google: tagged "Waiting for Google").
   const hoursCheck = actionPlanResult.status === "ok" ? await loadHoursCheck(params.id, scored.scoringBusiness ?? scored.business, actionPlanResult.tasks).catch(() => null) : null;
   const actionPlan =
     actionPlanResult.status === "ok"
-      ? {
-          ...actionPlanResult,
-          tasks: withHoursWhen(actionPlanResult.tasks, hoursCheck),
-          weeklyTasks: withHoursWhen(actionPlanResult.weeklyTasks, hoursCheck),
-          laterTasks: withHoursWhen(actionPlanResult.laterTasks, hoursCheck),
-        }
+      ? actionPlanResult
       : {
           tasks: [],
           completed: [],

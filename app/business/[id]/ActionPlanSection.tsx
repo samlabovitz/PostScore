@@ -3,7 +3,9 @@
 import { DetailsVersions, MergedActions, mergedOneClickItem, mergedTitle } from "@/components/overview/DetailsMismatchTasks";
 import { PremiumOneClickLine } from "@/components/scoring/PremiumOneClickLine";
 import { mergedKind, mismatchesCoveredBy, type DetailsMismatch } from "@/lib/detailsMismatch";
-import { hoursWaitingOnGoogle, isHoursCheck, type HoursCheckState } from "@/lib/hoursCheck";
+import { hoursWaitingOnGoogle, isHoursCheck, shownHoursState, type HoursCheckState } from "@/lib/hoursCheck";
+import { fixRowSteps, moreHelpLinks, oneClickSentence } from "@/lib/fixRow";
+import { isFixPlanStepsHref } from "@/lib/routes";
 import { HoursDiffLines, RescanNowButton, WaitingForGoogleTag } from "@/components/scoring/HoursCheck";
 import { useEffect, useState, createContext, useContext } from "react";
 import { useRouter } from "next/navigation";
@@ -212,6 +214,50 @@ function CurrentStatus({
       <ProblemText task={task} />
       {note && <p className="mt-1 text-[12px] text-ink-mute">{note}</p>}
     </div>
+  );
+}
+
+/** Fix plan's "What we found": the check's finding (or this week's real progress) on one line, and the checked
+ * date — plus any honest wait note — in small text under it. */
+function FixFound({
+  task,
+  pendingStatus,
+  metricProgress,
+  lastScanAt,
+  noChangeYet,
+}: {
+  task: ActionPlanTask;
+  pendingStatus: PendingCheckStatus | null;
+  metricProgress: WeeklyMetricProgress | null;
+  lastScanAt: string | null;
+  noChangeYet: boolean;
+}) {
+  const locale = useLocale();
+  const timeZone = useTimeZone();
+  const checked = lastScanAt ? t(locale, "dashboard.overview.actionPlan.checkedWithDate", { date: formatMonthDayTime(lastScanAt, locale, timeZone) }) : t(locale, "dashboard.overview.actionPlan.checkedNoDate");
+  let line = (task.problemLines && task.problemLines.length > 0 ? task.problemLines : [task.problem]).join(" ");
+  const notes: string[] = [];
+  if (pendingStatus === "not_yet_checked" || metricProgress?.kind === "not_yet_checked") notes.push(t(locale, "dashboard.overview.actionPlan.willCheckNextRescan"));
+  else if (metricProgress) {
+    const { kind, current, baseline, targetDelta, gained } = metricProgress;
+    line =
+      kind === "complete"
+        ? t(locale, "dashboard.overview.actionPlan.doneThisWeek", { current })
+        : kind === "partial"
+          ? t(locale, "dashboard.overview.actionPlan.progressText", { gained, targetDelta, current, remaining: Math.max(0, targetDelta - gained) })
+          : current < baseline
+            ? t(locale, "dashboard.overview.actionPlan.downTo", { current, baseline })
+            : t(locale, "dashboard.overview.actionPlan.stillAt", { current });
+  } else if (pendingStatus === "regressed") notes.push(t(locale, "dashboard.overview.actionPlan.movedWrongWay"));
+  else if (pendingStatus === "progressed") notes.push(t(locale, "dashboard.overview.actionPlan.realProgress"));
+  else if (pendingStatus === "unchanged") notes.push(t(locale, task.effort === "quick_win_action" ? "dashboard.overview.actionPlan.noRealChangeYet" : "dashboard.overview.actionPlan.googleStillDoesntShow"));
+  if (noChangeYet) notes.push(t(locale, "dashboard.overview.actionPlan.checkAgainNote"));
+  if (task.timingNote) notes.push(task.timingNote);
+  return (
+    <>
+      <p className="text-[13.5px] text-ink" data-testid="fix-found-line">{line}</p>
+      <p className="text-[11.5px] text-ink-mute" data-testid="fix-found-checked">{[checked, ...notes].join(" ")}</p>
+    </>
   );
 }
 
@@ -444,7 +490,7 @@ export function TaskCard({
   const stepLinks = task.links ?? [];
   // The card title is the action; the check's name is the small label.
   // Merged with the confirmed details: "Your hours don't match everywhere".
-  const hours = merged.length === 0 ? hoursCheck : null;
+  const hours = merged.length === 0 ? shownHoursState(task, hoursCheck) : null;
   const stale = hours?.kind === "stale";
   const waiting = hoursWaitingOnGoogle(hours);
   // A hours check that matches now keeps its real title; "Changed since your last scan" is a note under it.
@@ -590,6 +636,33 @@ export function TaskCard({
   // main button; the row opens to the evidence, how to fix it, "I did this" / "Check again".
   if (fixPlan?.compact) {
     const dot = { neutral: "bg-[#c6c0b0]", amber: "bg-amber", brass: "bg-brass", green: "bg-green", red: "bg-red" }[status.variant as string] ?? "bg-[#c6c0b0]";
+    // The row's ONE primary button: in the row while it's closed, in "What to do" once it's open — never both.
+    // A Fix plan step that would only open this row again goes to Google instead.
+    const dest = fixDestination(fixItem, fixCtx);
+    const ownSteps = dest.kind === "steps" && isFixPlanStepsHref(dest.href);
+    const oneClick = canDo && merged.length === 0 && !stale && !fixPlan.locked;
+    const buttonHref = stale || merged.length > 0 || fixPlan.locked ? null : ownSteps ? GOOGLE_BUSINESS_URL : dest.href;
+    const bodyButton = stale || merged.length > 0 || fixPlan.locked || !ownSteps ? (
+      mainButton
+    ) : (
+      <a href={GOOGLE_BUSINESS_URL} target="_blank" rel="noopener noreferrer" data-testid="fix-button" data-kind="google" className={fixPlan.compact.outline ? cn(FIX_BUTTON_CLASS, "!border-paper-deep !bg-white !text-ink hover:!bg-paper") : FIX_BUTTON_CLASS}>
+        {t(locale, "dashboard.fixPlan.row.openGoogle")} ↗
+      </a>
+    );
+    const steps = fixRowSteps(task, locale);
+    const stepList = (
+      <ol className="flex list-none flex-col gap-1.5" data-testid="fix-steps">
+        {steps.map((line, i) => (
+          <li key={line} className="flex gap-2 text-[13px] leading-snug text-ink">
+            <span aria-hidden className="mt-px flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-full bg-paper text-[11px] font-semibold text-ink-soft">{i + 1}</span>
+            <span>{line}</span>
+          </li>
+        ))}
+      </ol>
+    );
+    const help = moreHelpLinks(isSetup ? [] : stepLinks, buttonHref);
+    const markable = (!isPending || canMarkAgain) && !stale && task.markable !== false && !fixPlan.locked;
+    const section = "text-[11px] font-semibold uppercase tracking-[0.08em] text-ink-mute";
     return (
       <li id={cardId} className="scroll-mt-20 border-t border-paper-line first:border-t-0" data-testid="fix-row" data-open={rowOpen || undefined}>
         <div className={cn("grid grid-cols-[26px_minmax(0,1fr)] items-center gap-x-3 gap-y-2 px-4 py-3.5 sm:px-5 nav:grid-cols-[26px_112px_minmax(0,1fr)_auto]", rowOpen && "bg-[color:color-mix(in_srgb,var(--color-paper)_60%,white)]")}>
@@ -602,14 +675,15 @@ export function TaskCard({
               <span>{title}</span>
               <span className={cn("h-2.5 w-2.5 shrink-0 rounded-full", dot)} title={status.label} aria-label={status.label} data-testid="fix-row-status" data-variant={status.variant} />
             </span>
-            <span className="mt-0.5 block text-[12.5px] leading-snug text-ink-mute" data-testid="fix-row-why">{fixPlanWhy(task, locale)}</span>
+            <span className="mt-0.5 block text-[12.5px] leading-snug text-ink-mute" data-testid="fix-row-why">{stale ? t(locale, "dashboard.hoursCheck.staleTitle") : waiting ? t(locale, "dashboard.hoursCheck.profileMatches") : fixPlanWhy(task, locale)}</span>
           </button>
           <div className="col-start-2 flex items-center justify-between gap-3 nav:col-start-4 nav:justify-end" data-testid="fix-plan-points">
             <span className="whitespace-nowrap text-[13px] font-semibold text-ink-soft">
               {fixPlanPoints(task, locale)} → <b className="font-serif text-[16px] text-ink">{fixPlan.running}</b>
             </span>
             <span className="flex items-center gap-2">
-              {mainButton}
+              {/* Waiting on Google Maps: nothing for the owner to fix, so no button. */}
+              {!rowOpen && !waiting && mainButton}
               <button type="button" onClick={() => setRowOpen((o) => !o)} aria-label={t(locale, rowOpen ? "dashboard.overview.actionPlan.hideHowToFix" : "dashboard.overview.actionPlan.howToFixIt")} className="text-ink-mute hover:text-ink">
                 <IconChevronDown size={16} className={cn("transition-transform", rowOpen && "rotate-180")} aria-hidden />
               </button>
@@ -617,26 +691,109 @@ export function TaskCard({
           </div>
         </div>
         {rowOpen && (
-          <div className="flex flex-col gap-3 px-4 pb-4 sm:px-5 nav:pl-[57px]" data-testid="fix-row-body">
-            {stale && <p data-testid="hours-stale" className="text-[12.5px] text-ink-soft">{t(locale, "dashboard.hoursCheck.staleTitle")}</p>}
-            {hours?.kind === "differs" ? <HoursDiffLines state={hours} /> : headline !== title && !ownerOnly && !stale && <p className="text-[13.5px] font-medium text-ink">{headline}</p>}
-            {task.mergedLabels && task.mergedLabels.length > 0 && (
-              <p className="text-[12px] text-ink-mute">
-                <span className="font-medium text-ink-soft">{t(locale, "dashboard.overview.actionPlan.mergedReviewsHelpsLabel")}</span> {task.mergedLabels.join(", ")}
-              </p>
-            )}
-            {task.timingNote && <p className="text-[12px] italic text-ink-mute">{task.timingNote}</p>}
-            {merged.length > 0 ? <DetailsVersions mismatches={merged} /> : hours ? null : <CurrentStatus task={task} pendingStatus={pendingStatus} metricProgress={metricProgress} lastScanAt={lastScanAt} />}
+          <div className="flex flex-col gap-3.5 px-4 pb-4 sm:px-5 nav:pl-[57px]" data-testid="fix-row-body">
+            {/* 1. What we found: one line, the checked date small. */}
+            <section className="flex flex-col gap-1" data-testid="fix-found">
+              <h4 className={section}>{t(locale, "dashboard.fixPlan.row.found")}</h4>
+              {stale ? (
+                <p data-testid="hours-stale" className="text-[13.5px] text-ink">{t(locale, "dashboard.hoursCheck.staleTitle")}</p>
+              ) : merged.length > 0 ? (
+                <DetailsVersions mismatches={merged} />
+              ) : hours?.kind === "differs" ? (
+                <HoursDiffLines state={hours} />
+              ) : (
+                <FixFound task={task} pendingStatus={pendingStatus} metricProgress={metricProgress} lastScanAt={lastScanAt} noChangeYet={noChangeYet} />
+              )}
+            </section>
+            {/* 2. What to do: one sentence + the button (one click), or up to 3 steps + the button. */}
             {!isSetup && (
-              <div>
-                <p className="text-[13px] font-semibold text-ink">{t(locale, "dashboard.overview.actionPlan.howToFixIt")}</p>
-                {howToBody}
-              </div>
+              <section className="flex flex-col gap-2" data-testid="fix-todo" data-who={whoMakesIt} data-mode={stale ? "rescan" : waiting ? "waiting" : fixPlan.locked ? "locked" : oneClick ? "one_click" : "steps"}>
+                <h4 className={section}>{t(locale, "dashboard.fixPlan.row.todo")}</h4>
+                {waiting ? (
+                  <p className="text-[13px] text-ink" data-testid="hours-waiting">{t(locale, "dashboard.fixPlan.row.waiting")}</p>
+                ) : stale ? (
+                  <>
+                    <p className="text-[13px] text-ink">{t(locale, "dashboard.fixPlan.row.stale")}</p>
+                    <div className="flex flex-wrap items-center gap-2">{mainButton}</div>
+                  </>
+                ) : fixPlan.locked ? (
+                  <>
+                    {stepList}
+                    {howToBody}
+                  </>
+                ) : oneClick ? (
+                  <>
+                    <p className="text-[13px] text-ink">{oneClickSentence(task, locale)}</p>
+                    <div className="flex flex-wrap items-center gap-2">{bodyButton}</div>
+                    <button type="button" onClick={() => setExpanded((e) => !e)} aria-expanded={expanded} data-testid="fix-diy" className="w-fit text-[12px] font-medium text-ink-mute underline decoration-paper-deep underline-offset-2 hover:text-ink">
+                      {t(locale, expanded ? "dashboard.fixPlan.row.diyHide" : "dashboard.fixPlan.row.diy")}
+                    </button>
+                    {expanded && stepList}
+                  </>
+                ) : (
+                  <>
+                    {merged.length === 0 && stepList}
+                    <div className="flex flex-wrap items-center gap-2">{bodyButton}</div>
+                    {/* CLAUDE.md "Plans": Grow — what Premium does in one click, next to the steps. */}
+                    {(merged.length === 0 || mergedKind(merged) !== "owner_only") && <PremiumOneClickLine businessId={businessId} item={merged.length > 0 ? (mergedOneClickItem(merged) ?? fixItem) : fixItem} />}
+                    {/* Who makes this change (plan, connection, writes). */}
+                    {task.ownerActionOnGoogle && whoMakesIt !== "self" && (
+                      <p className="text-[12px] text-ink-mute" data-testid="how-to-who" data-who={whoMakesIt}>
+                        {whoMakesIt === "connect" ? (
+                          <Link href={`/business/${businessId}/connect-gbp`} className="font-semibold text-ink underline decoration-brass underline-offset-2">{t(locale, "dashboard.overview.actionPlan.connectToDo")}</Link>
+                        ) : whoMakesIt === "read_only" ? (
+                          t(locale, "dashboard.googleTab.w.readOnly")
+                        ) : (
+                          t(locale, "dashboard.overview.actionPlan.manualOnGoogle")
+                        )}
+                      </p>
+                    )}
+                  </>
+                )}
+              </section>
             )}
-            {!isSetup && (
-              <div className="flex flex-wrap items-center gap-2">
-                {secondaryActions}
-              </div>
+            {/* 3. Footer: "I did this" / "Check again" · More help ↗ (Google's help pages live inside). */}
+            {!isSetup && (markable || help.length > 0 || merged.length > 0 || (websiteRecheck && task.checkId.startsWith("website.") && task.checkId !== "website.has_website")) && (
+              <footer className="flex flex-wrap items-center gap-x-2 gap-y-1.5 border-t border-paper-line pt-2.5 text-[12.5px]" data-testid="fix-footer">
+                {markable && (
+                  <button type="button" onClick={handleMarkDone} disabled={state.kind === "saving"} data-testid="fix-mark" className="font-semibold text-ink underline decoration-paper-deep underline-offset-2 hover:decoration-ink disabled:opacity-60">
+                    {state.kind === "saving" ? t(locale, "dashboard.overview.actionPlan.saving") : canMarkAgain ? t(locale, "dashboard.overview.actionPlan.checkAgain") : t(locale, "dashboard.overview.actionPlan.didThis")}
+                  </button>
+                )}
+                {merged.length > 0 && (
+                  <>
+                    {markable && <span aria-hidden className="text-ink-mute">·</span>}
+                    <MergedActions businessId={businessId} mismatches={merged} only="link" />
+                  </>
+                )}
+                {help.length > 0 && (
+                  <details className="group" data-testid="fix-more-help">
+                    <summary className="flex cursor-pointer list-none items-center gap-2 font-semibold text-ink [&::-webkit-details-marker]:hidden">
+                      {(markable || merged.length > 0) && <span aria-hidden className="font-normal text-ink-mute">·</span>}
+                      <span className="underline decoration-paper-deep underline-offset-2 group-open:decoration-ink">{t(locale, "dashboard.fixPlan.row.moreHelp")} ↗</span>
+                    </summary>
+                    <span className="mt-1.5 flex flex-col gap-1 pl-3">
+                      {help.map((link) =>
+                        link.external ? (
+                          <a key={link.href} href={link.href} target="_blank" rel="noopener noreferrer" className="w-fit text-ink-soft underline decoration-brass underline-offset-2 hover:text-ink">
+                            {link.label} ↗
+                          </a>
+                        ) : (
+                          <Link key={link.href} href={link.href} className="w-fit text-ink-soft underline decoration-brass underline-offset-2 hover:text-ink">
+                            {link.label}
+                          </Link>
+                        )
+                      )}
+                    </span>
+                  </details>
+                )}
+                {websiteRecheck && task.checkId.startsWith("website.") && task.checkId !== "website.has_website" && (
+                  <div className="w-full" data-testid="how-to-recheck">
+                    <WebsiteRecheck businessId={businessId} initialLeft={websiteRecheck.left} hasWebsite={websiteRecheck.hasWebsite} compact />
+                  </div>
+                )}
+                {state.kind === "error" && <span className="w-full text-[12px] text-red">{state.message}</span>}
+              </footer>
             )}
           </div>
         )}

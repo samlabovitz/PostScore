@@ -134,9 +134,11 @@ describe("the old paste box", () => {
     expect(notConnected).toContain('data-testid="review-reply-drafter"');
     expect(notConnected).toContain("Connect Google to see and answer every review here.");
     expect(page("premium", false, "es")).toContain("Conecte Google para ver y responder todas sus reseñas aquí.");
-    const grow = page("grow", true);
+    // Grow not connected: no inbox, so the paste box is open. (Connected, Grow gets the inbox and the one-line box.)
+    const grow = page("grow", false);
     expect(grow).not.toContain("paste-box-collapsed");
     expect(grow).toContain('data-testid="review-reply-drafter"');
+    expect(page("grow", true)).toContain("paste-box-collapsed");
     for (const html of [notConnected, grow, page("premium", true)]) expect(html.match(/data-testid="replies-footer"[^>]*>([^<]*)/)?.[1]).not.toMatch(/coming soon/);
   });
 });

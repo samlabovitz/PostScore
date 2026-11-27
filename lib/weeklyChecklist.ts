@@ -25,6 +25,11 @@ export const WEEKLY_CHECKLIST_ITEM_IDS: readonly WeeklyChecklistItemId[] = [
   "check_hours",
 ];
 
+/** Any id the app checks off (the routine five plus the Growth plan's answers task): never free text from the page. */
+export function isWeeklyChecklistItemId(v: unknown): v is WeeklyChecklistItemId {
+  return typeof v === "string" && Object.prototype.hasOwnProperty.call(ITEM_MESSAGE_KEYS, v);
+}
+
 export interface WeeklyChecklistItem {
   id: WeeklyChecklistItemId;
   title: string;

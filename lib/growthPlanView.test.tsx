@@ -15,7 +15,7 @@ vi.mock("@/components/gbp/GoogleResults", () => ({ ThisWeek: () => <div data-tes
 vi.mock("@/components/gbp/MoreWaysCards", () => ({ MoreWaysCards: () => <div data-testid="more-ways-cards" /> }));
 
 import { LocaleProvider, type Locale } from "@/lib/i18n";
-import type { GrowthFacts } from "@/lib/growthTier";
+import { TIER_RULES, resultsRuleMet, type GrowthFacts } from "@/lib/growthTier";
 import { growthState, rankWeek, tierLines } from "@/lib/growthPlan";
 import { GrowthFreePreview, TierCard, WeekPlanCard, tierLineText } from "@/components/growth/GrowthPlanView";
 
@@ -100,6 +100,51 @@ describe("the tier card (mockup 03)", () => {
     expect(text(wrap(<TierCard state={dropped} testAccount={false} />))).toContain("You moved to Starting out: no activity the weeks of Nov 30 and Dec 7. Two active weeks bring Building back.");
     const up = { ...state, change: { kind: "up" as const, activeWeeks: 5, of: 6 } };
     expect(text(wrap(<TierCard state={up} testAccount={false} />))).toContain("You moved up to Building: 5 active weeks and customer actions from Google up on last year.");
+  });
+});
+
+describe("the tier card's requirement rows: ✓ only when met", () => {
+  const state = growthState(HE, new Date("2026-11-21T17:00:00Z"));
+  const card = (html: string, tier: number) => html.slice(html.indexOf(`data-testid="tier-needs" data-tier="${tier}"`)).split('data-testid="tier-needs"')[1];
+  const row = (html: string, id: string) => html.slice(html.indexOf(`data-testid="${id}"`)).split("</p>")[0];
+  test("Hair Express: To reach Growing has one result (met ✓) but 3 of 5 active weeks (open circle) → 1 of 2", () => {
+    expect(state.next).toMatchObject({ tier: 3, activeNow: 3, activeWeeks: 5, activeMet: false, resultsNow: 1, resultsMet: true });
+    const html = card(wrap(<TierCard state={state} testAccount={false} />), 3);
+    expect(row(html, "needs-active")).toContain('data-mark="open"');
+    expect(row(html, "needs-active")).not.toContain('data-mark="met"');
+    expect(row(html, "needs-active")).not.toContain("data-met");
+    expect(row(html, "needs-results")).toContain('data-mark="met"');
+    expect(row(html, "needs-results")).toContain('data-met="true"');
+    expect(text(row(html, "needs-progress"))).toContain("1 of 2");
+  });
+  test("Hair Express: Thriving needs two results (one measured); one isn't enough → both rows open, 0 of 2", () => {
+    expect(state.after).toMatchObject({ tier: 4, results: 2, measured: 1, resultsNow: 1, resultsMet: false, activeMet: false });
+    const html = card(wrap(<TierCard state={state} testAccount={false} />), 4);
+    expect(row(html, "needs-active")).toContain('data-mark="open"');
+    expect(row(html, "needs-results")).toContain('data-mark="open"');
+    expect(row(html, "needs-results")).not.toContain('data-mark="met"');
+    expect(text(row(html, "needs-progress"))).toContain("0 of 2");
+  });
+  test("every row met: green ✓ on both and 2 of 2 (EN + ES)", () => {
+    const next = { ...state.next!, activeNow: 5, activeMet: true, resultsMet: true };
+    const html = wrap(<TierCard state={{ ...state, next, after: null }} testAccount={false} />);
+    expect(row(html, "needs-active")).toContain('data-mark="met"');
+    expect(row(html, "needs-results")).toContain('data-mark="met"');
+    expect(html).not.toContain('data-mark="open"');
+    expect(text(row(html, "needs-progress"))).toContain("2 of 2");
+    expect(text(row(wrap(<TierCard state={{ ...state, next, after: null }} testAccount={false} />, "es"), "needs-progress"))).toMatch(/2 de 2/);
+  });
+  test("results count alone isn't enough: the measured part must hold too", () => {
+    expect(resultsRuleMet({ R1: "not_met", R2: "not_met", R3: "unavailable", R4: "met", R5: "unavailable" }, { results: 1, measured: 1 })).toEqual({ now: 1, measuredNow: 0, met: false });
+    expect(resultsRuleMet({ R1: "met", R2: "not_met", R3: "unavailable", R4: "met", R5: "unavailable" }, TIER_RULES[4])).toEqual({ now: 2, measuredNow: 1, met: true });
+    expect(resultsRuleMet({ R1: "met", R2: "not_checked", R3: "unavailable", R4: "not_met", R5: "unavailable" }, TIER_RULES[4]).met).toBe(false);
+  });
+  test("Local favorite's stay card: open circle for what isn't met", () => {
+    const html = wrap(<TierCard state={{ ...state, tier: 5, next: null, after: null, stay: { activeNow: 11, of: 12, activeOk: true, results: 3, resultsNow: 2, resultsOk: false } }} testAccount={false} />);
+    expect(html.slice(html.indexOf('data-testid="top-active"')).split("</li>")[0]).toContain('data-mark="met"');
+    const results = html.slice(html.indexOf('data-testid="top-results"')).split("</li>")[0];
+    expect(results).toContain('data-mark="open"');
+    expect(results).not.toContain("data-met");
   });
 });
 

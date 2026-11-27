@@ -46,6 +46,9 @@ export interface GoogleTabListing {
 
 export interface GoogleProfileTabProps {
   businessId: string;
+  /** This week's saved post draft (lib/postDrafts.server.ts, written in the background) — shown at once, never
+   * "Getting drafts ready…" when there is one. */
+  savedPostDraft?: string | null;
   connected: boolean;
   practice: boolean;
   needsReconnect: boolean;

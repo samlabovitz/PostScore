@@ -181,6 +181,7 @@ export async function loadGoogleResults(businessId: string, gbpParam?: string): 
       visitShare,
       actionEvents,
       websiteHours,
+      savedPostDraft: await savedPostDraftFor(businessId, timeZone, base.business.language ?? null),
     },
   };
 }
@@ -265,4 +266,11 @@ export async function loadGoogleListing(businessId: string, gbpParam?: string): 
 async function viewerIsDevTestLogin(): Promise<boolean> {
   const { data } = await createClient().auth.getUser();
   return isDevTestLoginEmail(data.user?.email);
+}
+
+/** This week's post draft as the background run saved it (lib/postDrafts.server.ts) — shown at once. */
+async function savedPostDraftFor(businessId: string, timeZone: string, language: string | null): Promise<string | null> {
+  const [{ savedDraft }, { weekStartOf }, { viewLocale }] = await Promise.all([import("@/lib/postDrafts.server"), import("@/lib/gbpPosts"), import("@/lib/viewLocale.server")]);
+  const text = await savedDraft(createAdminClient(), businessId, weekStartOf(Date.now(), timeZone), viewLocale(language)).catch(() => null);
+  return typeof text === "string" ? text : null;
 }

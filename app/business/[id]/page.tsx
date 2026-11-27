@@ -1,6 +1,5 @@
 import { notFound, redirect } from "next/navigation";
 import { loadHoursCheck } from "@/lib/hoursCheck.server";
-import { withHoursWhen } from "@/lib/hoursCheck";
 import { loadDetailsMismatches } from "@/lib/detailsMismatch.server";
 import { loadOverviewListing } from "@/lib/overviewListing.server";
 import { canConnectGbp } from "@/lib/premium";
@@ -194,7 +193,7 @@ export default async function BusinessPage({ params, searchParams = {} }: { para
   // The scored hours check as it is now; waiting on Google → "Takes a few weeks".
   const hoursCheck = actionPlan.status === "ok" ? await loadHoursCheck(params.id, scored.scoringBusiness ?? scored.business, actionPlan.tasks).catch(() => null) : null;
   const recommendations =
-    actionPlan.status === "ok" ? topRecommendations(withHoursWhen(actionPlan.tasks, hoursCheck), actionPlan.websiteBanner, params.id, linkOptions, Infinity, actionPlan.urgentIssues) : null;
+    actionPlan.status === "ok" ? topRecommendations(actionPlan.tasks, actionPlan.websiteBanner, params.id, linkOptions, Infinity, actionPlan.urgentIssues) : null;
   // The Website page's own fix count (same builder rule, same plan).
   const websiteAnalysis = parseWebsiteAnalysis(scored.business.website_analysis_json);
   const websiteChecks = scored.result.breakdown.categories.find((c) => c.id === "website")?.checks ?? [];

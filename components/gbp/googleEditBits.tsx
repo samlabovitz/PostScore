@@ -10,6 +10,7 @@
 import { useState } from "react";
 import { IconBrandGoogle, IconFlask, IconLock } from "@tabler/icons-react";
 import { formatShortDate, t, useLocale, useTimeZone, type MessageKey } from "@/lib/i18n";
+import { GOOGLE_WRITES_FOR_EVERYONE } from "@/lib/googleWritesLaunch";
 
 const K = (key: string) => `dashboard.gbpProfileEdits.${key}` as MessageKey;
 
@@ -41,9 +42,11 @@ export function ApproveButton({ canEdit, busy, disabled, onClick, testId, label 
     <button type="button" data-testid={testId} disabled={busy || disabled} onClick={onClick} className="inline-flex items-center gap-1.5 rounded-lg border border-ink bg-ink px-3.5 py-2 text-[13px] font-semibold text-paper disabled:cursor-not-allowed disabled:opacity-50">
       <IconBrandGoogle size={14} aria-hidden />
       {busy ? t(locale, K("approving")) : (label ?? t(locale, K("approve")))}
-      <span data-testid="beta-label" className="rounded bg-[color:color-mix(in_srgb,var(--color-paper)_20%,transparent)] px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-[0.06em]">
-        {t(locale, K("beta"))}
-      </span>
+      {!GOOGLE_WRITES_FOR_EVERYONE && (
+        <span data-testid="beta-label" className="rounded bg-[color:color-mix(in_srgb,var(--color-paper)_20%,transparent)] px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-[0.06em]">
+          {t(locale, K("beta"))}
+        </span>
+      )}
     </button>
   );
 }

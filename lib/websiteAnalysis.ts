@@ -1365,6 +1365,21 @@ export function couldNotFindMainContent(raw: RawPageSpeedResponse): boolean {
   return !raw.lighthouseResult?.runtimeError?.code && extractLabScore(raw) === null && (lcp?.errorMessage ?? "").includes("NO_LCP");
 }
 
+/** v1.18.0: the lab run's Speed Index, in seconds (reported even when the main content can't be found). */
+function extractSpeedIndexSeconds(raw: RawPageSpeedResponse): number | null {
+  const ms = raw.lighthouseResult?.audits?.["speed-index"]?.numericValue;
+  return typeof ms === "number" && Number.isFinite(ms) && ms > 0 ? ms / 1000 : null;
+}
+
+/** v1.18.0: what the page downloads (Lighthouse's resource summary) — advice only. */
+function extractPageWeight(raw: RawPageSpeedResponse): { totalBytes: number; imageBytes: number; imageCount: number } | null {
+  const items = (raw.lighthouseResult?.audits?.["resource-summary"]?.details as { items?: Array<{ resourceType?: string; transferSize?: number; requestCount?: number }> } | undefined)?.items ?? [];
+  const total = items.find((i) => i.resourceType === "total");
+  const image = items.find((i) => i.resourceType === "image");
+  if (typeof total?.transferSize !== "number") return null;
+  return { totalBytes: Math.round(total.transferSize), imageBytes: Math.round(image?.transferSize ?? 0), imageCount: image?.requestCount ?? 0 };
+}
+
 /** v1.13.0: the lab run's largest-contentful-paint, in seconds. */
 function extractLabLcpSeconds(raw: RawPageSpeedResponse): number | null {
   const ms = raw.lighthouseResult?.audits?.["largest-contentful-paint"]?.numericValue;
@@ -1668,6 +1683,32 @@ export async function fetchMobilePerformance(
     // The real page loaded, but Google couldn't find its main content
     // (the real Hair express case) — a site problem with a fix.
     const noMainContent = !anyErrorPage && outcomes.some((o) => o.kind === "ok" && couldNotFindMainContent(o.response));
+    // v1.18.0: the main-content time can't be measured, but the same runs report the Speed Index: that's the
+    // measurement (the speed check's seconds), with the page weight as advice.
+    const speedIndex = noMainContent
+      ? outcomes.map((o, i) => (o.kind === "ok" && assessments[i]?.loadedRealPage && couldNotFindMainContent(o.response) ? extractSpeedIndexSeconds(o.response) : null)).filter((v): v is number => v !== null)
+      : [];
+    if (speedIndex.length > 0) {
+      const weight = outcomes.map((o) => (o.kind === "ok" ? extractPageWeight(o.response) : null)).find((w) => w !== null) ?? null;
+      return {
+        measurement: {
+          method: "lab",
+          fieldCategory: null,
+          labScore: null,
+          labRuns: speedIndex.length,
+          measuredAt: new Date().toISOString(),
+          measuredUrl: website,
+          speedIndexSeconds: roundSeconds(median(speedIndex)),
+          ...(weight ? { pageWeight: weight } : {}),
+          ...withUsability(usabilityFrom(outcomes)),
+        },
+        failureReason: null,
+        renderedContentSignals,
+        stackPackIds,
+        callCount: 3,
+        softNotFoundUrl,
+      };
+    }
     return {
       measurement: null,
       failureReason: anyErrorPage ? { kind: "error_page", status: null } : noMainContent ? { kind: "error", status: null, cause: "no_main_content" } : pickFailureReason(outcomes),
@@ -1691,6 +1732,10 @@ export async function fetchMobilePerformance(
       measuredAt: new Date().toISOString(),
       measuredUrl: website,
       ...(labLcp.length > 0 ? { lcpSeconds: roundSeconds(median(labLcp)) } : {}),
+      ...(() => {
+        const weight = outcomes.map((o, i) => (o.kind === "ok" && assessments[i]?.loadedRealPage ? extractPageWeight(o.response) : null)).find((w) => w !== null);
+        return weight ? { pageWeight: weight } : {};
+      })(),
       ...withUsability(usabilityFrom(outcomes)),
     },
     failureReason: null,

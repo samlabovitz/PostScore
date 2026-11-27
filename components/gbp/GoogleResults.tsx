@@ -694,7 +694,7 @@ export function ThisWeek({ props, chips, noTitle = false }: { props: GoogleProfi
   const { recs, type } = useTabIdeas(props);
   // The page's section already says "What to do this week": no second label (ThisWeekList's "This week").
   const title = noTitle ? <></> : <h3 className="text-[15px] font-bold text-ink">{t(locale, K("s1.todo.title"))}</h3>;
-  return <ThisWeekList businessId={props.businessId} recs={thisWeekRecs(recs)} type={type} canEdit={props.canEditGoogle === true} practice={props.practice} title={title} chips={chips} />;
+  return <ThisWeekList businessId={props.businessId} recs={thisWeekRecs(recs)} type={type} canEdit={props.canEditGoogle === true} practice={props.practice} title={title} chips={chips} savedPost={props.savedPostDraft ?? null} />;
 }
 
 /** "Nov 3: replied to 10 reviews". */

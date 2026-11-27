@@ -77,7 +77,15 @@ import { socialIconCount, socialLinkProblems, URGENT_LINK_KINDS, type LinkCheckR
 // 1.16.0: one borderline speed test (3–12 s) waits for a second.
 // 1.17.0: a website more than half of whose checks couldn't run earns at
 // most 80% of its points ("Partly checked").
-export const SCORING_VERSION = "1.17.0";
+// 1.18.0: "Loads in a reasonable time" (same 3 points, same 6 s line and
+// two-test rule): when Google can't find the page's main content (no LCP),
+// the same test's Speed Index is the seconds; real-visitor data still comes
+// first. Photo weight is advice only. Nov 25, 2026 (Hair Express:
+// Speed Index 6.3 s; the old LCP route could never take a second test).
+export const SCORING_VERSION = "1.18.0";
+
+/** v1.18.0: Speed Index stands in when the main-content time can't be measured. */
+export const SPEED_INDEX_FROM = "1.18.0";
 
 /** v1.17.0: the partly-checked Website cap is on from this version. */
 export const PARTLY_CHECKED_CAP_FROM = "1.17.0";
@@ -375,6 +383,12 @@ export interface MobilePerformanceMeasurement {
   /** v1.13.0: Google's phone-usability audits from the same run (see
    * website.mobile_friendly). Absent on older rows. */
   mobileUsability?: MobileUsability;
+  /** v1.18.0: Google's Speed Index (how fast the page visibly fills in), lab median in seconds — set when the
+   * main-content time (LCP) couldn't be measured ("no main content"), and then the speed check's seconds. */
+  speedIndexSeconds?: number;
+  /** v1.18.0: what the page downloads on a phone, from the same test — advice only ("Your 2 photos are 1.2 MB"),
+   * never points. */
+  pageWeight?: { totalBytes: number; imageBytes: number; imageCount: number };
 }
 
 /** v1.13.0: what the page's own code says about phones (lib/websiteContentAnalysis.ts detectPhoneLayout). */
@@ -513,7 +527,10 @@ export function carryForwardMobilePerformance(
   // a real measurement from the last 30 days the same way. So is "error"
   // (Google's test ran but returned no score, e.g. it couldn't find the
   // page's main content) — nothing about the site was measured.
-  if (!CARRY_FORWARD_KINDS.has(freshFailureReason?.kind ?? "") || !existing?.measuredAt) {
+  // v1.18.0: "no main content" isn't a flaky run, it's how the page is built: every test fails the same way, so an
+  // old test is never reused to stand in (it would wait for a second test forever). The reason is kept instead.
+  const noMainContent = freshFailureReason?.kind === "error" && freshFailureReason.cause === "no_main_content" && scoringAtLeast(SPEED_INDEX_FROM);
+  if (noMainContent || !CARRY_FORWARD_KINDS.has(freshFailureReason?.kind ?? "") || !existing?.measuredAt) {
     return { mobilePerformance: null, mobilePerformanceFailureReason: freshFailureReason };
   }
   const age = now.getTime() - new Date(existing.measuredAt).getTime();
@@ -1520,7 +1537,9 @@ function loadsReasonableV115(input: BusinessScoringInput, locale: Locale): Retur
   const wa = input.websiteAnalysis!;
   const blocked = siteBlocksAutomatedChecks(input);
   const m = wa.mobilePerformance;
-  const usable = !!m && (m.method === "field" ? m.fieldCategory !== null : !blocked && m.labScore !== null);
+  // v1.18.0: no main-content time, but the same test's Speed Index.
+  const speedIndex = scoringAtLeast(SPEED_INDEX_FROM) && m?.method === "lab" && typeof m.lcpSeconds !== "number" && typeof m.speedIndexSeconds === "number" ? m.speedIndexSeconds : null;
+  const usable = !!m && (m.method === "field" ? m.fieldCategory !== null : !blocked && (m.labScore !== null || speedIndex !== null));
   if (!m || !usable) {
     if (blocked) return { earnedPoints: null, confidence: "NOT_FOUND", explanation: t(locale, "content.checks.website.performance_mobile.explanation.blockedSite") };
     if (wa.mobilePerformanceFailureReason?.cause === "no_main_content") {
@@ -1529,8 +1548,14 @@ function loadsReasonableV115(input: BusinessScoringInput, locale: Locale): Retur
     return { earnedPoints: null, confidence: "NOT_FOUND", explanation: t(locale, "content.checks.website.performance_mobile.explanation.noScore") };
   }
   const smoothed = wa.speedSmoothed && m.measuredUrl && sameMeasuredSite(wa.speedSmoothed.measuredUrl, m.measuredUrl) ? wa.speedSmoothed : null;
-  const seconds = smoothed?.seconds ?? (typeof m.lcpSeconds === "number" ? m.lcpSeconds : null);
+  const seconds = smoothed?.seconds ?? (typeof m.lcpSeconds === "number" ? m.lcpSeconds : speedIndex);
   if (seconds === null) return { earnedPoints: null, confidence: "NOT_FOUND", explanation: t(locale, "content.checks.website.performance_mobile.explanation.noSecondsV115") };
+  // Advice only, never points: heavy photos are the usual reason a page fills in slowly.
+  const weight = m.pageWeight;
+  const photosAdvice =
+    weight && weight.imageCount > 0 && weight.imageBytes >= 1_000_000
+      ? [t(locale, "content.checks.website.performance_mobile.explanation.photosHeavy", { count: weight.imageCount, size: new Intl.NumberFormat(locale, { maximumFractionDigits: 1 }).format(Math.round(weight.imageBytes / 100_000) / 10) })]
+      : [];
   // v1.16.0: one phone test counts on its own only when its result is
   // clear (≤ 3 s, or ≥ 12 s — double the limit); in between it takes two
   // within 30 days (this scan's runs and earlier scans'), since one test
@@ -1546,7 +1571,7 @@ function loadsReasonableV115(input: BusinessScoringInput, locale: Locale): Retur
       explanation: t(locale, "content.checks.website.performance_mobile.explanation.oneTestSoFar", {
         seconds: new Intl.NumberFormat(locale, { minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(Math.round(seconds * 10) / 10),
       }),
-      meta: { noScoreCause: "one_test", seconds: String(Math.round(seconds * 10) / 10) },
+      meta: { noScoreCause: "one_test", seconds: String(Math.round(seconds * 10) / 10), ...(speedIndex !== null ? { speedMetric: "speed_index" } : {}) },
     };
   }
   const time = new Intl.NumberFormat(locale, { minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(Math.round(seconds * 10) / 10);
@@ -1559,9 +1584,11 @@ function loadsReasonableV115(input: BusinessScoringInput, locale: Locale): Retur
       t(locale, pass ? "content.checks.website.performance_mobile.explanation.reasonableV115" : "content.checks.website.performance_mobile.explanation.tooSlowV115", { seconds: time }),
       ...(smoothed && smoothed.samples > 1 ? [t(locale, "content.checks.website.performance_mobile.explanation.typicalOfTestsV115", { count: smoothed.samples })] : []),
       ...(lastMeasured ? [t(locale, "content.checks.website.performance_mobile.explanation.lastMeasuredNoteV115", { date: lastMeasured })] : []),
+      ...(speedIndex !== null ? [t(locale, "content.checks.website.performance_mobile.explanation.speedIndexNote")] : []),
+      ...photosAdvice,
     ].join(" "),
     note: t(locale, m.method === "field" ? "content.checks.website.performance_mobile.note.field" : "content.checks.website.performance_mobile.note.lab"),
-    meta: { method: m.method, seconds: String(Math.round(seconds * 10) / 10) },
+    meta: { method: m.method, seconds: String(Math.round(seconds * 10) / 10), ...(speedIndex !== null ? { speedMetric: "speed_index" } : {}) },
     ...(pass ? {} : { gaps: ["too_slow"] }),
   };
 }
@@ -3388,10 +3415,14 @@ export const CHECKS: CheckDefinition[] = [
       // Friday 12:00 PM–12:00 AM; …").
       if (first.field === "hours" && first.siteLabel) {
         const dayless = (v: string | null) => (v ?? "").replace(/^(\w+): /, "$1 ");
+        const google = googleSideOf(first, input);
         return {
           earnedPoints,
           confidence: "VERIFIED",
-          explanation: t(locale, "content.checks.website.info_consistency.explanation.conflictHoursLabelled", { label: first.siteLabel, site: dayless(first.siteValue), google: dayless(googleSideOf(first, input)) }),
+          // Google's listing not at hand (couldn't be read): never "Google says ." with nothing after it.
+          explanation: google
+            ? t(locale, "content.checks.website.info_consistency.explanation.conflictHoursLabelled", { label: first.siteLabel, site: dayless(first.siteValue), google: dayless(google) })
+            : t(locale, "content.checks.website.info_consistency.explanation.conflictHoursLabelledNoGoogle", { label: first.siteLabel, site: dayless(first.siteValue) }),
         };
       }
       const fieldKey =
@@ -3405,8 +3436,11 @@ export const CHECKS: CheckDefinition[] = [
       return {
         earnedPoints,
         confidence: "VERIFIED",
-        // Google's side from the listing values at hand — never saved.
-        explanation: t(locale, fieldKey, { site: first.siteValue ?? "", google: googleSideOf(first, input) ?? "" }),
+        // Google's side from the listing values at hand — never saved; not at hand: the sentence without it.
+        explanation: (() => {
+          const google = googleSideOf(first, input);
+          return google ? t(locale, fieldKey, { site: first.siteValue ?? "", google }) : t(locale, "content.checks.website.info_consistency.explanation.conflictNoGoogle", { site: first.siteValue ?? "" });
+        })(),
       };
     },
     simulateFix: (input) => ({
@@ -4325,9 +4359,12 @@ function parseMobilePerformance(value: unknown): MobilePerformanceMeasurement | 
   const measuredUrlField = typeof v.measuredUrl === "string" && v.measuredUrl ? { measuredUrl: v.measuredUrl } : {};
   const tri = (x: unknown) => (typeof x === "boolean" ? x : null);
   const u = v.mobileUsability && typeof v.mobileUsability === "object" ? (v.mobileUsability as Record<string, unknown>) : null;
+  const pw = v.pageWeight && typeof v.pageWeight === "object" ? (v.pageWeight as Record<string, unknown>) : null;
   const extra = {
     ...(typeof v.lcpSeconds === "number" && v.lcpSeconds > 0 ? { lcpSeconds: v.lcpSeconds } : {}),
     ...(typeof v.labRuns === "number" && v.labRuns > 0 ? { labRuns: Math.floor(v.labRuns) } : {}),
+    ...(typeof v.speedIndexSeconds === "number" && v.speedIndexSeconds > 0 ? { speedIndexSeconds: v.speedIndexSeconds } : {}),
+    ...(pw && typeof pw.totalBytes === "number" && typeof pw.imageBytes === "number" && typeof pw.imageCount === "number" ? { pageWeight: { totalBytes: pw.totalBytes, imageBytes: pw.imageBytes, imageCount: pw.imageCount } } : {}),
     ...(u ? { mobileUsability: { tapTargets: tri(u.tapTargets), textReadable: tri(u.textReadable), fitsScreen: tri(u.fitsScreen) } } : {}),
   };
   if (v.method === "field" && isFieldSpeedCategory(v.fieldCategory)) {
@@ -4343,11 +4380,12 @@ function parseMobilePerformance(value: unknown): MobilePerformanceMeasurement | 
       ...extra,
     };
   }
-  if (v.method === "lab" && typeof v.labScore === "number") {
+  // v1.18.0: a lab test with no score but a Speed Index (the main content couldn't be found) is a measurement too.
+  if (v.method === "lab" && (typeof v.labScore === "number" || (typeof v.speedIndexSeconds === "number" && v.speedIndexSeconds > 0))) {
     return {
       method: "lab",
       fieldCategory: null,
-      labScore: v.labScore,
+      labScore: typeof v.labScore === "number" ? v.labScore : null,
       measuredAt,
       ...measuredUrlField,
       carriedForward,
@@ -4535,6 +4573,7 @@ function parseSpeedHistory(value: unknown): SpeedSample[] | null {
       measuredAt: s.measuredAt as string,
       measuredUrl: s.measuredUrl as string,
       lcpSeconds: typeof s.lcpSeconds === "number" ? s.lcpSeconds : null,
+      ...(typeof s.speedIndexSeconds === "number" && s.speedIndexSeconds > 0 ? { speedIndexSeconds: s.speedIndexSeconds } : {}),
       category: s.category as FieldSpeedCategory,
       ...(typeof s.runs === "number" && s.runs > 0 ? { runs: Math.floor(s.runs) } : {}),
     }));

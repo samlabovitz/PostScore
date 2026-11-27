@@ -21,7 +21,7 @@ const BROKEN = [
 
 describe("v1.13.1", () => {
   test("SCORING_VERSION is 1.14.0, with 1.13.0's and 1.13.1's rules still on", () => {
-    expect(SCORING_VERSION).toBe("1.17.0");
+    expect(SCORING_VERSION).toBe("1.18.0");
     expect(SCORING_V1131).toBe(true);
     expect(SCORING_V113).toBe(true);
   });
