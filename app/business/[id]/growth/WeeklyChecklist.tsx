@@ -31,6 +31,8 @@ const ITEM_ICON: Record<WeeklyChecklistItemId, typeof IconClock> = {
   add_photo: IconPhoto,
   check_hours: IconClock,
   answer_questions: IconMessageCircle,
+  start_offer: IconCalendarEvent,
+  seasonal_idea: IconCalendarEvent,
 };
 
 /** Where an item is done inside PostScore, when there's a page for it. */

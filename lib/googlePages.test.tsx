@@ -89,8 +89,8 @@ describe("behind the switch: only the dev test login, only under next dev", () =
 });
 
 describe("the two menus and their anchors", () => {
-  test("Google results: Last month · This week · Since you did this · Searches → actions · Search terms", () => {
-    expect(RESULTS_SECTIONS.map((s) => s.id)).toEqual(["last-month", "this-week", "since", "funnel", "searches"]);
+  test("Google results: Last month · Since you did this · Searches → actions · Search terms (no task list)", () => {
+    expect(RESULTS_SECTIONS.map((s) => s.id)).toEqual(["last-month", "since", "funnel", "searches"]);
     expect(LISTING_SECTIONS.map((s) => s.id)).toEqual(["listing", "next", "protection"]);
     // The old tab keeps its six.
     expect(JUMP_SECTIONS.map((s) => s.id)).toEqual(["last-month", "funnel", "searches", "listing", "next", "protection"]);
@@ -106,7 +106,8 @@ describe("the two menus and their anchors", () => {
 
   test("today's anchor ids stay on the pages (spec §3 'anchor ids stay')", () => {
     const r = results("premium");
-    for (const id of ["last-month", "this-week", "since", "funnel", "searches"]) expect(r, id).toContain(`id="${id}"`);
+    for (const id of ["last-month", "since", "funnel", "searches", "google-tab-levers"]) expect(r, id).toContain(`id="${id}"`);
+    expect(r).not.toContain('id="this-week"');
     const l = listing("premium");
     for (const id of ["listing", "next", "protection", "listing-hours", "listing-reviews", "others"]) expect(l, id).toContain(`id="${id}"`);
   });
@@ -159,12 +160,14 @@ describe("Google results (Growth)", () => {
     expect(readFileSync("components/gbp/GoogleResults.tsx", "utf8")).toContain('c?.dir === "up" ? "text-green" : c?.dir === "down" && !page ? "text-red" : "text-ink-mute"');
   });
 
-  test("Premium: Approve all; Grow: the same to-dos as steps with the Premium line, every number shown", () => {
-    const p = results("premium");
-    expect(p).not.toContain("google-results-grow-week");
+  test("no tasks on any plan (the checklist is on Growth plan); Grow sees every number", () => {
+    for (const plan of ["premium", "grow"] as const) {
+      const html = results(plan);
+      expect(html).not.toContain("approve-all-button");
+      expect(html).toContain('data-testid="google-results-drivers"');
+      expect(text(html)).toContain("Your weekly checklist is on Growth plan →");
+    }
     const g = results("grow");
-    expect(g).toContain("google-results-grow-week");
-    expect(text(g)).toContain("Premium approves all of these in one click →");
     // Grow sees the numbers (spec §9 decision 1).
     expect(g).toContain("google-tab-kpis");
     expect(g).toContain("google-tab-terms");
@@ -318,13 +321,10 @@ test("every new string has EN and ES", () => {
 describe("fixes before commit (Nov 22)", () => {
   const EXTRAS = { specialPeriods: [], services: ["Haircut"], categories: ["Hair salon"], description: "Short" };
 
-  test("Google results: no empty 'Sources' heading at the bottom, no second 'This week' label", () => {
+  test("Google results: no empty 'Sources' heading at the bottom, no 'What to do this week'", () => {
     const html = results("premium");
     expect(html).not.toContain("google-tab-sources");
-    const week = html.slice(html.indexOf('id="this-week"'), html.indexOf('id="since"'));
-    expect(text(week)).toContain("What to do this week");
-    expect(week).not.toContain("dashboard.googleTab.rec.thisWeek");
-    expect(text(week)).not.toMatch(/\bTHIS WEEK\b|\bThis week\b/);
+    expect(text(html)).not.toContain("What to do this week");
   });
 
   test("Google results: 'What this means for you' reads as advice — a plain bullet, no orange '!'", () => {

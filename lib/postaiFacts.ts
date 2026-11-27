@@ -11,6 +11,7 @@ import { shortName } from "@/lib/displayName";
 import { closureOf } from "@/lib/businessStatus";
 import { RATING_CONFIDENCE_FULL_AT_REVIEWS, REVIEW_COUNT_SATURATION, type ScoreBreakdown } from "@/lib/scoring";
 import { t, type Locale } from "@/lib/i18n";
+import { hoursExplanation } from "@/lib/hoursCheck";
 import { wholeCategoryPoints } from "@/lib/overviewTiles";
 import { freeWaitingPoints } from "@/lib/freeUpsell";
 import { displayPoints, wholePointRange } from "@/lib/pointRange";
@@ -152,7 +153,8 @@ export function buildPostaiFacts(
       status: isNotScoredYet(c) ? "not scored yet" : c.earnedPoints === null ? "couldn't check" : c.earnedPoints >= c.maxPoints ? "done" : "needs work",
       earned: c.earnedPoints,
       max: c.maxPoints,
-      explanation: c.explanation,
+      // Never a hours line whose two sides read the same (lib/hoursCheck.ts).
+      explanation: hoursExplanation(c, "en"),
     })),
     replyCounts: b.replyCounts ?? null,
     ownerProvided: b.owner ? ownerProvidedLines(b.owner) : [],

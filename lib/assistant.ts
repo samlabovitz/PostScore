@@ -19,6 +19,7 @@ import type { ReachabilityFailureReason } from "@/lib/websiteReachability";
 import type { TaskEffort, WebsiteBanner } from "@/lib/actionPlan";
 import { PHOTO_COMPARISON_CAP, type GrowthMoveId } from "@/lib/growthMoves";
 import { DEFAULT_LOCALE, formatShortDate, t, type Locale } from "@/lib/i18n";
+import { hoursExplanation } from "@/lib/hoursCheck";
 import { weekStartFor, type WeeklyChecklistItemId } from "@/lib/weeklyChecklist";
 
 // ---------------------------------------------------------------------------
@@ -635,6 +636,10 @@ function weeklyRoutineDoneOn(id: WeeklyChecklistItemId): string {
       return "Done directly on the owner's real Google Business Profile (Google itself) — not inside PostScore.";
     case "answer_questions":
       return "Done directly on the owner's real Google Business Profile (description, services and prices, customer details) — not inside PostScore.";
+    case "start_offer":
+      return "Done in PostScore's own Customer offers (a coupon, referral or first-time offer).";
+    case "seasonal_idea":
+      return "A plan for the next holiday: a themed Google post or a PostScore offer, owner-marked.";
   }
 }
 
@@ -840,7 +845,8 @@ export function buildAssistantContextText(context: AssistantBusinessContext, loc
     for (const c of context.score.losingChecks) {
       const earned = c.earnedPoints ?? 0;
       const missing = c.maxPoints - earned;
-      const explanation = clarifyCheckExplanation(c.checkId, c.explanation, locale);
+      // Never a hours line whose two sides read the same (lib/hoursCheck.ts hoursExplanation).
+      const explanation = clarifyCheckExplanation(c.checkId, hoursExplanation({ id: c.checkId, explanation: c.explanation }, locale), locale);
       lines.push(
         `- [${t(locale, CATEGORY_LABELS[c.category])}] ${c.label}: ${formatPoints(earned)}/${formatPoints(c.maxPoints)} pts — losing ${formatPoints(missing)} — ${explanation}`
       );

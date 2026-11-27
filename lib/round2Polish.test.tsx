@@ -240,13 +240,13 @@ describe("3. Reviews: 'Skip for now' on a pre-drafted reply; Grow's inbox; the B
 describe("4. Overview breakdown: the header agrees with the counts; compact rows; 'not scored yet' on one line", () => {
   const SAME = "Your website says Thursday 9:30 AM–6:00 PM; Google says Thursday 9:30 AM–6:00 PM.";
   const c = (id: string, earned: number | null, max: number, explanation = `${id} explained`) => ({ id, label: id, earnedPoints: earned, maxPoints: max, confidence: "VERIFIED", explanation });
-  test("a needs-work row: title, points and one button on one line; the description on tap", () => {
+  test("a row losing points: title, points and one button on one line; it starts open with its description (Nov 27)", () => {
     const category = { id: "visibility", label: "Reviews", earnedPoints: 1, possiblePoints: 6, relativeScore: 20, weight: 40, checks: [c("visibility.review_replies", 0, 5), c("visibility.rating", 1, 1)] };
     const html = wrap(<CategoryCard category={category as never} embedded businessId="b1" />);
     const row = html.slice(html.indexOf('id="check-review_replies"'), html.indexOf('data-testid="passed-checks"'));
     expect(row).toContain('data-compact="true"');
     expect(row.match(/data-testid="fix-button"/g)?.length ?? 0).toBeLessThanOrEqual(1);
-    expect(row).toMatch(/data-testid="row-detail"[^>]*class="[^"]*hidden/);
+    expect(row).toMatch(/data-testid="row-detail" data-open="true" class="flex-col gap-1.5 flex"/);
     expect(text(row)).toContain("visibility.review_replies explained");
   });
   test("'Not scored yet' rows: one muted line with their points", () => {

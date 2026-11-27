@@ -12,6 +12,7 @@ import { postaiQuestionsByPage } from "@/lib/postaiDock";
 import { getPlan } from "@/lib/premium";
 import { createClient } from "@/lib/supabase/server";
 import { NEW_PAGES_LIVE } from "@/lib/routes";
+import { LocalWriteNameProvider } from "@/components/gbp/LocalWriteGuard";
 import { ShellDataProvider } from "@/components/layout/ShellData";
 
 /**
@@ -39,12 +40,23 @@ export default async function BusinessLayout({ children, params }: { children: R
   const { devLocaleOverride } = await import("@/lib/viewLocale.server");
   // Day 25B step 4: the two-tab sidebar's score, plan and tags (new-design preview only).
   const shell = NEW_PAGES_LIVE ? await (await import("@/lib/shellData.server")).loadShellData(params.id) : null;
+  // Local development only: a bulk send to the real Google listing asks for the business name first
+  // (components/gbp/LocalWriteGuard.tsx). Never in production.
+  const localWriteName = process.env.NODE_ENV === "development" ? await localBusinessName(params.id) : null;
   return (
     <DevLocaleProvider value={devLocaleOverride()}>
-      <ShellDataProvider value={shell}>{children}</ShellDataProvider>
+      <LocalWriteNameProvider name={localWriteName}>
+        <ShellDataProvider value={shell}>{children}</ShellDataProvider>
+      </LocalWriteNameProvider>
       <Dock businessId={params.id} />
     </DevLocaleProvider>
   );
+}
+
+/** The name the owner sees (the business summary, request-cached; the page reads it too). */
+async function localBusinessName(businessId: string): Promise<string | null> {
+  const summary = await getBusinessSummary(businessId).catch(() => null);
+  return summary?.status === "ok" ? (summary.business.name ?? null) : null;
 }
 
 async function Dock({ businessId }: { businessId: string }) {

@@ -112,6 +112,35 @@ async function readReview(target: InboxTarget, reviewId: string, fetchImpl: type
 
 export type ReplyAction = "post" | "edit" | "delete";
 
+/** Reviews PostScore really replied to (never practice): the latest logged action is a post or edit Google accepted
+ * ("ok", or "unconfirmed": accepted, not shown yet), with no delete after it. Any age: a reply Google is slow to show
+ * is still a reply. `text`: our own saved draft when its length matches what the log recorded. */
+export async function sentFromLog(admin: SupabaseClient, businessId: string): Promise<Map<string, { at: string; text: string | null }>> {
+  const { data, error } = await admin.from("gbp_review_reply_log").select("review_id, action, status, reply_length, reply_text, created_at").eq("business_id", businessId).order("created_at", { ascending: false }).limit(1000);
+  const out = new Map<string, { at: string; text: string | null; length: number | null }>();
+  if (error || !data) return new Map();
+  const seen = new Set<string>();
+  for (const row of data as Array<{ review_id: string; action: ReplyAction; status: string; reply_length: number | null; reply_text?: string | null; created_at: string }>) {
+    if (seen.has(row.review_id) || row.status === "failed" || row.status === "practice") continue;
+    seen.add(row.review_id);
+    if (row.action !== "delete" && (row.status === "ok" || row.status === "unconfirmed")) out.set(row.review_id, { at: row.created_at, text: row.reply_text?.trim() || null, length: row.reply_length });
+  }
+  // Sent before the log kept the words: our own saved draft, when its length matches.
+  if (Array.from(out.values()).some((v) => !v.text)) {
+    const { data: drafts } = await admin.from("review_reply_batch").select("review_id, reply").eq("business_id", businessId).in("review_id", Array.from(out.keys()));
+    for (const d of (drafts ?? []) as Array<{ review_id: string; reply: string | null }>) {
+      const s = out.get(d.review_id);
+      if (s && !s.text && d.reply && (s.length === null || d.reply.trim().length === s.length)) s.text = d.reply.trim();
+    }
+  }
+  return new Map(Array.from(out, ([id, v]) => [id, { at: v.at, text: v.text }]));
+}
+
+/** The page's reviews with PostScore's own sent replies marked (only where Google shows no reply yet). */
+export function withSent<T extends { reviewId: string; reply: unknown }>(reviews: T[], sent: Map<string, { at: string; text: string | null }>): Array<T & { sent?: { at: string; text: string | null } | null }> {
+  return reviews.map((r) => (!r.reply && sent.has(r.reviewId) ? { ...r, sent: sent.get(r.reviewId)! } : r));
+}
+
 export type ReplyChangeResult =
   /** Google confirmed it on read-back. */
   | { status: "ok"; review: InboxReview }
@@ -127,7 +156,7 @@ export type ReplyChangeResult =
 
 export async function logReplyChange(
   admin: SupabaseClient,
-  row: { businessId: string; userId: string; action: ReplyAction; reviewId: string; replyLength: number | null; status: "ok" | "unconfirmed" | "failed" | "practice"; errorReason?: string | null }
+  row: { businessId: string; userId: string; action: ReplyAction; reviewId: string; replyLength: number | null; status: "ok" | "unconfirmed" | "failed" | "practice"; errorReason?: string | null; replyText?: string | null }
 ): Promise<void> {
   const { error } = await admin.from("gbp_review_reply_log").insert({
     business_id: row.businessId,
@@ -137,6 +166,8 @@ export async function logReplyChange(
     reply_length: row.replyLength,
     status: row.status,
     error_reason: row.errorReason ? row.errorReason.slice(0, 120) : null,
+    // PostScore's own reply as sent (supabase/day25b-reply-log-text.sql) — never the review's text.
+    ...(row.replyText ? { reply_text: row.replyText.slice(0, 4096) } : {}),
   });
   if (error) console.error(`[review-replies] log failed for ${row.businessId}: ${error.code ?? "unknown"}`);
 }
@@ -172,6 +203,8 @@ export async function changeReplyWithClient(
       action: change.action,
       reviewId: change.reviewId,
       replyLength,
+      // The words we sent, kept with a send Google accepted (a failed one changed nothing).
+      replyText: status !== "failed" && change.action !== "delete" && !options.practice ? change.text : null,
       ...(options.practice ? { status: "practice" as const, errorReason: errorReason ? `${status}:${errorReason}` : status } : { status, errorReason }),
     });
   const fail = async (e: GbpCallError): Promise<ReplyChangeResult> => {

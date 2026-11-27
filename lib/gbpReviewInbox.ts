@@ -20,6 +20,22 @@ export interface InboxReview {
   createTime: string | null;
   updateTime: string | null;
   reply: { comment: string; updateTime: string | null } | null;
+  /** PostScore posted a reply Google isn't showing yet (gbp_review_reply_log: a real post, accepted, not deleted
+   * since): it counts as Replied — never back under "Needs a reply" with a "Draft it now" that invites a duplicate.
+   * `text`: the reply we sent (our own saved draft, when its length matches what the log recorded). */
+  sent?: { at: string; text: string | null } | null;
+}
+
+/** Replied: Google shows a reply, or PostScore sent one Google hasn't shown yet. */
+export function isReplied(r: Pick<InboxReview, "reply" | "sent">): boolean {
+  return !!r.reply || !!r.sent;
+}
+
+/** After this long with Google still not showing a reply PostScore sent: "Google never showed this reply. Post it
+ * again?" (with a confirm step). */
+export const SENT_NOT_SHOWN_MS = 48 * 60 * 60 * 1000;
+export function sentNotShown(r: Pick<InboxReview, "reply" | "sent">, now: number): boolean {
+  return !r.reply && !!r.sent && now - Date.parse(r.sent.at) > SENT_NOT_SHOWN_MS;
 }
 
 /** Google's raw review, only the fields read here. */
@@ -66,8 +82,8 @@ export function toInboxReview(raw: RawGbpReview): InboxReview | null {
 }
 
 export function filterReviews(reviews: InboxReview[], filter: InboxFilter): InboxReview[] {
-  if (filter === "needs_reply") return reviews.filter((r) => !r.reply);
-  if (filter === "replied") return reviews.filter((r) => !!r.reply);
+  if (filter === "needs_reply") return reviews.filter((r) => !isReplied(r));
+  if (filter === "replied") return reviews.filter((r) => isReplied(r));
   return reviews;
 }
 

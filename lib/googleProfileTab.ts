@@ -41,7 +41,6 @@ export type JumpSectionId = (typeof JUMP_SECTIONS)[number]["id"] | (typeof RESUL
  * old tab (plus this-week and since, which were inside its section 1). */
 export const RESULTS_SECTIONS = [
   { id: "last-month", key: "lastMonth", part: "performance" },
-  { id: "this-week", key: "thisWeek", part: "performance" },
   { id: "since", key: "since", part: "performance" },
   { id: "funnel", key: "funnel", part: "performance" },
   { id: "searches", key: "searches", part: "performance" },

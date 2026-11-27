@@ -118,8 +118,10 @@ export async function listGoogleReviews(businessId: string, pageToken: string | 
     console.warn("[review-inbox] list failed", JSON.stringify({ status: page.status, reason: page.reason }));
     return { status: "error", error: "failed" };
   }
-  const { pendingFromLog } = await import("@/lib/gbpReviewInbox.server");
-  return { status: "ok", reviews: page.reviews, nextPageToken: page.nextPageToken, total: page.total, practice: t.practice, canPost: t.canPost, pending: pageToken ? [] : await pendingFromLog(t.admin, businessId) };
+  const { pendingFromLog, sentFromLog, withSent } = await import("@/lib/gbpReviewInbox.server");
+  // A reply PostScore sent that Google isn't showing yet counts as Replied (never "Draft it now" again).
+  const sent = t.practice ? new Map() : await sentFromLog(t.admin, businessId).catch(() => new Map());
+  return { status: "ok", reviews: withSent(page.reviews, sent), nextPageToken: page.nextPageToken, total: page.total, practice: t.practice, canPost: t.canPost, pending: pageToken ? [] : await pendingFromLog(t.admin, businessId) };
 }
 
 export type CheckGoogleReviewResult = { status: "ok"; review: InboxReview } | { status: "blocked"; reason: GbpEditBlock } | { status: "error"; error: "reconnect" | "not_found" | "failed" };

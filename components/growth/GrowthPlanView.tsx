@@ -1,38 +1,30 @@
 "use client";
 
-// Day 25B step 6 (docs/plans/day25a-spec.md §2 Growth plan, §2c, §6, mockups
-// 03, 03b and 06): Growth → Growth plan on the new design. Top to bottom:
-// the tier card (name, "Tier N of 5", the next step, active weeks, the 5-step
-// track, "To reach …" and "After that"), this week's plan (one list, ranked
-// by what each task does for the tier; Premium approves, Grow does the steps
-// and checks them off), "More ways to bring people in", the link to Google
-// results, and "More customers, whatever your score". Tier terms only:
+// Day 25B (docs/mockups/day25b/growth-checklist.html): Growth → Growth plan on
+// the new design. Top to bottom: the tier card (name, "Tier N of 5", the next
+// step, active weeks, the 5-step track, "To reach …" and "After that"), this
+// week's checklist of habits (components/growth/HabitChecklist.tsx; score
+// fixes live only on Fix plan), "More ways to bring people in", the link to
+// Google results, and "More customers, whatever your score". Tier terms only:
 // never PostScore points. Free: a locked preview, never a made-up tier.
 
 import Link from "next/link";
-import { useMemo, useState, useTransition, type ReactNode } from "react";
 import { IconArrowRight, IconCheck, IconLock, IconPlugConnected } from "@tabler/icons-react";
 import { Card } from "@/components/ui/Card";
-import { TierPlanContext, type TierPlanValue } from "@/components/growth/TierPlanContext";
-import { ThisWeek, GrowThisWeek } from "@/components/gbp/GoogleResults";
 import { PresenceUnder70Note, TwoScoresStrip } from "@/components/overview/TwoScoresStrip";
 import { MoreWaysCards } from "@/components/gbp/MoreWaysCards";
-import { GrowMoreCustomers } from "@/components/overview/GrowMoreCustomers";
+import { HabitChecklist, habitText } from "@/components/growth/HabitChecklist";
+import { bestPostDay, lastMonthProof, type Habit } from "@/lib/growthHabits";
+import type { WeeklyChecklistStateDTO } from "@/app/actions/weeklyChecklist";
 import { UpgradeTrigger } from "@/components/upgrade/UpgradeTrigger";
-import { itemText } from "@/components/gbp/ThisWeekList";
-import { setWeeklyCheckItem } from "@/app/actions/weeklyChecklist";
 import type { GoogleProfileTabProps } from "@/components/gbp/googleTabParts";
 import type { GrowthState, TierLine } from "@/lib/growthPlan";
-import type { WeekPlanData } from "@/lib/growthWeekPlan.server";
 import type { ResultId, TierNumber } from "@/lib/growthTier";
-import type { Rec } from "@/lib/googleRecommendations";
-import type { IdeaType } from "@/lib/listingIdeas";
-import type { WeeklyChecklistItemId } from "@/lib/weeklyChecklist";
 import { TIER_NAME_KEYS } from "@/lib/navTabs";
 import { gbpConnectHref } from "@/lib/gbpLanding";
 import { isPremiumPlan, type Plan } from "@/lib/plan";
-import { getReviewsHref, googleListingHref, googleResultsHref } from "@/lib/routes";
-import { t, tPlural, useLocale, type Locale, type MessageKey } from "@/lib/i18n";
+import { fixPlanHref, googleResultsHref } from "@/lib/routes";
+import { formatCount, t, tPlural, useLocale, type Locale, type MessageKey } from "@/lib/i18n";
 import type { PluralKeyBase } from "@/lib/i18n/messages";
 import { cn } from "@/lib/utils";
 
@@ -60,21 +52,6 @@ export function tierLineText(line: TierLine, locale: Locale): string {
     case "checkOff":
       return t(locale, G("line.checkOff"));
   }
-}
-
-/** The plan's order and tier lines (and "I did this" on Grow / not connected) for the shared list. */
-export function TierPlanProvider({ businessId, plan, week, didThis, children }: { businessId: string; plan: WeekPlanData; week: boolean; didThis: boolean; children: ReactNode }) {
-  const locale = useLocale();
-  const value: TierPlanValue = useMemo(
-    () => ({
-      businessId,
-      order: plan.order,
-      lines: week ? Object.fromEntries(Object.entries(plan.lines).map(([k, l]) => [k, { text: tierLineText(l!, locale), first: !!l!.first }])) : {},
-      didThis: didThis ? { checked: plan.checked } : null,
-    }),
-    [businessId, plan, week, didThis, locale]
-  );
-  return <TierPlanContext.Provider value={value}>{children}</TierPlanContext.Provider>;
 }
 
 // ------------------------------------------------------------------ tier card
@@ -263,147 +240,50 @@ function ChangeLine({ change, tier, metResults }: { change: NonNullable<GrowthSt
 
 // ------------------------------------------------------------------ this week's plan
 
-/** "Share your review link" and "Check your hours": the routine items that aren't Google tasks, in the same list. */
-const ROUTINE_EXTRAS: WeeklyChecklistItemId[] = ["share_review_link", "check_hours"];
-
-/** Each extra's own way in: the review link & QR, or the Hours row of the Google listing. */
-function routineLink(businessId: string, id: WeeklyChecklistItemId, locale: Locale): { href: string; label: string; howTo?: string } | null {
-  if (id === "share_review_link") return { href: getReviewsHref(businessId, { hash: "review-link" }), label: t(locale, G("routine.reviewLink")), howTo: t(locale, G("routine.reviewLinkHowTo")) };
-  if (id === "check_hours") return { href: googleListingHref(businessId, { hash: "listing-hours" }), label: t(locale, G("routine.hours")) };
-  return null;
-}
-
-function RoutineExtra({ businessId, id, title, howTo, checked: initial }: { businessId: string; id: WeeklyChecklistItemId; title: string; howTo: string; checked: boolean }) {
-  const locale = useLocale();
-  const link = routineLink(businessId, id, locale);
-  const [checked, setChecked] = useState(initial);
-  const [pending, start] = useTransition();
-  return (
-    <li className="flex flex-col gap-2 border-t border-paper-line py-3 sm:flex-row sm:items-center sm:justify-between" data-testid={`routine-${id}`}>
-      <div className="min-w-0">
-        <p className="text-[14.5px] font-medium text-ink">{title}</p>
-        <p className="mt-0.5 text-[12.5px] text-ink-mute">{link?.howTo ?? howTo}</p>
-      </div>
-      <div className="flex shrink-0 flex-wrap items-center gap-2">
-      {link && (
-        <Link href={link.href} className="inline-flex w-fit items-center rounded-lg border border-paper-deep bg-white px-3 py-1.5 text-[13px] font-semibold text-ink hover:border-ink-soft" data-testid={`routine-link-${id}`}>
-          {link.label}
-        </Link>
-      )}
-      <button
-        type="button"
-        aria-pressed={checked}
-        disabled={pending}
-        onClick={() =>
-          start(async () => {
-            const next = !checked;
-            setChecked(next);
-            const r = await setWeeklyCheckItem(businessId, id, next).catch(() => null);
-            if (!r || r.status !== "ok") setChecked(!next);
-          })
-        }
-        className={cn("inline-flex w-fit shrink-0 items-center gap-1.5 rounded-lg border px-3 py-1.5 text-[13px] font-semibold", checked ? "border-green text-green" : "border-paper-deep bg-white text-ink hover:border-ink-soft")}
-      >
-        <IconCheck size={14} aria-hidden />
-        {t(locale, checked ? G("didIt") : G("didThis"))}
-      </button>
-      </div>
-    </li>
-  );
-}
-
-export function WeekPlanCard({
-  props,
-  plan,
-  state,
-  week,
-  routine,
-}: {
-  props: GoogleProfileTabProps;
-  plan: Plan;
-  state: GrowthState | null;
-  week: WeekPlanData;
-  routine: Array<{ id: WeeklyChecklistItemId; title: string; howTo: string }>;
-}) {
-  const locale = useLocale();
-  const premium = isPremiumPlan(plan);
-  const connected = week.connected;
-  const oneTap = premium && connected;
-  // The top line, from the real tier rules (spec §2c).
-  const target = state ? (state.thisWeekCounts ? "next" : "this") : "this";
-  // Check-offs (Grow, or not connected): 2 make a week count; one tap (Premium, connected): 1 task.
-  const top = !oneTap
-    ? state?.onTrack
-      ? t(locale, G("top.checkOffOnTrack"), { tier: tierName(locale, state.onTrack.tier), date: dayLabel(state.onTrack.monday, locale) })
-      : t(locale, G(target === "next" ? "top.checkOffNext" : "top.checkOffThis"))
-    : state?.onTrack
-      ? t(locale, G("top.onTrack"), { tier: tierName(locale, state.onTrack.tier), date: dayLabel(state.onTrack.monday, locale) })
-      : t(locale, G(target === "next" ? "top.nextWeek" : "top.thisWeek"));
-  const sub = state?.thisWeekCounts ? t(locale, G("top.alreadyCounts")) : null;
-  // The next result is for the first tier above whose results aren't in hand yet.
-  const resultTier = state?.next ? (state.next.results > 0 && !state.next.resultsMet ? state.next.tier : state.after?.tier ?? null) : null;
-  const nextResult = state?.nextResult && resultTier ? t(locale, G("top.nextResult"), { tier: tierName(locale, resultTier), result: t(locale, G(`${RESULT_KEY[state.nextResult]}.goal`)) }) : null;
-  const extras = routine.filter((r) => ROUTINE_EXTRAS.includes(r.id));
-  return (
-    <section id="this-week" className="scroll-mt-20" data-testid="week-plan">
-      <div className="mb-3 flex flex-col gap-1">
-        <h2 className="font-serif text-xl font-semibold text-ink">{t(locale, G("week.title"))}</h2>
-        <p className="text-[13px] text-ink-soft">
-          {oneTap ? tPlural(locale, G("week.subOneTap") as PluralKeyBase, week.count, { count: week.count }) : connected ? tPlural(locale, G("week.subSteps") as PluralKeyBase, week.count, { count: week.count }) : t(locale, G("week.subNotConnected"))}
-        </p>
-      </div>
-      <Card className="flex flex-col gap-3 p-5 sm:p-6">
-        <div className="rounded-lg bg-[color:color-mix(in_srgb,var(--color-green)_8%,white)] px-3.5 py-2.5" data-testid="week-top-line">
-          <p className="text-[14px] font-semibold text-ink">{top}</p>
-          {(sub || nextResult) && <p className="mt-0.5 text-[12.5px] text-ink-soft">{[sub, nextResult].filter(Boolean).join(" ")}</p>}
-        </div>
-        <TierPlanProvider businessId={props.businessId} plan={week} week didThis={!oneTap}>
-          {oneTap ? <ThisWeek props={props} noTitle /> : <GrowThisWeek props={props} chips={null} />}
-        </TierPlanProvider>
-        {!connected && <p className="text-[12.5px] text-ink-soft" data-testid="week-connect-line">{t(locale, G("week.connectOneTap"))}</p>}
-        {extras.length > 0 && (
-          <>
-          {/* Not ranked for the tier, so not in the count above: "Also this week". */}
-          <p className="border-t border-paper-line pt-3 text-[12px] font-bold uppercase tracking-[0.08em] text-ink-soft" data-testid="week-routine-title">{t(locale, G("routine.also"))}</p>
-          <ul data-testid="week-routine" className="[&>li:first-child]:border-t-0 [&>li:first-child]:pt-1">
-            {extras.map((r) => (
-              <RoutineExtra key={r.id} businessId={props.businessId} id={r.id} title={r.title} howTo={r.howTo} checked={week.checked.includes(r.id)} />
-            ))}
-          </ul>
-          </>
-        )}
-      </Card>
-    </section>
-  );
-}
-
 // ------------------------------------------------------------------ the page
+
+/** Under the subtitle: what Google brought last month, from Google's own numbers (never made up), linking to Google
+ * results. Not connected: nothing here (the Connect banner below says it). Connected with no months yet: nothing. */
+function ProofLine({ props }: { props: GoogleProfileTabProps }) {
+  const locale = useLocale();
+  const cls = "mt-2 inline-block max-w-2xl text-[13.5px] font-semibold text-ink underline decoration-brass underline-offset-[3px] hover:text-ink-soft";
+  if (!props.connected) return null;
+  const proof = lastMonthProof(props.insights);
+  if (!proof) return null;
+  const change = proof.change ? t(locale, G(`proof.${proof.change.dir}`), { pct: proof.change.pct }) : "";
+  return (
+    <Link href={googleResultsHref(props.businessId)} className={cls} data-testid="growth-proof" data-kind="numbers">
+      {tPlural(locale, "dashboard.growthPlan.proof", proof.count, { count: formatCount(proof.count, locale) })}
+      {change} →
+    </Link>
+  );
+}
 
 export function GrowthPlanView({
   props,
   plan,
   state,
   testAccount,
-  week,
-  routine,
-  growMore,
+  habits,
+  checklist,
 }: {
   props: GoogleProfileTabProps;
   plan: Plan;
   state: GrowthState | null;
   testAccount: boolean;
-  week: WeekPlanData;
-  routine: Array<{ id: WeeklyChecklistItemId; title: string; howTo: string }>;
-  growMore: Parameters<typeof GrowMoreCustomers>[0];
+  habits: Habit[];
+  /** This week's check-offs and PostScore's own checks (null: couldn't be read). */
+  checklist: WeeklyChecklistStateDTO | null;
 }) {
   const locale = useLocale();
-  const connected = week.connected;
+  const connected = props.connected || props.practice;
   const lost = !props.connected && props.needsReconnect;
   return (
     <div className="flex flex-col gap-8" data-testid="growth-plan">
       <div>
         <h1 className="font-serif text-2xl font-semibold text-ink nav:text-[27px]">{t(locale, G("title"))}</h1>
-        <p className="mt-1 max-w-2xl text-sm text-ink-soft">{t(locale, G("subtitle"))}</p>
+        <p className="mt-1 max-w-2xl text-sm text-ink-soft">{t(locale, G("subtitleV3"))}</p>
+        <ProofLine props={props} />
       </div>
       {/* Presence under 70: fixing it is the fastest way to be found. Then how the two scores work together. */}
       <PresenceUnder70Note businessId={props.businessId} />
@@ -413,7 +293,7 @@ export function GrowthPlanView({
         <Card className={cn("flex flex-col gap-2 p-4 sm:flex-row sm:items-center sm:justify-between", lost && "border-red/40")} data-testid={lost ? "growth-reconnect" : "growth-connect"}>
           <p className={cn("flex items-center gap-2 text-[13.5px] font-medium", lost ? "text-red" : "text-ink")}>
             <IconPlugConnected size={16} aria-hidden className={lost ? "text-red" : "text-brass"} />
-            {t(locale, G(lost ? "reconnectBanner" : "connectBanner"))}
+            {t(locale, G(lost ? "reconnectBanner" : "proof.connectBanner"))}
           </p>
           <a href={props.canStart ? gbpConnectHref(props.businessId, "profile") : `/business/${props.businessId}/connect-gbp`} className={cn("inline-flex h-9 w-fit shrink-0 items-center rounded-lg px-3.5 text-[13px] font-semibold text-white", lost ? "bg-red" : "bg-ink")}>
             {t(locale, lost ? "dashboard.overview.listingRow.reconnect" : "dashboard.overview.listingRow.connect")}
@@ -421,7 +301,27 @@ export function GrowthPlanView({
         </Card>
       )}
       {state ? <TierCard state={state} testAccount={testAccount} /> : <Card className="p-5 text-sm text-ink-soft">{t(locale, G("unavailable"))}</Card>}
-      <WeekPlanCard props={props} plan={plan} state={state} week={week} routine={routine} />
+      {checklist ? (
+        <HabitChecklist
+          businessId={props.businessId}
+          habits={habits}
+          weekStart={checklist.weekStart}
+          checked={checklist.checkedItemIds}
+          auto={checklist.auto}
+          connected={connected}
+          week={state?.thisWeekActions ?? null}
+          postDay={bestPostDay(props.insights)}
+        />
+      ) : (
+        <Card className="p-5 text-sm text-ink-soft">{t(locale, G("unavailable"))}</Card>
+      )}
+      {/* Score fixes (replies, listing details, hours) live only on Fix plan. */}
+      <Link href={fixPlanHref(props.businessId)} className="flex flex-col gap-1 rounded-xl border border-paper-deep bg-white px-4 py-3 text-[14px] hover:border-ink-soft sm:flex-row sm:items-center sm:justify-between" data-testid="habits-fix-link">
+        <span>
+          <b className="font-semibold text-ink">{t(locale, "dashboard.habits.fixLink.title")}</b> <span className="text-ink-soft">{t(locale, "dashboard.habits.fixLink.body")}</span>
+        </span>
+        <span className="font-semibold text-brass">{t(locale, "dashboard.habits.fixLink.link")}</span>
+      </Link>
       <section id="more-ways" className="scroll-mt-20 flex flex-col gap-3">
         {/* The cards carry their own "More ways to bring people in" heading. */}
         <MoreWaysCards businessId={props.businessId} premium={isPremiumPlan(plan)} connected={connected} />
@@ -433,17 +333,14 @@ export function GrowthPlanView({
           <IconArrowRight size={15} aria-hidden />
         </span>
       </Link>
-      <div id="more" className="scroll-mt-20">
-        <GrowMoreCustomers {...growMore} />
-      </div>
     </div>
   );
 }
 
 // ------------------------------------------------------------------ Free (06)
 
-/** Free: "?" (never a made-up tier), what the tier would measure, this week's real task titles blurred, Grow vs Premium. */
-export function GrowthFreePreview({ businessId, recs, type }: { businessId: string; recs: Rec[]; type: IdeaType | null }) {
+/** Free: "?" (never a made-up tier), what the tier would measure, this week's real habits with the how-to blurred, Grow vs Premium. */
+export function GrowthFreePreview({ businessId, habits }: { businessId: string; habits: Habit[] }) {
   const locale = useLocale();
   return (
     <div className="flex flex-col gap-6" data-testid="growth-free">
@@ -470,13 +367,13 @@ export function GrowthFreePreview({ businessId, recs, type }: { businessId: stri
         </div>
       </Card>
       <Card className="flex flex-col gap-2 p-5" data-testid="growth-free-week">
-        <h2 className="font-serif text-lg font-semibold text-ink">{t(locale, G("week.title"))}</h2>
+        <h2 className="font-serif text-lg font-semibold text-ink">{t(locale, "dashboard.habits.free.title")}</h2>
         <ul className="flex flex-col divide-y divide-paper-line">
-          {recs.map((rec) => {
-            const x = itemText(rec, locale, type);
+          {habits.map((habit) => {
+            const x = habitText(habit, locale);
             return (
-              <li key={rec.kind} className="py-2.5">
-                <p className="text-[14.5px] font-medium text-ink">{x.text}</p>
+              <li key={habit.id} className="py-2.5">
+                <p className="text-[14.5px] font-medium text-ink">{x.title}</p>
                 <p aria-hidden className="mt-1 select-none text-[13px] text-ink-mute blur-[3px]">{t(locale, G("free.blurred"))}</p>
               </li>
             );

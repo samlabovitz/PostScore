@@ -29,16 +29,16 @@ import type { ScoreSnapshot } from "@/app/actions/scoring";
 import { formatPoints } from "@/components/scoring/CategoryCard";
 import type { ProfileChange } from "@/lib/profileChanges";
 import { describeScanChanges, type NowValues } from "@/lib/scanChangeText";
-import { diffBreakdowns, resolveChangeDisplay, type CheckChange } from "@/lib/scoreChanges";
-import type { ScoreBreakdown } from "@/lib/scoring";
-import { formatShortDate, t, tPlural, useLocale, useTimeZone, type Locale } from "@/lib/i18n";
+import { resolveChangeDisplay } from "@/lib/scoreChanges";
+import { checkLabelKey, type ScoreBreakdown } from "@/lib/scoring";
+import { formatShortDate, t, useLocale, useTimeZone, type Locale } from "@/lib/i18n";
 import { calendarDaysAgo } from "@/lib/i18n/format";
 import { isScoringUpdate } from "@/lib/websiteRecheckPolicy";
+import { scoreMoves, type ScoreMove } from "@/lib/scanSplit";
+import { FixButton } from "@/components/scoring/FixButton";
+import { helpSplit } from "@/components/scoring/CategoryCard";
 import { cn } from "@/lib/utils";
 
-/** At most this many check changes on the Overview (biggest point
- * changes first); the rest are one link away on Reports. */
-export const MAX_CHECK_ROWS = 4;
 
 const FIELD_ICON: Record<ProfileChange["field"], typeof IconStar> = {
   phone: IconPhone,
@@ -82,8 +82,11 @@ export function SinceLastScanCard({
   const timeZone = useTimeZone();
   const [current, previous] = snapshots;
   const sameVersion = !!current && !!previous && !scoringUpdateBetween(previous, current);
-  const checkChanges = sameVersion ? diffBreakdowns(previous.breakdown_json, current.breakdown_json) : [];
-  const hiddenChanges = Math.max(0, checkChanges.length - MAX_CHECK_ROWS);
+  // Always which checks moved and why; across a scoring update, the earlier scan re-scored under today's rules
+  // (lib/scanSplit.ts): the owner's changes first, PostScore's update after.
+  // Every check that moved, gains and losses alike, each with its effect on the score (lib/scanSplit.ts) — on the
+  // same version and across a scoring update (a check the update started counting is listed too, marked).
+  const moves = current && previous ? scoreMoves(previous, current, sameVersion) : null;
   const reportsLink = (
     <Link
       href={`/business/${businessId}/reports`}
@@ -115,36 +118,16 @@ export function SinceLastScanCard({
       {/* Equal height with Top recommendations: content sits at the
           top; any extra height goes above the Reports link. */}
       <div className="flex flex-1 flex-col gap-3">
-        <ScoreBeforeAfter current={current} previous={previous} timeZone={timeZone} />
+        <ScoreBeforeAfter current={current} previous={previous} timeZone={timeZone} explained={!!moves?.rescored} />
+        {moves && <GainedLost moves={moves} current={current} liveBreakdown={liveBreakdown} businessId={businessId} />}
 
         <div className="flex flex-col gap-2">
           <SubHeading>{t(locale, "dashboard.overview.sinceCard.listingHeading")}</SubHeading>
           <ListingChanges businessId={businessId} current={current} gbpConnected={gbpConnected} now={now} />
         </div>
-
-        {/* A scoring-version change has no point-for-point comparison;
-            the one note above already says so — no second message. */}
-        {sameVersion && (
-          <div className="flex flex-col gap-2">
-            <SubHeading>{t(locale, "dashboard.overview.sinceCard.checksHeading")}</SubHeading>
-            <CheckChanges changes={checkChanges} liveBreakdown={liveBreakdown} />
-            {hiddenChanges > 0 && (
-              <Link
-                href={`/business/${businessId}/reports`}
-                data-testid="since-more-changes"
-                className="inline-flex w-fit flex-wrap items-center gap-x-1 pt-1 text-[13px] font-semibold text-ink hover:text-brass"
-              >
-                <span>{tPlural(locale, "dashboard.overview.sinceCard.moreChanges", hiddenChanges)}</span>
-                <IconArrowRight size={14} aria-hidden />
-                <span>{t(locale, "dashboard.overview.sinceCard.reportsLink")}</span>
-              </Link>
-            )}
-          </div>
-        )}
       </div>
 
-      {/* The "+N more" link already goes to Reports — no second one. */}
-      {hiddenChanges === 0 && reportsLink}
+      {reportsLink}
     </section>
   );
 }
@@ -161,9 +144,11 @@ function shortDay(at: string, locale: Locale, timeZone: string): string {
   return new Date(at).getFullYear() === new Date().getFullYear() ? full.replace(/,? \d{4}$/, "") : full;
 }
 
-function ScoreBeforeAfter({ current, previous, timeZone }: { current: ScoreSnapshot; previous: ScoreSnapshot; timeZone: string }) {
+function ScoreBeforeAfter({ current, previous, timeZone, explained = false }: { current: ScoreSnapshot; previous: ScoreSnapshot; timeZone: string; explained?: boolean }) {
   const locale = useLocale();
   const sameVersion = !scoringUpdateBetween(previous, current);
+  // Every move is listed below (gains and losses, the update's marked): never hidden behind one pill.
+  const splitShown = !sameVersion && explained;
   const delta = current.total - previous.total;
   const Icon = delta > 0 ? IconArrowUpRight : delta < 0 ? IconArrowDownRight : IconMinus;
   return (
@@ -183,7 +168,7 @@ function ScoreBeforeAfter({ current, previous, timeZone }: { current: ScoreSnaps
           </span>
           <span className="font-serif text-[28px] font-bold leading-none tabular-nums text-ink">{current.total}</span>
         </div>
-        {!sameVersion && (
+        {!sameVersion && !splitShown && (
           <span data-testid="since-scoring-updated" className="mb-0.5 inline-flex items-center rounded-full bg-white px-2.5 py-1 text-[12.5px] font-semibold text-ink-soft">
             {t(locale, "dashboard.overview.scoreCard.scoringUpdated")}
           </span>
@@ -205,7 +190,7 @@ function ScoreBeforeAfter({ current, previous, timeZone }: { current: ScoreSnaps
           </span>
         )}
       </div>
-      {!sameVersion && <p className="text-[12.5px] leading-snug text-ink">{t(locale, "dashboard.overview.scoringUpdatedBetweenScans")}</p>}
+      {!sameVersion && !splitShown && <p className="text-[12.5px] leading-snug text-ink">{t(locale, "dashboard.overview.scoringUpdatedBetweenScans")}</p>}
     </div>
   );
 }
@@ -244,45 +229,72 @@ function ListingChanges({ businessId, current, gbpConnected, now }: { businessId
   );
 }
 
-function CheckChanges({ changes, liveBreakdown }: { changes: CheckChange[]; liveBreakdown: ScoreBreakdown }) {
+
+const one = (n: number) => Math.round(n * 10) / 10;
+const signedOne = (n: number) => (one(n) > 0 ? `+${formatPoints(one(n))}` : one(n) < 0 ? `−${formatPoints(Math.abs(one(n)))}` : "0");
+
+/** "Gained +3.8" and "Lost −2.9": every check that moved — old → new points, why in today's words, and for a loss
+ * the button to fix it. A check PostScore's scoring update started counting is listed like any other, with a note. */
+export function GainedLost({ moves, current, liveBreakdown, businessId }: { moves: NonNullable<ReturnType<typeof scoreMoves>>; current: ScoreSnapshot; liveBreakdown: ScoreBreakdown; businessId: string }) {
   const locale = useLocale();
-  if (changes.length === 0) return <p className="text-[13px] text-ink-soft">{t(locale, "dashboard.overview.nothingChangedSinceLastScan")}</p>;
+  const checkOf = (id: string) => current.breakdown_json.checks.find((c) => c.id === id) ?? liveBreakdown.checks.find((c) => c.id === id);
+  // Saved scans keep no words: the label from its key, else today's check.
+  const labelOf = (id: string) => {
+    const c = checkOf(id);
+    const byKey = `content.checks.${id}.label`;
+    const keyed = t(locale, byKey as Parameters<typeof t>[1]);
+    // Translated: the scorer's own label key, else the check's generic one (a saved scan can carry English words).
+    const own = checkLabelKey(id);
+    return (own ? t(locale, own) : null) || (keyed !== byKey ? keyed : null) || (c && resolveChangeDisplay(c, liveBreakdown, locale).label) || liveBreakdown.checks.find((x) => x.id === id)?.label || id;
+  };
+  const pts = (v: number | null) => (v === null ? t(locale, "dashboard.overview.sinceCard.notScored") : formatPoints(v));
+  const row = (m: ScoreMove, loss: boolean) => {
+    const check = checkOf(m.id);
+    // The reason in one sentence (what we found, and the line), like the breakdown rows.
+    const why = check ? helpSplit(resolveChangeDisplay(check, liveBreakdown, locale).explanation).first : "";
+    return (
+      <li key={m.id} className="flex flex-col gap-1 py-2 first:pt-0 last:pb-0" data-testid="since-move" data-loss={loss || undefined}>
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0 text-[13.5px] font-medium text-ink">
+            {labelOf(m.id)}:{" "}
+            <span className="tabular-nums">{m.from === null ? t(locale, "dashboard.overview.sinceCard.nowPoints", { points: `${pts(m.to)} / ${formatPoints(m.max)}` }) : `${pts(m.from)} → ${pts(m.to)} / ${formatPoints(m.max)}`}</span>
+          </div>
+          <span className={cn("inline-flex shrink-0 whitespace-nowrap rounded-full px-2 py-0.5 text-[12px] font-semibold", loss ? "bg-[color:color-mix(in_srgb,var(--color-red)_10%,transparent)] text-red" : "bg-[color:color-mix(in_srgb,var(--color-green)_10%,transparent)] text-green")}>
+            {signedOne(m.impact)} {t(locale, "dashboard.website.ptsAbbrev")}
+          </span>
+        </div>
+        {why && <p className="text-[12px] text-ink-soft">{why}</p>}
+        {m.byUpdate && <p className="text-[12px] font-medium text-ink" data-testid="since-by-update">{t(locale, "dashboard.overview.sinceCard.byUpdate")}</p>}
+        {loss && (
+          <span className="w-fit">
+            <FixButton businessId={businessId} item={{ checkId: m.id }} fromScore premiumLine={false} />
+          </span>
+        )}
+      </li>
+    );
+  };
+  const gains = moves.moves.filter((m) => m.impact > 0);
+  const losses = moves.moves.filter((m) => m.impact < 0);
+  const group = (title: string, total: number, list: ScoreMove[], loss: boolean, testId: string) =>
+    list.length > 0 && (
+      <div className="flex flex-col gap-1.5" data-testid={testId}>
+        <SubHeading>
+          {title} <span className={loss ? "text-red" : "text-green"}>{signedOne(total)}</span>
+        </SubHeading>
+        <ul className="flex flex-col divide-y divide-paper-line">{list.map((m) => row(m, loss))}</ul>
+      </div>
+    );
   return (
-    <ul className="flex flex-col divide-y divide-paper-line">
-      {changes.slice(0, MAX_CHECK_ROWS).map(({ check, fromPoints, toPoints, methodChanged }) => {
-        // A method change confounds the delta (HOW speed was measured
-        // changed) — never imply the business itself got faster/slower.
-        const delta = !methodChanged && fromPoints !== null && toPoints !== null ? toPoints - fromPoints : null;
-        const { label, explanation } = resolveChangeDisplay(check, liveBreakdown, locale);
-        return (
-          <li key={check.id} className="flex items-start justify-between gap-3 py-2.5 first:pt-0 last:pb-0">
-            <div className="min-w-0">
-              <div className="text-[13.5px] font-medium text-ink">{label}</div>
-              {/* A check no longer scored has no live words, and saved scans keep none. */}
-              {(methodChanged || explanation) && (
-                <div className="mt-0.5 text-[12px] text-ink-soft">
-                  {methodChanged ? t(locale, "dashboard.overview.speedMeasurementMethodChanged") : explanation}
-                </div>
-              )}
-            </div>
-            <span
-              className={cn(
-                "inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-full px-2 py-0.5 text-[12px] font-semibold",
-                delta === null ? "bg-[color:color-mix(in_srgb,var(--color-ink)_5%,transparent)] text-ink-soft" : delta > 0 ? "bg-[color:color-mix(in_srgb,var(--color-green)_10%,transparent)] text-green" : delta < 0 ? "bg-[color:color-mix(in_srgb,var(--color-red)_10%,transparent)] text-red" : "bg-[color:color-mix(in_srgb,var(--color-ink)_5%,transparent)] text-ink-soft"
-              )}
-            >
-              {delta === null ? (
-                t(locale, "dashboard.overview.updatedPillLabel")
-              ) : (
-                <>
-                  {delta > 0 ? <IconArrowUpRight size={13} aria-hidden /> : delta < 0 ? <IconArrowDownRight size={13} aria-hidden /> : null}
-                  {signed(delta)} {t(locale, "dashboard.website.ptsAbbrev")}
-                </>
-              )}
-            </span>
-          </li>
-        );
-      })}
-    </ul>
+    <div className="flex flex-col gap-3" data-testid="since-gained-lost">
+      {!moves.rescored && <p className="text-[12.5px] text-ink-soft" data-testid="since-cant-rescore">{t(locale, "dashboard.overview.sinceCard.cantRescore")}</p>}
+      {moves.moves.length === 0 ? (
+        <p className="text-[13px] text-ink-soft">{t(locale, "dashboard.overview.nothingChangedSinceLastScan")}</p>
+      ) : (
+        <>
+          {group(t(locale, "dashboard.overview.sinceCard.gained"), moves.gained, gains, false, "since-gained")}
+          {group(t(locale, "dashboard.overview.sinceCard.lost"), moves.lost, losses, true, "since-lost")}
+        </>
+      )}
+    </div>
   );
 }

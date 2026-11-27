@@ -15,6 +15,124 @@ export type MessageKey =
   | "dashboard.fixPlan.thisWeekLabel.one"
   | "dashboard.fixPlan.thisWeekLabel.other"
   | "dashboard.fixPlan.everyFix"
+  | "dashboard.overview.sinceCard.gained"
+  | "dashboard.overview.sinceCard.lost"
+  | "dashboard.overview.sinceCard.byUpdate"
+  | "dashboard.overview.sinceCard.nowPoints"
+  | "dashboard.overview.band.gainedLost"
+  | "dashboard.googleReviews.sent.waiting"
+  | "dashboard.googleReviews.sent.notShown"
+  | "dashboard.googleReviews.sent.repost"
+  | "dashboard.googleReviews.sent.repostConfirm"
+  | "dashboard.googleReviews.sent.repostYes"
+  | "dashboard.overview.sinceCard.cantRescore"
+  | "dashboard.overview.sinceCard.notScored"
+  | "dashboard.hoursCheck.sameNow"
+  | "dashboard.hoursCheck.differMaps"
+  | "dashboard.hoursCheck.differProfile"
+  | "dashboard.fixPlan.send.replies.one"
+  | "dashboard.fixPlan.send.replies.other"
+  | "dashboard.fixPlan.send.listing"
+  | "dashboard.fixPlan.send.repliesConfirm.one"
+  | "dashboard.fixPlan.send.repliesConfirm.other"
+  | "dashboard.fixPlan.send.namesMore"
+  | "dashboard.fixPlan.send.readFirst"
+  | "dashboard.fixPlan.send.listingConfirm"
+  | "dashboard.fixPlan.send.note"
+  | "dashboard.fixPlan.send.post"
+  | "dashboard.fixPlan.send.update"
+  | "dashboard.fixPlan.send.sending"
+  | "dashboard.fixPlan.send.description"
+  | "dashboard.fixPlan.send.empty"
+  | "dashboard.fixPlan.send.notListed"
+  | "dashboard.fixPlan.send.listed"
+  | "dashboard.fixPlan.send.yes"
+  | "dashboard.fixPlan.send.no"
+  | "dashboard.fixPlan.send.notSet"
+  | "dashboard.fixPlan.send.sent.one"
+  | "dashboard.fixPlan.send.sent.other"
+  | "dashboard.fixPlan.send.failed"
+  | "dashboard.approveConfirm.what"
+  | "dashboard.approveConfirm.title.one"
+  | "dashboard.approveConfirm.title.other"
+  | "dashboard.approveConfirm.send"
+  | "dashboard.approveConfirm.cancel"
+  | "dashboard.approveConfirm.typeName"
+  | "dashboard.breakdown.moreHelp"
+  | "dashboard.breakdown.lessHelp"
+  | "dashboard.googlePages.results.drivers.title"
+  | "dashboard.googlePages.results.drivers.checklist"
+  | "dashboard.habits.post.bestDay"
+  | "dashboard.growthPlan.subtitleV3"
+  | "dashboard.growthPlan.proof.one"
+  | "dashboard.growthPlan.proof.other"
+  | "dashboard.growthPlan.proof.up"
+  | "dashboard.growthPlan.proof.down"
+  | "dashboard.growthPlan.proof.same"
+  | "dashboard.growthPlan.proof.connectBanner"
+  | "dashboard.fixPlan.subtitleV3"
+  | "dashboard.fixPlan.approve.title"
+  | "dashboard.fixPlan.approve.grow.one"
+  | "dashboard.fixPlan.approve.grow.other"
+  | "dashboard.fixPlan.approve.growPremium"
+  | "dashboard.fixPlan.approve.growPremiumNoCount"
+  | "dashboard.fixPlan.inApprove.replies.one"
+  | "dashboard.fixPlan.inApprove.replies.other"
+  | "dashboard.fixPlan.inApprove.listing"
+  | "dashboard.fixPlan.readReplies"
+  | "dashboard.fixPlan.readDrafts"
+  | "dashboard.fixPlan.hideDrafts"
+  | "dashboard.fixPlan.repliesPanel.note"
+  | "dashboard.fixPlan.repliesPanel.growNote"
+  | "dashboard.fixPlan.repliesPanel.all"
+  | "dashboard.fixPlan.repliesPanel.none"
+  | "dashboard.fixPlan.listing.title"
+  | "dashboard.fixPlan.listing.why"
+  | "dashboard.fixPlan.fromHabit.before"
+  | "dashboard.fixPlan.fromHabit.after"
+  | "dashboard.fixPlan.holiday.title"
+  | "dashboard.fixPlan.holiday.why"
+  | "dashboard.fixPlan.holiday.tag"
+  | "dashboard.fixPlan.holiday.button"
+  | "dashboard.habits.title"
+  | "dashboard.habits.range"
+  | "dashboard.habits.progress"
+  | "dashboard.habits.counts"
+  | "dashboard.habits.countsMore"
+  | "dashboard.habits.needs.one"
+  | "dashboard.habits.needs.other"
+  | "dashboard.habits.toast"
+  | "dashboard.habits.reset"
+  | "dashboard.habits.fixLink.title"
+  | "dashboard.habits.fixLink.body"
+  | "dashboard.habits.fixLink.link"
+  | "dashboard.habits.mark"
+  | "dashboard.habits.tag.autoSent"
+  | "dashboard.habits.tag.autoSeen"
+  | "dashboard.habits.tag.autoCan"
+  | "dashboard.habits.tag.offerAuto"
+  | "dashboard.habits.tag.self"
+  | "dashboard.habits.tag.seasonal"
+  | "dashboard.habits.tag.scoreReviews"
+  | "dashboard.habits.tag.scorePhotos"
+  | "dashboard.habits.connect"
+  | "dashboard.habits.failed"
+  | "dashboard.habits.post.title"
+  | "dashboard.habits.post.howTo"
+  | "dashboard.habits.post.link"
+  | "dashboard.habits.reviews.title"
+  | "dashboard.habits.reviews.howTo"
+  | "dashboard.habits.reviews.link"
+  | "dashboard.habits.photo.title"
+  | "dashboard.habits.photo.howTo"
+  | "dashboard.habits.photo.link"
+  | "dashboard.habits.offer.title"
+  | "dashboard.habits.offer.howTo"
+  | "dashboard.habits.offer.link"
+  | "dashboard.habits.seasonal.title"
+  | "dashboard.habits.seasonal.howTo"
+  | "dashboard.habits.seasonal.link"
+  | "dashboard.habits.free.title"
   | "dashboard.googleReviews.all.ready.one"
   | "dashboard.googleReviews.all.ready.other"
   | "dashboard.googleReviews.all.button"
@@ -334,7 +452,6 @@ export type MessageKey =
   | "dashboard.growthPlan.didIt"
   | "dashboard.growthPlan.resultsLink"
   | "dashboard.growthPlan.resultsLinkNotConnected"
-  | "dashboard.growthPlan.connectBanner"
   | "dashboard.growthPlan.reconnectBanner"
   | "dashboard.growthPlan.tasksThisWeek.one"
   | "dashboard.replies.line.ready.one"
@@ -6717,6 +6834,14 @@ export type MessageKey =
  * how a future locale with more categories, e.g. "few"/"many", would
  * still get a safe result even before every category is seeded for it). */
 export type PluralKeyBase =
+  | "dashboard.fixPlan.send.replies"
+  | "dashboard.fixPlan.send.repliesConfirm"
+  | "dashboard.fixPlan.send.sent"
+  | "dashboard.approveConfirm.title"
+  | "dashboard.growthPlan.proof"
+  | "dashboard.fixPlan.approve.grow"
+  | "dashboard.fixPlan.inApprove.replies"
+  | "dashboard.habits.needs"
   | "dashboard.googleReviews.all.ready"
   | "dashboard.googleReviews.all.confirm"
   | "dashboard.googleReviews.all.sent"
@@ -6835,6 +6960,124 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.fixPlan.thisWeekLabel.one": "This week · 1 fix you can finish yourself, today",
     "dashboard.fixPlan.thisWeekLabel.other": "This week · {count} fixes you can finish yourself, today",
     "dashboard.fixPlan.everyFix": "When every fix is done",
+    "dashboard.overview.sinceCard.gained": "Gained",
+    "dashboard.overview.sinceCard.lost": "Lost",
+    "dashboard.overview.sinceCard.byUpdate": "Started counting with PostScore's scoring update.",
+    "dashboard.overview.sinceCard.nowPoints": "now {points}",
+    "dashboard.overview.band.gainedLost": "Gained {gained} · Lost {lost}",
+    "dashboard.googleReviews.sent.waiting": "Posted · waiting for Google to show it",
+    "dashboard.googleReviews.sent.notShown": "Google never showed this reply.",
+    "dashboard.googleReviews.sent.repost": "Post it again?",
+    "dashboard.googleReviews.sent.repostConfirm": "Post this reply to Google again? Check Google Maps first: if it shows there now, posting again isn't needed.",
+    "dashboard.googleReviews.sent.repostYes": "Post it again",
+    "dashboard.overview.sinceCard.cantRescore": "PostScore couldn't re-score the earlier scan under today's rules, so these are just the checks that moved.",
+    "dashboard.overview.sinceCard.notScored": "not scored",
+    "dashboard.hoursCheck.sameNow": "Your website and your Google listing show the same hours now; Google Maps still showed different hours at your last scan. Your next scan updates this.",
+    "dashboard.hoursCheck.differMaps": "{day}: website {website} · Google Maps {google}",
+    "dashboard.hoursCheck.differProfile": "{day}: website {website} · Business Profile {google}",
+    "dashboard.fixPlan.send.replies.one": "Post {count} review reply",
+    "dashboard.fixPlan.send.replies.other": "Post {count} review replies",
+    "dashboard.fixPlan.send.listing": "Update your Google listing ({count})",
+    "dashboard.fixPlan.send.repliesConfirm.one": "Post {count} reply to Google?",
+    "dashboard.fixPlan.send.repliesConfirm.other": "Post {count} replies to Google?",
+    "dashboard.fixPlan.send.namesMore": "{names} + {count} more",
+    "dashboard.fixPlan.send.readFirst": "Read them first →",
+    "dashboard.fixPlan.send.listingConfirm": "Send these changes to your Google listing?",
+    "dashboard.fixPlan.send.note": "Nothing goes to Google until you confirm.",
+    "dashboard.fixPlan.send.post": "Post them",
+    "dashboard.fixPlan.send.update": "Send the changes",
+    "dashboard.fixPlan.send.sending": "Sending…",
+    "dashboard.fixPlan.send.description": "Description",
+    "dashboard.fixPlan.send.empty": "(empty)",
+    "dashboard.fixPlan.send.notListed": "not listed",
+    "dashboard.fixPlan.send.listed": "listed",
+    "dashboard.fixPlan.send.yes": "Yes",
+    "dashboard.fixPlan.send.no": "No",
+    "dashboard.fixPlan.send.notSet": "Not set",
+    "dashboard.fixPlan.send.sent.one": "{count} sent to Google.",
+    "dashboard.fixPlan.send.sent.other": "{count} sent to Google.",
+    "dashboard.fixPlan.send.failed": "Didn't go through: {count}. Its row says why.",
+    "dashboard.approveConfirm.what": "What goes: {list}.",
+    "dashboard.approveConfirm.title.one": "Send {count} item to Google? You can still read or change it first.",
+    "dashboard.approveConfirm.title.other": "Send {count} items to Google? You can still read or change any of them first.",
+    "dashboard.approveConfirm.send": "Send to Google",
+    "dashboard.approveConfirm.cancel": "Cancel",
+    "dashboard.approveConfirm.typeName": "Localhost safety: this goes to the real Google listing. Type {name} to confirm.",
+    "dashboard.breakdown.moreHelp": "More help",
+    "dashboard.breakdown.lessHelp": "Less help",
+    "dashboard.googlePages.results.drivers.title": "What's driving these numbers",
+    "dashboard.googlePages.results.drivers.checklist": "Your weekly checklist is on Growth plan →",
+    "dashboard.habits.post.bestDay": "Best day: {day}, before your busiest call days ({days})",
+    "dashboard.growthPlan.subtitleV3": "More customers through your door, every week. A few habits each week that bring people in, whatever your score.",
+    "dashboard.growthPlan.proof.one": "Last month Google brought you {count} customer action (calls, directions, website clicks)",
+    "dashboard.growthPlan.proof.other": "Last month Google brought you {count} customer actions (calls, directions, website clicks)",
+    "dashboard.growthPlan.proof.up": ", up {pct}% on last year",
+    "dashboard.growthPlan.proof.down": ", down {pct}% on last year",
+    "dashboard.growthPlan.proof.same": ", the same as last year",
+    "dashboard.growthPlan.proof.connectBanner": "Connect Google to see how many customers find you each month",
+    "dashboard.fixPlan.subtitleV3": "Your weekly plan: every fix that raises your PostScore score, grouped by how long it takes.",
+    "dashboard.fixPlan.approve.title": "PostScore has this week's one-click fixes ready",
+    "dashboard.fixPlan.approve.grow.one": "{count} reply drafted for you to post",
+    "dashboard.fixPlan.approve.grow.other": "{count} replies drafted for you to post",
+    "dashboard.fixPlan.approve.growPremium": "Premium approves all {count} in one click →",
+    "dashboard.fixPlan.approve.growPremiumNoCount": "Premium approves them all in one click →",
+    "dashboard.fixPlan.inApprove.replies.one": "{count} drafted · ready to post",
+    "dashboard.fixPlan.inApprove.replies.other": "{count} drafted · ready to post",
+    "dashboard.fixPlan.inApprove.listing": "Drafted · ready to update",
+    "dashboard.fixPlan.readReplies": "Read the replies",
+    "dashboard.fixPlan.readDrafts": "Read the drafts",
+    "dashboard.fixPlan.hideDrafts": "Hide",
+    "dashboard.fixPlan.repliesPanel.note": "Ticked replies go out with “Post review replies”. Untick any to leave it out; edit any on Reviews.",
+    "dashboard.fixPlan.repliesPanel.growNote": "PostScore drafted these for you. Copy each one into Google, or post them from Reviews.",
+    "dashboard.fixPlan.repliesPanel.all": "All of them on Reviews →",
+    "dashboard.fixPlan.repliesPanel.none": "No drafted replies yet. PostScore writes them in the background; they appear on Reviews.",
+    "dashboard.fixPlan.listing.title": "Complete your listing details",
+    "dashboard.fixPlan.listing.why": "Customer details (parking, payments, access), plus a description and your services, so Google can answer customers' questions.",
+    "dashboard.fixPlan.fromHabit.before": "Comes from a weekly habit:",
+    "dashboard.fixPlan.fromHabit.after": "on your Growth checklist",
+    "dashboard.fixPlan.holiday.title": "Set your {holiday} hours ({date})",
+    "dashboard.fixPlan.holiday.why": "Google shows your regular hours unless you set holiday hours, so customers may come to a closed door.",
+    "dashboard.fixPlan.holiday.tag": "Protects customers · no points",
+    "dashboard.fixPlan.holiday.button": "Set holiday hours",
+    "dashboard.habits.title": "This week's checklist",
+    "dashboard.habits.range": "{from} – {to} · resets Monday",
+    "dashboard.habits.progress": "{done} of {count} done",
+    "dashboard.habits.counts": "This week counts toward your tier.",
+    "dashboard.habits.countsMore": "Every extra habit brings in more customers.",
+    "dashboard.habits.needs.one": "One more check-off makes this week count toward your tier.",
+    "dashboard.habits.needs.other": "{count} check-offs make this week count toward your tier.",
+    "dashboard.habits.toast": "This week counts toward your tier. Nice work!",
+    "dashboard.habits.reset": "Unchecked habits don't carry over: Monday starts a fresh list.",
+    "dashboard.habits.fixLink.title": "Score fixes live in Fix plan.",
+    "dashboard.habits.fixLink.body": "Review replies, listing details and hours.",
+    "dashboard.habits.fixLink.link": "Fix plan →",
+    "dashboard.habits.mark": "Mark \"{title}\" done",
+    "dashboard.habits.tag.autoSent": "Checked by PostScore · sent from PostScore",
+    "dashboard.habits.tag.autoSeen": "Checked by PostScore · seen on Google",
+    "dashboard.habits.tag.autoCan": "PostScore checks this when it sees it",
+    "dashboard.habits.tag.offerAuto": "Checks itself when you start one in PostScore",
+    "dashboard.habits.tag.self": "You check it off",
+    "dashboard.habits.tag.seasonal": "Seasonal idea",
+    "dashboard.habits.tag.scoreReviews": "Also helps your score: reviews",
+    "dashboard.habits.tag.scorePhotos": "Also helps your score: photos",
+    "dashboard.habits.connect": "Connect Google and PostScore checks your posts and photos for you.",
+    "dashboard.habits.failed": "Couldn't save that. Try again.",
+    "dashboard.habits.post.title": "Post on Google",
+    "dashboard.habits.post.howTo": "A short update, offer or photo post keeps your listing fresh. This week's draft is ready below.",
+    "dashboard.habits.post.link": "Open this week's post",
+    "dashboard.habits.reviews.title": "Ask 3 customers for a review",
+    "dashboard.habits.reviews.howTo": "Send your review link or show the QR to a few happy customers at checkout.",
+    "dashboard.habits.reviews.link": "Get your review link & QR",
+    "dashboard.habits.photo.title": "Add a photo to Google",
+    "dashboard.habits.photo.howTo": "Fresh photos of your work, your place or your team.",
+    "dashboard.habits.photo.link": "Add photos",
+    "dashboard.habits.offer.title": "Run or refresh an offer",
+    "dashboard.habits.offer.howTo": "A first-visit, referral or loyalty offer gives people a reason to come in this week.",
+    "dashboard.habits.offer.link": "Customer offers",
+    "dashboard.habits.seasonal.title": "{holiday} is {date}: plan something for it",
+    "dashboard.habits.seasonal.howTo": "A holiday post or a gift-card offer, ready a week or two before.",
+    "dashboard.habits.seasonal.link": "Plan a holiday offer",
+    "dashboard.habits.free.title": "Your weekly habits",
     "dashboard.fixPlan.trackNow": "now",
     "dashboard.fixPlan.trackWeek": "this week",
     "dashboard.fixPlan.trackEvery": "every fix",
@@ -7113,7 +7356,6 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.growthPlan.didIt": "Done ✓",
     "dashboard.growthPlan.resultsLink": "See what Google brought you last month",
     "dashboard.growthPlan.resultsLinkNotConnected": "See what Google results will show you",
-    "dashboard.growthPlan.connectBanner": "Connect your Google listing to see your results and let PostScore post for you.",
     "dashboard.growthPlan.reconnectBanner": "Google disconnected: reconnect to keep your plan one tap. Your tier is kept.",
     "dashboard.growthPlan.tasksThisWeek.one": "{count} task this week",
     "dashboard.replies.line.ready.one": "{count} reply drafted and ready",
@@ -9073,7 +9315,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.googleTab.jump.next": "Show up for more",
     "dashboard.googleTab.jump.protection": "Changes",
     "dashboard.googlePages.results.title": "Google results",
-    "dashboard.googlePages.results.lead": "What people did after they found you on Google, and what to do this week to get more of it.",
+    "dashboard.googlePages.results.lead": "What people did after they found you on Google, and what drives those numbers.",
     "dashboard.googlePages.results.info": "These numbers show results from Google. They don't change your PostScore score.",
     "dashboard.googlePages.results.fixListing": "Fix your listing →",
     "dashboard.googlePages.results.heroSentence": "of people who found you on Google took action (called, got directions or visited your site)",
@@ -13974,6 +14216,124 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.fixPlan.thisWeekLabel.one": "Esta semana · 1 corrección que puede terminar usted mismo, hoy",
     "dashboard.fixPlan.thisWeekLabel.other": "Esta semana · {count} correcciones que puede terminar usted mismo, hoy",
     "dashboard.fixPlan.everyFix": "Cuando termine todas las correcciones",
+    "dashboard.overview.sinceCard.gained": "Ganó",
+    "dashboard.overview.sinceCard.lost": "Perdió",
+    "dashboard.overview.sinceCard.byUpdate": "Empezó a contar con la actualización de la puntuación de PostScore.",
+    "dashboard.overview.sinceCard.nowPoints": "ahora {points}",
+    "dashboard.overview.band.gainedLost": "Ganó {gained} · Perdió {lost}",
+    "dashboard.googleReviews.sent.waiting": "Publicada · esperando a que Google la muestre",
+    "dashboard.googleReviews.sent.notShown": "Google nunca mostró esta respuesta.",
+    "dashboard.googleReviews.sent.repost": "¿Publicarla de nuevo?",
+    "dashboard.googleReviews.sent.repostConfirm": "¿Publicar esta respuesta en Google de nuevo? Revise antes Google Maps: si ya aparece, no hace falta volver a publicarla.",
+    "dashboard.googleReviews.sent.repostYes": "Publicarla de nuevo",
+    "dashboard.overview.sinceCard.cantRescore": "PostScore no pudo volver a puntuar el análisis anterior con las reglas de hoy; estas son solo las comprobaciones que cambiaron.",
+    "dashboard.overview.sinceCard.notScored": "sin puntuar",
+    "dashboard.hoursCheck.sameNow": "Su sitio web y su ficha de Google muestran ahora el mismo horario; Google Maps aún mostraba otro horario en su último análisis. Su próximo análisis lo actualizará.",
+    "dashboard.hoursCheck.differMaps": "{day}: sitio web {website} · Google Maps {google}",
+    "dashboard.hoursCheck.differProfile": "{day}: sitio web {website} · Perfil de Empresa {google}",
+    "dashboard.fixPlan.send.replies.one": "Publicar {count} respuesta a reseña",
+    "dashboard.fixPlan.send.replies.other": "Publicar {count} respuestas a reseñas",
+    "dashboard.fixPlan.send.listing": "Actualizar su ficha de Google ({count})",
+    "dashboard.fixPlan.send.repliesConfirm.one": "¿Publicar {count} respuesta en Google?",
+    "dashboard.fixPlan.send.repliesConfirm.other": "¿Publicar {count} respuestas en Google?",
+    "dashboard.fixPlan.send.namesMore": "{names} y {count} más",
+    "dashboard.fixPlan.send.readFirst": "Léalas primero →",
+    "dashboard.fixPlan.send.listingConfirm": "¿Enviar estos cambios a su ficha de Google?",
+    "dashboard.fixPlan.send.note": "Nada se envía a Google hasta que usted lo confirme.",
+    "dashboard.fixPlan.send.post": "Publicarlas",
+    "dashboard.fixPlan.send.update": "Enviar los cambios",
+    "dashboard.fixPlan.send.sending": "Enviando…",
+    "dashboard.fixPlan.send.description": "Descripción",
+    "dashboard.fixPlan.send.empty": "(vacía)",
+    "dashboard.fixPlan.send.notListed": "no figura",
+    "dashboard.fixPlan.send.listed": "en la ficha",
+    "dashboard.fixPlan.send.yes": "Sí",
+    "dashboard.fixPlan.send.no": "No",
+    "dashboard.fixPlan.send.notSet": "Sin definir",
+    "dashboard.fixPlan.send.sent.one": "{count} enviado a Google.",
+    "dashboard.fixPlan.send.sent.other": "{count} enviados a Google.",
+    "dashboard.fixPlan.send.failed": "No se enviaron: {count}. Su fila explica por qué.",
+    "dashboard.approveConfirm.what": "Lo que se envía: {list}.",
+    "dashboard.approveConfirm.title.one": "¿Enviar {count} elemento a Google? Aún puede leerlo o cambiarlo antes.",
+    "dashboard.approveConfirm.title.other": "¿Enviar {count} elementos a Google? Aún puede leer o cambiar cualquiera de ellos antes.",
+    "dashboard.approveConfirm.send": "Enviar a Google",
+    "dashboard.approveConfirm.cancel": "Cancelar",
+    "dashboard.approveConfirm.typeName": "Seguridad en localhost: esto va a la ficha real de Google. Escriba {name} para confirmar.",
+    "dashboard.breakdown.moreHelp": "Más ayuda",
+    "dashboard.breakdown.lessHelp": "Menos ayuda",
+    "dashboard.googlePages.results.drivers.title": "Qué impulsa estas cifras",
+    "dashboard.googlePages.results.drivers.checklist": "Su lista semanal está en el Plan de crecimiento →",
+    "dashboard.habits.post.bestDay": "Mejor día: {day}, antes de sus días con más llamadas ({days})",
+    "dashboard.growthPlan.subtitleV3": "Más clientes por su puerta, cada semana. Unos pocos hábitos semanales que atraen a la gente, sea cual sea su puntuación.",
+    "dashboard.growthPlan.proof.one": "El mes pasado Google le trajo {count} acción de clientes (llamadas, indicaciones, clics a su sitio web)",
+    "dashboard.growthPlan.proof.other": "El mes pasado Google le trajo {count} acciones de clientes (llamadas, indicaciones, clics a su sitio web)",
+    "dashboard.growthPlan.proof.up": ", {pct} % más que el año pasado",
+    "dashboard.growthPlan.proof.down": ", {pct} % menos que el año pasado",
+    "dashboard.growthPlan.proof.same": ", igual que el año pasado",
+    "dashboard.growthPlan.proof.connectBanner": "Conecte Google para ver cuántos clientes lo encuentran cada mes",
+    "dashboard.fixPlan.subtitleV3": "Su plan semanal: cada corrección que sube su puntuación de PostScore, agrupada por cuánto tarda.",
+    "dashboard.fixPlan.approve.title": "PostScore tiene listas las correcciones de un clic de esta semana",
+    "dashboard.fixPlan.approve.grow.one": "{count} respuesta redactada para que usted la publique",
+    "dashboard.fixPlan.approve.grow.other": "{count} respuestas redactadas para que usted las publique",
+    "dashboard.fixPlan.approve.growPremium": "Premium aprueba las {count} con un clic →",
+    "dashboard.fixPlan.approve.growPremiumNoCount": "Premium las aprueba todas con un clic →",
+    "dashboard.fixPlan.inApprove.replies.one": "{count} redactada · lista para publicar",
+    "dashboard.fixPlan.inApprove.replies.other": "{count} redactadas · listas para publicar",
+    "dashboard.fixPlan.inApprove.listing": "Redactado · listo para actualizar",
+    "dashboard.fixPlan.readReplies": "Leer las respuestas",
+    "dashboard.fixPlan.readDrafts": "Leer los borradores",
+    "dashboard.fixPlan.hideDrafts": "Ocultar",
+    "dashboard.fixPlan.repliesPanel.note": "Las respuestas marcadas se envían con «Publicar respuestas a reseñas». Desmarque cualquiera para dejarla fuera; edítelas en Reseñas.",
+    "dashboard.fixPlan.repliesPanel.growNote": "PostScore las redactó para usted. Copie cada una en Google o publíquelas desde Reseñas.",
+    "dashboard.fixPlan.repliesPanel.all": "Todas en Reseñas →",
+    "dashboard.fixPlan.repliesPanel.none": "Aún no hay respuestas redactadas. PostScore las escribe en segundo plano; aparecen en Reseñas.",
+    "dashboard.fixPlan.listing.title": "Complete los datos de su ficha",
+    "dashboard.fixPlan.listing.why": "Datos para clientes (estacionamiento, pagos, acceso), además de una descripción y sus servicios, para que Google responda las preguntas de los clientes.",
+    "dashboard.fixPlan.fromHabit.before": "Viene de un hábito semanal:",
+    "dashboard.fixPlan.fromHabit.after": "en su lista semanal de Crecimiento",
+    "dashboard.fixPlan.holiday.title": "Configure su horario para {holiday} ({date})",
+    "dashboard.fixPlan.holiday.why": "Google muestra su horario normal a menos que configure un horario festivo, así que los clientes podrían encontrar la puerta cerrada.",
+    "dashboard.fixPlan.holiday.tag": "Protege a sus clientes · sin puntos",
+    "dashboard.fixPlan.holiday.button": "Configurar horario festivo",
+    "dashboard.habits.title": "La lista de esta semana",
+    "dashboard.habits.range": "{from} – {to} · se reinicia el lunes",
+    "dashboard.habits.progress": "{done} de {count} hechos",
+    "dashboard.habits.counts": "Esta semana cuenta para su nivel.",
+    "dashboard.habits.countsMore": "Cada hábito extra le trae más clientes.",
+    "dashboard.habits.needs.one": "Una marca más y esta semana cuenta para su nivel.",
+    "dashboard.habits.needs.other": "Con {count} marcas esta semana cuenta para su nivel.",
+    "dashboard.habits.toast": "Esta semana cuenta para su nivel. ¡Buen trabajo!",
+    "dashboard.habits.reset": "Los hábitos sin marcar no pasan a la semana siguiente: el lunes empieza una lista nueva.",
+    "dashboard.habits.fixLink.title": "Las correcciones de puntuación están en el Plan de correcciones.",
+    "dashboard.habits.fixLink.body": "Respuestas a reseñas, datos de la ficha y horario.",
+    "dashboard.habits.fixLink.link": "Plan de correcciones →",
+    "dashboard.habits.mark": "Marcar «{title}» como hecho",
+    "dashboard.habits.tag.autoSent": "Marcado por PostScore · enviado desde PostScore",
+    "dashboard.habits.tag.autoSeen": "Marcado por PostScore · visto en Google",
+    "dashboard.habits.tag.autoCan": "PostScore lo marca cuando lo ve",
+    "dashboard.habits.tag.offerAuto": "Se marca solo cuando inicia una en PostScore",
+    "dashboard.habits.tag.self": "Usted lo marca",
+    "dashboard.habits.tag.seasonal": "Idea de temporada",
+    "dashboard.habits.tag.scoreReviews": "También ayuda a su puntuación: reseñas",
+    "dashboard.habits.tag.scorePhotos": "También ayuda a su puntuación: fotos",
+    "dashboard.habits.connect": "Conecte Google y PostScore marcará sus publicaciones y fotos por usted.",
+    "dashboard.habits.failed": "No se pudo guardar. Inténtelo de nuevo.",
+    "dashboard.habits.post.title": "Publique en Google",
+    "dashboard.habits.post.howTo": "Una actualización, oferta o foto breve mantiene su ficha al día. El borrador de esta semana está listo más abajo.",
+    "dashboard.habits.post.link": "Abrir la publicación de esta semana",
+    "dashboard.habits.reviews.title": "Pida una reseña a 3 clientes",
+    "dashboard.habits.reviews.howTo": "Envíe su enlace de reseñas o muestre el código QR a algunos clientes satisfechos al pagar.",
+    "dashboard.habits.reviews.link": "Obtener su enlace y QR de reseñas",
+    "dashboard.habits.photo.title": "Agregue una foto a Google",
+    "dashboard.habits.photo.howTo": "Fotos recientes de su trabajo, su local o su equipo.",
+    "dashboard.habits.photo.link": "Agregar fotos",
+    "dashboard.habits.offer.title": "Lance o renueve una oferta",
+    "dashboard.habits.offer.howTo": "Una oferta para nuevos clientes, de recomendación o de fidelidad les da una razón para venir esta semana.",
+    "dashboard.habits.offer.link": "Ofertas para clientes",
+    "dashboard.habits.seasonal.title": "{holiday} es el {date}: prepare algo especial",
+    "dashboard.habits.seasonal.howTo": "Una publicación de temporada o una oferta de tarjeta de regalo, lista una o dos semanas antes.",
+    "dashboard.habits.seasonal.link": "Preparar una oferta para la fecha",
+    "dashboard.habits.free.title": "Sus hábitos semanales",
     "dashboard.fixPlan.trackNow": "ahora",
     "dashboard.fixPlan.trackWeek": "esta semana",
     "dashboard.fixPlan.trackEvery": "todas las correcciones",
@@ -14252,7 +14612,6 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.growthPlan.didIt": "Hecho ✓",
     "dashboard.growthPlan.resultsLink": "Vea lo que Google le trajo el mes pasado",
     "dashboard.growthPlan.resultsLinkNotConnected": "Vea lo que le mostrarán los resultados en Google",
-    "dashboard.growthPlan.connectBanner": "Conecte su ficha de Google para ver sus resultados y dejar que PostScore publique por usted.",
     "dashboard.growthPlan.reconnectBanner": "Google se desconectó: vuelva a conectar para mantener su plan a un toque. Su nivel se mantiene.",
     "dashboard.growthPlan.tasksThisWeek.one": "{count} tarea esta semana",
     "dashboard.replies.line.ready.one": "{count} respuesta redactada y lista",
@@ -16103,7 +16462,7 @@ export const messages: Record<Locale, LocaleMessages> = {
     "dashboard.googleTab.jump.next": "Aparezca en más",
     "dashboard.googleTab.jump.protection": "Cambios",
     "dashboard.googlePages.results.title": "Resultados en Google",
-    "dashboard.googlePages.results.lead": "Lo que hizo la gente después de encontrarle en Google, y qué hacer esta semana para conseguir más.",
+    "dashboard.googlePages.results.lead": "Lo que hizo la gente después de encontrarle en Google, y qué impulsa esas cifras.",
     "dashboard.googlePages.results.info": "Estas cifras muestran resultados de Google. No cambian su puntuación de PostScore.",
     "dashboard.googlePages.results.fixListing": "Corrija su ficha →",
     "dashboard.googlePages.results.heroSentence": "de las personas que le encontraron en Google realizaron una acción (llamaron, pidieron indicaciones o visitaron su sitio)",

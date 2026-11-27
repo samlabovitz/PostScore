@@ -75,14 +75,14 @@ describe("Overview", () => {
   test("a real difference: the exact days, website vs Google, and that Google Maps hasn't published the Business Profile's hours yet (EN + ES)", () => {
     const state = hoursCheckState(SITE, MAPS, PROFILE)!;
     const words = text(wrap(<TopRecommendations businessId="b1" recommendations={recs} limit={3} hoursCheck={state} />));
-    expect(words).toContain("Tuesday: website 9:30 AM – 5:00 PM · Google 10:00 AM – 5:00 PM");
-    expect(words).toContain("Thursday: website 9:30 AM – 6:00 PM · Google 10:00 AM – 5:00 PM");
+    expect(words).toContain("Tuesday: website 9:30 AM – 5:00 PM · Google Maps 10:00 AM – 5:00 PM");
+    expect(words).toContain("Thursday: website 9:30 AM – 6:00 PM · Google Maps 10:00 AM – 5:00 PM");
     expect(words).toContain("+1 more");
     expect(words).toContain("Google Maps hasn't published them yet");
     expect(words).not.toContain("show different hours");
     expect(words).toMatch(/\+1 pt|\+0\.6|pt/);
     const es = text(wrap(<TopRecommendations businessId="b1" recommendations={recs} limit={3} hoursCheck={state} />, "es"));
-    expect(es).toMatch(/jueves: sitio web 9:30 a\.\s?m\. – 6:00 p\.\s?m\. · Google 10:00 a\.\s?m\. – 5:00 p\.\s?m\./);
+    expect(es).toMatch(/jueves: sitio web 9:30 a\.\s?m\. – 6:00 p\.\s?m\. · Google Maps 10:00 a\.\s?m\. – 5:00 p\.\s?m\./);
   });
 });
 
@@ -93,7 +93,7 @@ describe("Growth recap", () => {
     expect(stale).toContain('data-kind="rescan"');
     expect(text(stale)).not.toMatch(/Up to|I did this|show different hours/);
     const differs = wrap(<TaskListCard tasks={[CHECK]} businessId="b1" context="weekly" emptyMessage="" hoursCheck={hoursCheckState(SITE, MAPS, PROFILE)} />).split("<li").slice(1)[0];
-    expect(text(differs)).toContain("Thursday: website 9:30 AM – 6:00 PM · Google 10:00 AM – 5:00 PM");
+    expect(text(differs)).toContain("Thursday: website 9:30 AM – 6:00 PM · Google Maps 10:00 AM – 5:00 PM");
     expect(text(differs)).not.toContain("show different hours");
     // Never the scan's sentence next to the days (it read Google's side from the Business Profile: "Google says Thursday 9:30 AM–6:00 PM").
     expect(text(differs)).not.toMatch(/Google says/);

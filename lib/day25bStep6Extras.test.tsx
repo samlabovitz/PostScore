@@ -19,7 +19,7 @@ vi.mock("@/app/actions/reviewReplies", () => ({ getReplyVoice: vi.fn(() => Promi
 import { LocaleProvider, type Locale } from "@/lib/i18n";
 import type { GrowthFacts } from "@/lib/growthTier";
 import { growthState } from "@/lib/growthPlan";
-import { TierCard, WeekPlanCard, keepLine } from "@/components/growth/GrowthPlanView";
+import { TierCard, keepLine } from "@/components/growth/GrowthPlanView";
 import { AnswersPreview, OnGoogleNow, type AnswersState } from "@/components/gbp/AnswersPreview";
 import { ReplyTweaks, ReplyVoicePicker } from "@/components/reviews/ReplyTweaks";
 import { devPreviewKeep, devPreviewTier } from "@/lib/devTier";
@@ -68,24 +68,6 @@ describe("5. the description and services: what's on Google now, never guessed",
   });
   test("Google can't be read: says so", () => {
     expect(text(wrap(<AnswersPreview businessId="b1" state={answers({ status: "failed", data: null })} />))).toBe("Couldn't load what's on Google right now.");
-  });
-});
-
-describe("6–8. the routine's own buttons; the count matches the list", () => {
-  test("'Get your review link & QR →', 'Check your hours →', both with 'I did this', under 'Also this week'", () => {
-    const state = growthState(HE, new Date("2026-11-21T17:00:00Z"));
-    const routine = [{ id: "share_review_link" as const, title: "Share your review link with 3+ customers", howTo: "old" }, { id: "check_hours" as const, title: "Check your hours", howTo: "Open your Google Business Profile" }];
-    const html = wrap(<WeekPlanCard props={{ businessId: "b1", connected: true, practice: false } as never} plan="premium" state={state} week={{ order: ["posts"] as never, lines: {}, checked: [], count: 4, connected: true }} routine={routine} />);
-    const words = text(html);
-    expect(words).toContain("4 tasks · ranked by what they do for your tier");
-    expect(words).toContain("Also this week");
-    expect(words).toContain("Copy your review link or QR on Get more reviews and send it to a few recent customers.");
-    // getReviewsHref / googleListingHref: today's pages here, /get-reviews and /google-listing on the preview.
-    expect(html).toContain('data-testid="routine-link-share_review_link" href="/business/b1/website-reviews#review-link"');
-    expect(html).toContain('data-testid="routine-link-check_hours" href="/business/b1/growth?tab=google#listing-hours"');
-    expect(words).toContain("Get your review link & QR →");
-    expect(words).toContain("Check your hours →");
-    expect(words.match(/I did this/g)?.length).toBe(2);
   });
 });
 

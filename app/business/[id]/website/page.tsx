@@ -136,8 +136,11 @@ export default async function WebsitePage({ params }: { params: { id: string } }
   // couldn't score, a client-rendered site we couldn't fully read) shows
   // the identical honest "couldn't verify" state as everywhere else,
   // never a 0.
+  // The hours as Overview and Fix plan show them (the live compare; waiting on Google is never the website's to fix).
+  const hoursCheck = hasWebsite ? await websiteHoursCheck(params.id, data.websiteCategory) : null;
   const scoreBreakdown = hasWebsite ? (
     <WebsiteScoreBreakdown
+      hoursCheck={hoursCheck}
       websiteCategory={data.websiteCategory}
       scoreBasis={data.scoreBasis}
       websiteAnalysis={data.websiteAnalysis}
@@ -313,4 +316,15 @@ export default async function WebsitePage({ params }: { params: { id: string } }
       </div>
     </DashboardShell>
   );
+}
+
+/** The live hours compare for the Website page's "Matches your Google listing" row (request-cached scoring; no read
+ * at all unless the scored check is losing points). */
+async function websiteHoursCheck(businessId: string, category: { checks: Array<{ id: string; earnedPoints: number | null; maxPoints: number }> } | null | undefined) {
+  const check = category?.checks.find((c) => c.id === "website.info_consistency");
+  if (!check || check.earnedPoints === null || check.earnedPoints >= check.maxPoints) return null;
+  const [{ scoreBusinessById }, { loadHoursCheck }] = await Promise.all([import("@/app/actions/scoring"), import("@/lib/hoursCheck.server")]);
+  const scored = await scoreBusinessById(businessId).catch(() => null);
+  if (!scored || scored.status !== "ok") return null;
+  return loadHoursCheck(businessId, scored.scoringBusiness ?? scored.business, [{ checkId: "website.info_consistency", mismatchFields: ["hours"] }]).catch(() => null);
 }

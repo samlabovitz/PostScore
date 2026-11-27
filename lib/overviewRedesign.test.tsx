@@ -414,6 +414,8 @@ describe("since your last scan (replaces the two change sections)", () => {
     expect(html).toContain("not from a change at your business, so it isn&#x27;t counted as a gain or a loss.");
     expect(html).not.toContain("Checks that went up or down");
     expect(html).not.toContain("aren&#x27;t compared across a scoring update");
+    // A version this card can't re-score across: it says so and lists only the checks that moved (Nov 27).
+    expect(html).toContain('data-testid="since-cant-rescore"');
   });
 
   test("review count / rating: unconnected owners see only that it changed, with today's value, and how to get exact counts (EN + ES)", () => {
@@ -466,30 +468,15 @@ describe("since your last scan (replaces the two change sections)", () => {
     });
     return { changed, prev: snap({ breakdown_json: { ...breakdown, checks: prevChecks } }) };
   };
-  const rows = (html: string) => html.split("Checks that went up or down")[1]?.split("</ul>")[0].split("<li").length - 1;
 
-  test("at most 4 check changes, biggest first, then '+N more changes → Reports'", () => {
+  test("every check that moved is listed (gains and losses, Nov 28), with one Reports link (EN + ES)", () => {
     const { prev, changed } = withChanges(7);
     expect(changed.length).toBe(7);
     const html = card([snap({}), prev]);
-    expect(rows(html)).toBe(4);
-    expect(html).toContain("+3 more changes");
-    expect(html).toContain('data-testid="since-more-changes"');
-    // The "+N more" link is the one Reports link.
+    expect(html.match(/data-testid="since-move"/g)?.length).toBe(7);
+    expect(html).not.toContain("since-more-changes");
     expect(html.split('href="/business/b/reports"').length - 1).toBe(1);
-    const es = card([snap({}), prev], "es");
-    expect(es).toContain("+3 cambios más");
-    expect(es).toContain("Vea el historial completo en Informes");
-  });
-
-  test("4 or fewer: all shown, no '+N more' link", () => {
-    for (const n of [1, 2, 4]) {
-      const html = card([snap({}), withChanges(n).prev]);
-      expect(rows(html)).toBe(n);
-      expect(html).not.toContain("since-more-changes");
-      expect(html).toContain("See full history on Reports");
-    }
-    expect(card([snap({}), withChanges(5).prev])).toContain("+1 more change<");
+    expect(card([snap({}), prev], "es")).toContain("Vea el historial completo en Informes");
   });
 });
 

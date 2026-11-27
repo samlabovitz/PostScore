@@ -61,7 +61,7 @@ describe("CategoryCard — points rendering", () => {
   });
 });
 
-describe("CategoryCard — the full description always shows", () => {
+describe("CategoryCard — the description: first sentence whole, the rest on More help", () => {
   const LONG = "Your phone number (302-382-1054) is on the page but isn't tap-to-call — make it a link so phone visitors can call in one tap. Found real Services/Products content at https://keesbakeshop.com/12-count-cupcakes-daily-menu/with/a/very/long/path.";
   const category: CategoryResult = {
     ...FLOAT_ARTIFACT_CATEGORY,
@@ -71,7 +71,7 @@ describe("CategoryCard — the full description always shows", () => {
     ],
   };
 
-  test("never cut to two lines; long URLs wrap instead of running off (EN + ES)", () => {
+  test("never cut mid-text: the first sentence whole, the rest behind 'More help'; long URLs wrap (EN + ES)", () => {
     for (const locale of ["en", "es"] as const) {
       const html = renderToStaticMarkup(
         <LocaleProvider locale={locale}>
@@ -79,7 +79,9 @@ describe("CategoryCard — the full description always shows", () => {
         </LocaleProvider>
       );
       expect(html).not.toContain("line-clamp");
-      expect(html.replace(/&#x27;/g, "'")).toContain(LONG);
+      const first = LONG.slice(0, LONG.indexOf(" Found real"));
+      expect(html.replace(/&#x27;/g, "'")).toContain(first);
+      expect(html).toContain('data-testid="row-more-help"');
       expect(html).toMatch(/data-testid="row-status" class="[^"]*break-words/);
       expect(html).toMatch(/data-testid="customer-details-status" class="[^"]*break-words/);
     }

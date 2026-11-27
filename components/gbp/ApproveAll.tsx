@@ -14,6 +14,7 @@
 
 import { useState } from "react";
 import { approveListingAll } from "@/app/actions/approveAll";
+import { useLocalWriteGuard } from "@/components/gbp/LocalWriteGuard";
 import { t, tPlural, type MessageKey, useLocale, useTimeZone } from "@/lib/i18n";
 import type { AnswersState } from "@/components/gbp/AnswersPreview";
 import type { PostDraftState } from "@/components/gbp/PostPreview";
@@ -79,6 +80,9 @@ export function ApproveAll({
   const locale = useLocale();
   const timeZone = useTimeZone();
   const [progress, setProgress] = useState<{ done: number; of: number } | null>(null);
+  // Nothing goes on the first click: a confirm step ("Send {n} items to Google?"), and on localhost the name.
+  const [confirming, setConfirming] = useState(false);
+  const guard = useLocalWriteGuard(practice);
   const [summary, setSummary] = useState<{ sent: number; failed: number } | null>(null);
   const count = approveCount({ replies, post, answers, failures });
   const tasks = approveTaskCount({ replies, post, answers, failures });
@@ -174,7 +178,7 @@ export function ApproveAll({
       </div>
       <div className="flex flex-col items-start gap-1 sm:items-end">
         {/* While drafts load: disabled, "Approve all (getting ready…)" — the final count once ready, never a misleading "(0)". */}
-        <button type="button" onClick={run} disabled={!canEdit || loading || count === 0 || progress !== null} className={W_BUTTON} data-testid="approve-all-button" data-count={count} data-tasks={tasks} data-loading={loading ? "1" : "0"}>
+        <button type="button" onClick={() => setConfirming(true)} disabled={!canEdit || loading || count === 0 || progress !== null || confirming} className={W_BUTTON} data-testid="approve-all-button" data-count={count} data-tasks={tasks} data-loading={loading ? "1" : "0"}>
           {progress ? t(locale, W("approveAll.sending"), { done: progress.done, count: progress.of }) : loading ? t(locale, W("approveAll.gettingReady")) : tPlural(locale, "dashboard.googleTab.w.approveTasks", tasks, { count: tasks })}
         </button>
         {!loading && !progress && count > 0 && (
@@ -183,6 +187,32 @@ export function ApproveAll({
           </p>
         )}
       </div>
+      {confirming && (
+        <div role="alertdialog" aria-label={t(locale, "dashboard.approveConfirm.send")} data-testid="approve-all-confirm" className="flex w-full flex-col gap-2 border-t border-paper-line pt-2.5">
+          <p className="text-[13.5px] font-semibold text-ink">{tPlural(locale, "dashboard.approveConfirm.title", count, { count })}</p>
+          {/* Exactly what goes to Google. */}
+          {what.length > 0 && <p className="text-[13px] text-ink" data-testid="approve-all-confirm-what">{t(locale, "dashboard.approveConfirm.what", { list: what.join(" · ") })}</p>}
+          {guard.field}
+          <div className="flex flex-wrap gap-2">
+            {/* Cancel first and focused: Enter never sends by accident. */}
+            <button type="button" autoFocus onClick={() => setConfirming(false)} className="rounded-lg border border-paper-deep bg-white px-3 py-1.5 text-[13px] font-medium text-ink" data-testid="approve-all-cancel">
+              {t(locale, "dashboard.approveConfirm.cancel")}
+            </button>
+            <button
+              type="button"
+              disabled={!guard.ok}
+              onClick={() => {
+                setConfirming(false);
+                void run();
+              }}
+              className="rounded-lg border border-ink bg-ink px-3.5 py-1.5 text-[13px] font-semibold text-paper disabled:opacity-50"
+              data-testid="approve-all-send"
+            >
+              {t(locale, "dashboard.approveConfirm.send")}
+            </button>
+          </div>
+        </div>
+      )}
       {practice && <p className="w-full text-[13px] font-semibold text-brass" data-testid="approve-all-practice">{t(locale, W("practice"))}</p>}
       {!canEdit && <p className="w-full text-[13px] text-ink-mute" data-testid="approve-all-off">{t(locale, W("readOnly"))}</p>}
       {summary && (

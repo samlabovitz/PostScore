@@ -55,6 +55,12 @@ export function buildReportExtras(input: BusinessScoringInput, breakdown: ScoreB
 
 /** "Your site says X, Google says Y" for each real, not-overridden
  * mismatch — null when no field has both values to quote. */
+/** Two shown values that read the same (spacing, dashes and case aside; "Thursday: 9:30" = "Thursday 9:30"). */
+export function sameShown(a: string, b: string): boolean {
+  const tidy = (v: string) => v.replace(/[\u202f\u2009\u00a0]/g, " ").replace(/\s*[–-]\s*/g, "–").replace(/^(\w+):/, "$1").replace(/\s+/g, " ").trim().toLowerCase();
+  return tidy(a) === tidy(b);
+}
+
 function mismatchText(input: BusinessScoringInput, locale: Locale): string | null {
   const trust = input.websiteAnalysis?.websiteTrust;
   if (!trust) return null;
@@ -65,6 +71,8 @@ function mismatchText(input: BusinessScoringInput, locale: Locale): string | nul
       // Google's side from the listing values at hand — never saved.
       .map((f) => ({ site: f.siteValue, google: googleSideOf(f, input) }))
       .filter((v): v is { site: string; google: string } => !!v.site && !!v.google)
+      // Both sides read the same (the Google side is the listing as read now): never "update whichever is wrong".
+      .filter((v) => sameShown(v.site, v.google) === false)
       .map((v) => t(locale, "report.focus.mismatch", v))
   );
   return lines.length > 0 ? lines.join(" ") : null;

@@ -15,7 +15,10 @@ export type WeeklyChecklistItemId =
   | "add_photo"
   | "check_hours"
   // Day 25B step 6: the Growth plan's "I did this" on the answers task (never one of the five routine items).
-  | "answer_questions";
+  | "answer_questions"
+  // Growth checklist (new design, lib/growthHabits.ts): an offer, and a seasonal idea.
+  | "start_offer"
+  | "seasonal_idea";
 
 export const WEEKLY_CHECKLIST_ITEM_IDS: readonly WeeklyChecklistItemId[] = [
   "post_update",
@@ -25,7 +28,8 @@ export const WEEKLY_CHECKLIST_ITEM_IDS: readonly WeeklyChecklistItemId[] = [
   "check_hours",
 ];
 
-/** Any id the app checks off (the routine five plus the Growth plan's answers task): never free text from the page. */
+/** Any id the app checks off (the routine five, the answers task and the Growth checklist's habits): never free
+ * text from the page. */
 export function isWeeklyChecklistItemId(v: unknown): v is WeeklyChecklistItemId {
   return typeof v === "string" && Object.prototype.hasOwnProperty.call(ITEM_MESSAGE_KEYS, v);
 }
@@ -61,6 +65,8 @@ const ITEM_MESSAGE_KEYS: Record<WeeklyChecklistItemId, { title: MessageKey; howT
     title: "dashboard.growth.checklist.items.answerQuestions.title",
     howTo: "dashboard.growth.checklist.items.answerQuestions.howTo",
   },
+  start_offer: { title: "dashboard.habits.offer.title", howTo: "dashboard.habits.offer.howTo" },
+  seasonal_idea: { title: "dashboard.habits.seasonal.title", howTo: "dashboard.habits.seasonal.howTo" },
 };
 
 /** The real, localized copy for all five checklist items, in the fixed
@@ -233,6 +239,13 @@ export interface AutoCheck {
 }
 
 const SENT_ITEM: Partial<Record<string, WeeklyChecklistItemId>> = { posts: "post_update", replies: "reply_reviews", photos: "add_photo" };
+
+/** Offers started in PostScore (promos, referrals; never test rows), by the moment they were created. The Growth
+ * checklist's "Run or refresh an offer" checks itself the week one starts. */
+export function offerChecks(createdAt: string[], timeZone: string): AutoCheck[] {
+  const weeks = new Set(createdAt.filter((at) => Number.isFinite(Date.parse(at))).map((at) => weekStartFor(new Date(at), timeZone)));
+  return Array.from(weeks).map((week_start) => ({ week_start, item_id: "start_offer" as const, source: "sent" as const }));
+}
 
 /** The weeks each item was done, from PostScore's own log (`events`: one
  * per day and kind, dates in the business's time zone) and the newest post

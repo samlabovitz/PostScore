@@ -36,7 +36,8 @@ describe("a saved breakdown keeps our results, never text quoting Google", () =>
     expect(resolveChangeDisplay(check, live, "en").explanation).toBe(live.checks.find((c) => c.id === "visibility.review_count")!.explanation);
     const gone: ScoreBreakdown = { ...live, checks: live.checks.filter((c) => c.id !== "visibility.review_count") };
     expect(resolveChangeDisplay(check, gone, "en").explanation).toBe("");
-    expect(readFileSync("components/overview/SinceLastScanCard.tsx", "utf8")).toContain("{(methodChanged || explanation) && (");
+    // Gained / Lost: the reason from the live score's own words (resolveChangeDisplay), never the saved text.
+    expect(readFileSync("components/overview/SinceLastScanCard.tsx", "utf8")).toContain("helpSplit(resolveChangeDisplay(check, liveBreakdown, locale).explanation).first");
   });
 
   test("every scan saves this way (the one place scores are written)", () => {

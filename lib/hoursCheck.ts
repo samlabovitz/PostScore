@@ -17,6 +17,9 @@ export type HoursCheckState =
       kind: "differs";
       days: Array<{ day: number; website: DayHours; google: DayHours }>;
       profileAhead: boolean;
+      /** Where the Google side of `days` was read: Google Maps (what customers see), or the owner's Business Profile
+       * (when Maps couldn't be read). */
+      googleSource?: "maps" | "profile";
       /** Waiting on Google since (waitingSince): when the hours change was sent to the Business Profile, else the
        * first scan in a row that saw the mismatch. */
       waitingSince?: string | null;
@@ -25,13 +28,13 @@ export type HoursCheckState =
 const sameDay = (a: DayHours, b: DayHours) => sameWeek([a], [b]);
 
 /** `site` / `google`: index = Google's day number (0 Sunday). `profile`: the connected owner's Business Profile week (null when not connected). */
-export function hoursCheckState(site: WeeklyHours | null, google: WeeklyHours | null, profile: WeeklyHours | null = null): HoursCheckState | null {
+export function hoursCheckState(site: WeeklyHours | null, google: WeeklyHours | null, profile: WeeklyHours | null = null, googleSource: "maps" | "profile" = "maps"): HoursCheckState | null {
   if (!site || !google) return null;
   // Monday first, like every hours list.
   const order = [1, 2, 3, 4, 5, 6, 0];
   const days = order.filter((d) => !sameDay(site[d], google[d])).map((day) => ({ day, website: site[day], google: google[day] }));
   if (days.length === 0) return { kind: "stale" };
-  return { kind: "differs", days, profileAhead: !!profile && sameWeek(profile, site) };
+  return { kind: "differs", days, profileAhead: !!profile && sameWeek(profile, site), googleSource };
 }
 
 /** The scored "Matches your Google listing" check about the hours. */
@@ -87,6 +90,14 @@ export function waitingLong(state: HoursCheckState | null | undefined, now: Date
 const HOURS_LINE_KEYS = ["content.checks.website.info_consistency.explanation.conflictHoursLabelled", "content.checks.website.info_consistency.explanation.conflictHours"] as const;
 const escape = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 const tidy = (v: string) => v.replace(/[\u202f\u2009\u00a0]/g, " ").replace(/\s*[–-]\s*/g, "–").replace(/\s+/g, " ").replace(/^(\w+):/, "$1").trim().toLowerCase();
+
+/** "Matches your Google listing" as any page, report or PostAI shows it without a live hours read: never the scan's
+ * hours line when both of its sides read the same (the Google side is rebuilt from the listing values at hand, and
+ * for a connected owner that's the Business Profile, which can already match while Maps still differs). */
+export function hoursExplanation(check: { id: string; explanation: string }, locale: (typeof SUPPORTED_LOCALES)[number]): string {
+  if (check.id === "website.info_consistency" && hoursShownSame([check.explanation])) return t(locale, "dashboard.hoursCheck.sameNow");
+  return check.explanation;
+}
 
 /** The scan's hours line shows the same hours on both sides (any language). */
 export function hoursShownSame(lines: ReadonlyArray<string | null | undefined>): boolean {

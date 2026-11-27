@@ -81,6 +81,8 @@ export interface GrowthState {
   /** The week in progress and whether it already counts. */
   thisWeek: string;
   thisWeekCounts: boolean;
+  /** This week's counted actions so far (verified: PostScore saw or sent it; told: check-offs). */
+  thisWeekActions: { verified: number; told: number };
   /** The last 8 closed weeks, oldest first. */
   weeks: Array<{ weekStart: string; active: boolean; neutral: boolean }>;
   next: ReturnType<typeof nextTierNeeds>;
@@ -130,6 +132,7 @@ export function growthState(facts: GrowthFacts, now: Date, previewTier: TierNumb
     monday,
     thisWeek,
     thisWeekCounts,
+    thisWeekActions: { verified: current.verified, told: current.told },
     weeks,
     next,
     after,

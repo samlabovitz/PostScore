@@ -31,7 +31,7 @@ export async function loadHoursCheck(
   // Google to publish them on Maps (which days still differ there is unknown without that read). Else the days
   // the Business Profile shows differently, side by side — those are the owner's to fix.
   if (!visit) return null;
-  const profile = hoursCheckState(site, visit);
+  const profile = hoursCheckState(site, visit, null, "profile");
   if (profile?.kind === "stale") return withWaitingSince(businessId, { kind: "differs", days: [], profileAhead: true });
   return profile;
 }

@@ -6,7 +6,9 @@ import { isNotScoredYet } from "@/lib/checkOutcome";
 import { IconAlertTriangle, IconCheck, IconMinus, IconX } from "@tabler/icons-react";
 import { LockFooter } from "@/components/plan/LockedPreview";
 import { Card } from "@/components/ui/Card";
-import { formatPoints } from "@/components/scoring/CategoryCard";
+import { formatPoints, hoursRowState } from "@/components/scoring/CategoryCard";
+import { HoursDiffLines, StillWaitingLine, WaitingForGoogleTag } from "@/components/scoring/HoursCheck";
+import { hoursExplanation, hoursShownSame, type HoursCheckState } from "@/lib/hoursCheck";
 import { cn } from "@/lib/utils";
 import {
   gradeFromTotal,
@@ -176,6 +178,15 @@ export function websiteFixSummary(plan: WebsiteFixPlan, locale: Locale): string 
   return t(locale, "dashboard.websiteFix.summary.both", { ...minutes, selfCount: self, webCount: web });
 }
 
+/** "Matches your Google listing" about the hours that isn't the website's to fix: waiting on Google (the Business
+ * Profile already matches), matching now (a re-scan away), or a saved line whose two sides read the same. */
+export function hoursNotWebsites(check: Pick<CheckResult, "id" | "explanation">, state: HoursCheckState | null | undefined): boolean {
+  if (check.id !== "website.info_consistency") return false;
+  const row = hoursRowState(check, state);
+  if (row === "waiting" || row === "stale") return true;
+  return !state && hoursShownSame([check.explanation]);
+}
+
 function CheckRow({
   check,
   suggestion,
@@ -184,7 +195,10 @@ function CheckRow({
   siteUrl,
   businessName,
   builderId,
+  hoursState = null,
 }: {
+  /** The live hours compare (lib/hoursCheck.server.ts), the same as Overview and Fix plan. */
+  hoursState?: HoursCheckState | null;
   check: CheckResult;
   suggestion: Suggestion | undefined;
   /** The detected website builder (null: unknown or custom-coded). */
@@ -217,6 +231,9 @@ function CheckRow({
   // spam findings, see hackSignsFor / SiteSecurityDetails.
   const spamFinding = check.id === "website.security" ? hackSignsFor(check, websiteAnalysis)[0] ?? null : null;
   const trust = websiteAnalysis?.websiteTrust ?? null;
+  // The hours: the same rule as Overview and Fix plan — never "change your website" when the website already matches.
+  const hours = hoursRowState(check, hoursState);
+  const notWebsites = hoursNotWebsites(check, hoursState);
 
   return (
     <div
@@ -250,16 +267,31 @@ function CheckRow({
             </span>
           )}
           {/* Day 23 2d-4: Google reads differently now than this saved result. */}
-          {check.liveDiffers ? null : excludedReasonKey ? t(locale, excludedReasonKey) : check.explanation}
+          {check.liveDiffers || hours ? null : excludedReasonKey ? t(locale, excludedReasonKey) : hoursExplanation(check, locale)}
         </p>
+        {hours === "waiting" && (
+          <div data-testid="hours-waiting" className="mt-1 flex flex-col gap-1 text-[12.5px] text-ink-mute">
+            <span className="w-fit">
+              <WaitingForGoogleTag />
+            </span>
+            <span>{t(locale, "dashboard.hoursCheck.profileMatches")}</span>
+            <StillWaitingLine state={hoursState} />
+          </div>
+        )}
+        {hours === "differs" && hoursState?.kind === "differs" && hoursState.days.length > 0 && (
+          <div className="mt-1">
+            <HoursDiffLines state={hoursState} />
+          </div>
+        )}
+        {hours === "stale" && <p data-testid="hours-stale" className="mt-1 text-[12.5px] text-ink-mute">{t(locale, "dashboard.breakdown.changedSince")}</p>}
         {check.liveDiffers === "changed" && <ChangedOnGoogleNote businessId={null} />}
         {check.note && !excludedReasonKey && <p className="mt-0.5 break-words text-[11.5px] text-ink-mute">{check.note}</p>}
         <LinkIssues check={check} className="mt-1 text-left text-[12.5px] font-semibold text-ink underline-offset-2 hover:text-brass hover:underline" />
 
-        {(state === "partial" || state === "zero") && suggestion && !spamFinding && (
+        {(state === "partial" || state === "zero") && suggestion && !spamFinding && !notWebsites && (
           <p className="mt-1 break-words text-[12.5px] text-ink-mute">{suggestion.advice}</p>
         )}
-        {fixes.length > 0 && (
+        {fixes.length > 0 && !notWebsites && (
           <div className="mt-1.5 flex flex-wrap gap-1.5">
             {fixes.map((fix, i) => (
               <span
@@ -275,12 +307,12 @@ function CheckRow({
           </div>
         )}
 
-        {(state === "partial" || state === "zero" || fixes.some((f) => f.gap === "no_main_content")) && fixes.length > 0 && check.id !== "website.has_website" && (
+        {(state === "partial" || state === "zero" || fixes.some((f) => f.gap === "no_main_content")) && fixes.length > 0 && check.id !== "website.has_website" && !notWebsites && (
           <WebsiteFixGuide fixes={fixes} builder={builderId} siteUrl={siteUrl} />
         )}
 
         {/* Day 23B: hours that differ from Google — the Google side of the fix too. */}
-        {check.id === "website.info_consistency" && (state === "partial" || state === "zero") && /hour|horario/i.test(check.explanation) && <OrUpdateOnGoogle />}
+        {check.id === "website.info_consistency" && (state === "partial" || state === "zero") && /hour|horario/i.test(check.explanation) && !notWebsites && <OrUpdateOnGoogle />}
 
         {spamFinding && trust && (
           <SiteSecurityDetails finding={spamFinding} trust={trust} siteUrl={siteUrl} businessName={businessName} />
@@ -387,7 +419,10 @@ export function WebsiteScoreBreakdown({
   businessName = null,
   points = null,
   belowScore = null,
+  hoursCheck = null,
 }: {
+  /** The live hours compare (lib/hoursCheck.server.ts loadHoursCheck), the same as Overview and Fix plan. */
+  hoursCheck?: HoursCheckState | null;
   /** The page title's "29 / 30 pts · speed not scored yet" (lib/categoryPoints.ts): the card shows the same one number. */
   points?: { earned: number; of: number; speedPending: boolean } | null;
   /** Under the score card: "1 check left · How to fix each check ↑". */
@@ -418,7 +453,8 @@ export function WebsiteScoreBreakdown({
   // Saved on each scan; before a site's first scan with detection, its
   // own address can still name a builder (sites.google.com, *.wixsite.com).
   const builder = resolveWebsiteBuilder(websiteAnalysis?.builder, siteUrl);
-  const plan = websiteFixPlan(websiteCategory.checks, builder?.id ?? null);
+  // An hours row that isn't the website's to fix (waiting on Google, or matching now) is never in the fix count.
+  const plan = websiteFixPlan(websiteCategory.checks.filter((c) => !hoursNotWebsites(c, hoursCheck)), builder?.id ?? null);
 
   const technicalChecks = websiteCategory.checks.filter((c) => TECHNICAL_CHECK_IDS.includes(c.id));
   const contentChecks = websiteCategory.checks.filter((c) => CONTENT_CHECK_IDS.includes(c.id));
@@ -475,6 +511,7 @@ export function WebsiteScoreBreakdown({
                       siteUrl={siteUrl}
                       businessName={businessName}
                       builderId={builder?.id ?? null}
+                      hoursState={hoursCheck}
                     />
                   ))}
                 </div>

@@ -191,7 +191,7 @@ export async function writeReplyDrafts(admin: SupabaseClient, businessId: string
   if (token.status !== "ok") return { status: "skipped", reason: token.reason === "reconnect" ? "reconnect" : "failed" };
   const { data: biz } = await admin.from("businesses").select("owner_id, language").eq("id", businessId).maybeSingle();
   const b = biz as { owner_id?: string; language?: string | null } | null;
-  const { fetchInboxPage, pendingFromLog } = await import("@/lib/gbpReviewInbox.server");
+  const { fetchInboxPage, pendingFromLog, sentFromLog } = await import("@/lib/gbpReviewInbox.server");
   const target = { businessId, userId: b?.owner_id ?? "", accountName: c.google_account_id, locationName: c.google_location_id, accessToken: token.accessToken };
   // Premium reads every page (up to MAX_PAGES); Grow's allowance fits in the first.
   const reviews: InboxReview[] = [];
@@ -206,7 +206,8 @@ export async function writeReplyDrafts(admin: SupabaseClient, businessId: string
     pageToken = page.nextPageToken;
     if (!pageToken) break;
   }
-  const pending = new Set((await pendingFromLog(admin, businessId)).map((p: { reviewId: string }) => p.reviewId));
+  // Waiting on Google, or already replied by PostScore (Google slow to show it): never drafted again.
+  const pending = new Set([...(await pendingFromLog(admin, businessId)).map((p: { reviewId: string }) => p.reviewId), ...Array.from((await sentFromLog(admin, businessId).catch(() => new Map())).keys())]);
 
   // No cookies here (a background run): the business's own language.
   const [{ loadReplyVoice }, { withOwnerDetailsFor }, { normalizeLocale }, rr] = await Promise.all([import("@/lib/reviewReplyDraft.server"), import("@/lib/ownerDetails.server"), import("@/lib/i18n"), import("@/lib/reviewReplies")]);

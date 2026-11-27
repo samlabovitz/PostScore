@@ -7,6 +7,7 @@ import {
   autoChecks,
   buildWeeklyChecklistStateWithAuto,
   isWeeklyChecklistItemId,
+  offerChecks,
   weekStartFor,
   type AutoCheck,
   type AutoCheckSource,
@@ -41,19 +42,31 @@ function toDTO(rows: WeeklyCheckRow[], timeZone: string, auto: AutoCheck[], noti
 
 /** Connected Premium: what PostScore sent (its own log) or saw on Google
  * (the stored post/photo summary) — database reads only, no Google calls.
- * Anyone else: nothing, and the note says why. */
-async function loadAutoChecks(supabase: ReturnType<typeof createClient>, businessId: string, timeZone: string): Promise<{ auto: AutoCheck[]; notice: WeeklyChecklistStateDTO["notice"] }> {
+ * Anyone else: nothing, and the note says why.
+ * `habits` (the Growth checklist, new design): connected on any paid plan (PostScore sees the post and photos
+ * whoever sent them), plus "Run or refresh an offer" the week one is started in PostScore. */
+async function loadAutoChecks(supabase: ReturnType<typeof createClient>, businessId: string, timeZone: string, habits = false): Promise<{ auto: AutoCheck[]; notice: WeeklyChecklistStateDTO["notice"] }> {
   const [{ getGbpConnectionStatus }, { getPlan, hasPremium }] = await Promise.all([import("@/app/actions/gbp"), import("@/lib/premium")]);
   const [gbp, plan] = await Promise.all([getGbpConnectionStatus(businessId), getPlan()]);
   const connected = gbp.status === "ok" && gbp.connected;
-  if (!connected) return { auto: [], notice: "notConnected" };
-  if (!hasPremium(plan)) return { auto: [], notice: "self" };
+  const offers = habits ? await loadOfferChecks(supabase, businessId, timeZone) : [];
+  if (!connected) return { auto: offers, notice: "notConnected" };
+  if (!hasPremium(plan) && !(habits && plan !== "free")) return { auto: offers, notice: "self" };
   const [{ loadActionEvents }, { loadPhotosAndPosts }] = await Promise.all([import("@/lib/googleActions.server"), import("@/lib/gbpMediaPosts.server")]);
   const [events, media] = await Promise.all([
     loadActionEvents(supabase, businessId, { timeZone, practice: false }).catch(() => []),
     loadPhotosAndPosts(supabase, businessId).catch(() => null),
   ]);
-  return { auto: autoChecks({ events, postsLastAt: media?.posts?.lastAt ?? null, photosNewestAt: media?.photos?.newestAt ?? null, timeZone }), notice: "auto" };
+  return { auto: [...autoChecks({ events, postsLastAt: media?.posts?.lastAt ?? null, photosNewestAt: media?.photos?.newestAt ?? null, timeZone }), ...offers], notice: "auto" };
+}
+
+/** Offers started in PostScore (promos and referrals, never test rows) — the owner-scoped client (RLS). */
+async function loadOfferChecks(supabase: ReturnType<typeof createClient>, businessId: string, timeZone: string): Promise<AutoCheck[]> {
+  const since = new Date(Date.now() - 14 * 86_400_000).toISOString();
+  const read = (table: "promos" | "referrals") => supabase.from(table).select("created_at, is_test").eq("business_id", businessId).gte("created_at", since);
+  const [promos, referrals] = await Promise.all([read("promos"), read("referrals")]);
+  const rows = [...((promos.data ?? []) as Array<{ created_at: string; is_test: boolean | null }>), ...((referrals.data ?? []) as Array<{ created_at: string; is_test: boolean | null }>)];
+  return offerChecks(rows.filter((r) => r.is_test !== true).map((r) => r.created_at), timeZone);
 }
 
 export type GetWeeklyChecklistStateResult =
@@ -73,7 +86,7 @@ async function checklistTimeZone(supabase: ReturnType<typeof createClient>, busi
   return businessTimeZone(data?.lat, data?.lng);
 }
 
-async function getWeeklyChecklistStateUncached(businessId: string): Promise<GetWeeklyChecklistStateResult> {
+async function getWeeklyChecklistStateUncached(businessId: string, opts: { habits?: boolean } = {}): Promise<GetWeeklyChecklistStateResult> {
   const supabase = createClient();
 
   const {
@@ -93,7 +106,7 @@ async function getWeeklyChecklistStateUncached(businessId: string): Promise<GetW
     return { status: "error", message: error.message };
   }
 
-  const { auto, notice } = await loadAutoChecks(supabase, businessId, timeZone);
+  const { auto, notice } = await loadAutoChecks(supabase, businessId, timeZone, opts.habits === true);
   return { status: "ok", state: toDTO((data ?? []) as WeeklyCheckRow[], timeZone, auto, notice) };
 }
 
@@ -115,7 +128,8 @@ export type SetWeeklyCheckItemResult =
 export async function setWeeklyCheckItem(
   businessId: string,
   itemId: WeeklyChecklistItemId,
-  checked: boolean
+  checked: boolean,
+  opts: { habits?: boolean } = {}
 ): Promise<SetWeeklyCheckItemResult> {
   const supabase = createClient();
 
@@ -157,7 +171,7 @@ export async function setWeeklyCheckItem(
     }
   }
 
-  return getWeeklyChecklistState(businessId);
+  return getWeeklyChecklistStateUncached(businessId, { habits: opts.habits === true });
 }
 
 /** Request-scoped (lib/requestCache.ts): one query per page render. */

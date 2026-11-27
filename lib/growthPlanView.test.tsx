@@ -17,7 +17,8 @@ vi.mock("@/components/gbp/MoreWaysCards", () => ({ MoreWaysCards: () => <div dat
 import { LocaleProvider, type Locale } from "@/lib/i18n";
 import { TIER_RULES, resultsRuleMet, type GrowthFacts } from "@/lib/growthTier";
 import { growthState, rankWeek, tierLines } from "@/lib/growthPlan";
-import { GrowthFreePreview, TierCard, WeekPlanCard, tierLineText } from "@/components/growth/GrowthPlanView";
+import { GrowthFreePreview, TierCard, tierLineText } from "@/components/growth/GrowthPlanView";
+import { weekHabits } from "@/lib/growthHabits";
 
 const text = (html: string) => html.replace(/<[^>]+>/g, " ").replace(/&amp;/g, "&").replace(/&#x27;/g, "'").replace(/\s+/g, " ").trim();
 const wrap = (node: ReactNode, locale: Locale = "en") => renderToStaticMarkup(<LocaleProvider locale={locale} timeZone="America/New_York">{node}</LocaleProvider>);
@@ -148,45 +149,11 @@ describe("the tier card's requirement rows: ✓ only when met", () => {
   });
 });
 
-describe("this week's plan (03, 03b)", () => {
-  const state = growthState(HE, new Date("2026-11-21T17:00:00Z"));
-  const props = { businessId: "b1", connected: true, practice: false } as never;
-  const week = (connected: boolean) => ({ order: ["posts", "replies"] as never, lines: {}, checked: [], count: 4, connected });
-  const routine = [{ id: "share_review_link" as const, title: "Share your review link", howTo: "Text it." }, { id: "check_hours" as const, title: "Check your hours", howTo: "On Google." }, { id: "post_update" as const, title: "Post", howTo: "x" }];
-  test("Premium, connected: one tap (Approve), the top line from the real rules; the routine folds in (EN + ES)", () => {
-    const html = wrap(<WeekPlanCard props={props} plan="premium" state={state} week={week(true)} routine={routine} />);
-    expect(html).toContain('data-testid="list-premium"');
-    expect(text(html)).toContain("Do 1 task → on track for Growing on Mon, Nov 30.");
-    expect(text(html)).toContain("This week already counts ✓.");
-    // Growing's result is already in hand (R1): the next result is for Thriving.
-    expect(text(html)).toContain("Your next result, for Thriving: 3 new reviews in 30 days.");
-    expect(text(html)).toContain("4 tasks · ranked by what they do for your tier");
-    // Only the routine items that aren't Google tasks: never a second list of the same things.
-    expect(html).toContain('data-testid="routine-share_review_link"');
-    expect(html).toContain('data-testid="routine-check_hours"');
-    expect(html).not.toContain('data-testid="routine-post_update"');
-    expect(text(wrap(<WeekPlanCard props={props} plan="premium" state={state} week={week(true)} routine={routine} />, "es"))).toContain("Haga 1 tarea → va camino de Creciendo el");
-  });
-  test("Grow: the steps (each with 'Premium does this for you in one click →' and 'I did this'); no Approve; check-offs count, so the top line says so", () => {
-    const html = wrap(<WeekPlanCard props={props} plan="grow" state={state} week={week(true)} routine={routine} />);
-    expect(html).toContain('data-testid="list-steps"');
-    expect(html).not.toContain('data-testid="list-premium"');
-    expect(text(html)).toContain("Check off 2 tasks → on track for Growing on Mon, Nov 30.");
-    expect(readFileSync("components/gbp/GoogleRecs.tsx", "utf8")).toContain("{!premium && <DidThisButton kind={rec.kind} />}");
-  });
-  test("not connected: steps on Google + check-offs; 'Connect Google and … become one tap'", () => {
-    const html = wrap(<WeekPlanCard props={{ ...(props as object), connected: false } as never} plan="premium" state={state} week={week(false)} routine={routine} />);
-    expect(html).toContain('data-testid="list-steps"');
-    expect(text(html)).toContain("Check off 2 tasks → on track for Growing on Mon, Nov 30.");
-    expect(text(wrap(<WeekPlanCard props={{ ...(props as object), connected: false } as never} plan="premium" state={{ ...state, onTrack: null }} week={week(false)} routine={routine} />))).toContain("Check off 2 tasks → next week counts too.");
-    expect(text(html)).toContain("Connect Google and the post, replies and answers become one tap.");
-  });
-});
-
 describe("Free (mockup 06): never a made-up tier", () => {
   test("'?', Locked, what it would measure, real task titles blurred, Grow vs Premium (EN + ES)", () => {
-    const recs = [{ kind: "replies", plan: { count: 10, of: 20, replied: 0 } }] as never;
-    const html = wrap(<GrowthFreePreview businessId="b1" recs={recs} type={null} />);
+    // The checklist's real habits, the how-to blurred (never the score fixes: those are Fix plan's).
+    const habits = weekHabits(new Date("2026-11-27T12:00:00Z"), { reviews: true, photos: false });
+    const html = wrap(<GrowthFreePreview businessId="b1" habits={habits} />);
     const words = text(html);
     expect(words).toContain("?");
     expect(words).toContain("Locked");
@@ -195,7 +162,10 @@ describe("Free (mockup 06): never a made-up tier", () => {
     expect(words).not.toMatch(/Tier \d|Nivel \d/);
     expect(html).toContain('data-testid="growth-free-grow"');
     expect(html).toContain('data-testid="growth-free-premium"');
-    expect(text(wrap(<GrowthFreePreview businessId="b1" recs={recs} type={null} />, "es"))).toContain("Bloqueado");
+    expect(words).toContain("Your weekly habits");
+    expect(words).toContain("Ask 3 customers for a review");
+    expect(words).not.toContain("Reply to");
+    expect(text(wrap(<GrowthFreePreview businessId="b1" habits={habits} />, "es"))).toContain("Bloqueado");
   });
 });
 
@@ -205,20 +175,20 @@ describe("wiring (the new design only)", () => {
     expect(page).toContain("if (NEW_PAGES_LIVE) return <GrowthPlanPage businessId={params.id} gbp={searchParams.gbp} />;");
     expect(page.indexOf("if (NEW_PAGES_LIVE) return <GrowthPlanPage")).toBeLessThan(page.indexOf("freeShowroom(params.id"));
   });
-  test("More customers moved to the Growth plan (with the Growth tools); off the Overview on the preview", () => {
+  test("More customers: off the Overview on the preview, and off the Growth plan too (the sidebar has those tools)", () => {
     expect(readFileSync("app/business/[id]/BusinessScoreView.tsx", "utf8")).toContain("{!NEW_PAGES_LIVE && (\n        <GrowMoreCustomers");
-    expect(readFileSync("app/business/[id]/growth/GrowthPlanPage.tsx", "utf8")).toContain("growthPlan: true,");
+    expect(readFileSync("app/business/[id]/growth/GrowthPlanPage.tsx", "utf8")).not.toContain("growthPlan: true,");
   });
-  test("Google results: the same list in the same order, on the preview only", () => {
+  test("Google results: the numbers only, no task list (the checklist is on Growth plan)", () => {
     const page = readFileSync("app/business/[id]/google-results/page.tsx", "utf8");
-    expect(page).toContain('if (!NEW_PAGES_LIVE || data.status !== "ok" || data.plan === "free") return');
-    expect(page).toContain("<TierPlanProvider businessId={params.id} plan={week} week didThis={!oneTap}>");
+    expect(page).not.toContain("TierPlanProvider");
+    expect(readFileSync("components/gbp/GoogleResults.tsx", "utf8")).not.toContain('id={"this-week"');
   });
   test("'Since you did this': test offers never for a real owner; the empty state", () => {
     expect(readFileSync("lib/googleActions.server.ts", "utf8")).toContain("filter((p) => opts.includeTestOffers || !p.is_test)");
     expect(readFileSync("components/gbp/GoogleResults.tsx", "utf8")).toContain('page ? "dashboard.growthPlan.sinceNone"');
   });
   test("the Monday job stays off; nothing here saves a tier", () => {
-    for (const f of ["lib/growthPlan.server.ts", "lib/growthWeekPlan.server.ts"]) expect(readFileSync(f, "utf8"), f).not.toMatch(/\.insert\(|\.upsert\(|\.update\(/);
+    for (const f of ["lib/growthPlan.server.ts"]) expect(readFileSync(f, "utf8"), f).not.toMatch(/\.insert\(|\.upsert\(|\.update\(/);
   });
 });

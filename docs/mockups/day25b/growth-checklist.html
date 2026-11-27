@@ -1,0 +1,277 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Growth checklist</title><style>
+@font-face{font-family:Fraunces;src:url(../../../app/fonts/Fraunces-latin-wght.woff2) format("woff2");font-weight:400 700}
+@font-face{font-family:Inter;src:url(../../../app/fonts/Inter-latin-wght.woff2) format("woff2");font-weight:400 600}
+:root{--ink:#14243f;--ink-soft:#3a4a66;--ink-mute:#6b7890;--brass:#b8862f;--green:#2e6b45;--red:#b23a2f;--paper:#f5f1e8;--paper-deep:#eae4d5;--paper-line:#e0dac8}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--paper);color:var(--ink);font-family:Inter,Arial,sans-serif;font-size:14px;line-height:1.45;-webkit-font-smoothing:antialiased}
+a{color:inherit;text-decoration:none}
+.app{display:flex;min-height:100vh}
+.sb{width:250px;flex-shrink:0;background:var(--ink);padding:20px 16px;display:flex;flex-direction:column;min-height:100vh}
+.logo{font-family:Fraunces,serif;font-size:21px;font-weight:600;padding:0 8px}
+.logo .p{color:#fff}.logo .s{color:var(--brass)}
+.biz{margin-top:20px;border:1px solid rgba(255,255,255,.09);background:rgba(255,255,255,.06);border-radius:11px;padding:12px}
+.biz b{display:block;color:#fff;font-size:13.5px;font-weight:600}
+.biz span{display:block;color:#9FB0C7;font-size:11px;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tabs{margin-top:16px;display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:4px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);border-radius:12px}
+.tab{border-radius:9px;padding:8px 10px;color:#B7C4D8;font-size:13px;font-weight:600;text-align:center}
+.tab.on{background:#fff;color:var(--ink);box-shadow:inset 0 -2px 0 var(--brass)}
+.nav{margin-top:12px;display:flex;flex-direction:column;gap:2px;flex:1}
+.ni{display:flex;align-items:center;gap:11px;border-radius:9px;padding:9px 12px;font-size:14px;font-weight:500;color:#B7C4D8}
+.ni.on{background:var(--brass);color:#fff}
+.ni .cnt{margin-left:auto;font-size:11px;font-weight:700;background:rgba(255,255,255,.25);border-radius:99px;padding:1px 7px}
+.ni .soon{margin-left:auto;font-size:10px;font-weight:600;color:#9FB0C7;border:1px solid rgba(255,255,255,.15);border-radius:99px;padding:1px 7px}
+.nav-sep{height:1px;background:rgba(255,255,255,.09);margin:8px 4px}
+.main{flex:1;min-width:0}
+.wrap{max-width:1000px;padding:34px 40px 110px}
+.topbar,.tbtabs{display:none}
+.eyebrow{font-size:11.5px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--brass)}
+h1{font-family:Fraunces,serif;font-size:30px;font-weight:600;margin:4px 0 0}
+.sub{color:var(--ink-soft);font-size:14.5px;margin:6px 0 0}
+.card{background:#fff;border:1px solid #ebe5d6;border-radius:16px;box-shadow:0 14px 34px -26px rgba(20,36,63,.4)}
+.mute{color:var(--ink-mute)}.soft{color:var(--ink-soft)}
+.link{font-weight:600;font-size:13px;text-decoration:underline;text-decoration-color:var(--brass);text-underline-offset:3px;white-space:nowrap}
+.btn{display:inline-flex;align-items:center;gap:7px;border-radius:9px;font-size:13px;font-weight:600;padding:8px 13px;border:1px solid var(--paper-line);background:#fff;color:var(--ink);white-space:nowrap}
+.btn.dark{background:var(--ink);border-color:var(--ink);color:#fff}
+.pill{display:inline-flex;align-items:center;gap:5px;border-radius:99px;font-size:11.5px;font-weight:600;padding:2px 9px;border:1px solid var(--paper-line);background:#fff;white-space:nowrap}
+.pill.test{background:#e4e6ea;border-color:#e4e6ea;color:#4b5567}
+.note{margin-top:18px;border:1.5px dashed #d9b46a;background:#fffaf0;border-radius:12px;padding:10px 14px;font-size:12.5px;color:#5d4a22}
+.note b{color:#8a6420}
+.note ul{margin:4px 0 0;padding-left:18px}
+/* tier card (stays on top) */
+.tier{margin-top:22px;padding:20px 22px}
+.tier .row1{display:flex;align-items:flex-start;gap:20px}
+.tier .nm{font-family:Fraunces,serif;font-size:30px;font-weight:600;line-height:1.05}
+.tier .on{color:var(--green);font-weight:600;font-size:14px;margin-top:8px}
+.weeks{display:grid;grid-template-columns:repeat(8,1fr);gap:5px;margin-top:14px}
+.weeks div{display:flex;flex-direction:column;gap:4px;align-items:center;font-size:10.5px;color:var(--ink-mute)}
+.weeks i{display:block;width:100%;height:9px;border-radius:99px;background:var(--paper-deep)}
+.weeks .a i{background:var(--green)}
+.weeks .now i{background:var(--green);outline:2px solid #9fcdb0;outline-offset:2px}
+.steps{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-top:14px}
+.steps div{border:1px solid #ebe5d6;border-radius:10px;padding:7px 8px;text-align:center;font-size:12.5px;font-weight:600;background:#fff}
+.steps div small{display:block;font-size:11px;font-weight:500;color:var(--ink-mute)}
+.steps .done{background:#f6f3ec}
+.steps .cur{border:1.5px solid var(--brass);background:#fffaf0}
+.needs{min-width:250px;border-left:1px solid #efe9dc;padding-left:20px}
+.needs h4{margin:0;font-size:13.5px}
+.req{display:flex;gap:8px;font-size:13px;margin-top:8px}
+.req .c{width:16px;height:16px;border-radius:50%;flex-shrink:0;margin-top:2px;display:flex;align-items:center;justify-content:center;font-size:10px}
+.req .c.y{background:var(--green);color:#fff}
+.req .c.n{border:1.5px solid var(--ink-mute)}
+/* checklist */
+.cl{margin-top:26px}
+.clh{display:flex;align-items:flex-end;gap:16px;margin-bottom:12px}
+.clh h2{font-family:Fraunces,serif;font-size:21px;font-weight:600;margin:0}
+.prog{margin-left:auto;display:flex;align-items:center;gap:10px;font-size:13px;font-weight:600;color:var(--ink-soft);white-space:nowrap}
+.prog .bar{width:120px;height:8px;border-radius:99px;background:var(--paper-deep);overflow:hidden}
+.prog .bar i{display:block;height:100%;width:40%;background:var(--green);border-radius:99px;transition:width .4s}
+.counts{display:flex;gap:10px;align-items:center;background:#eef5f0;border:1px solid #cfe3d5;border-radius:12px;padding:10px 14px;font-size:13.5px;color:#234f35;margin-bottom:12px}
+.list{overflow:visible}
+.it{display:grid;grid-template-columns:34px minmax(0,1fr) auto;gap:4px 14px;align-items:center;padding:15px 18px;border-top:1px solid #efe9dc;position:relative}
+.it:first-child{border-top:0}
+.box{width:28px;height:28px;border-radius:8px;border:2px solid #cfc8b6;background:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#fff;transition:background .2s,border-color .2s,transform .15s}
+.box svg{opacity:0;transform:scale(.5);transition:opacity .2s,transform .2s}
+.it.done .box{background:var(--green);border-color:var(--green)}
+.it.done .box svg{opacity:1;transform:scale(1)}
+.it.done .tt{color:var(--ink-mute);text-decoration:line-through;text-decoration-color:#b9c2cf}
+.tt{font-size:15px;font-weight:600}
+.hw{font-size:12.5px;color:var(--ink-mute);margin-top:2px}
+.meta{display:flex;flex-wrap:wrap;gap:6px;margin-top:7px}
+.auto{background:#eaf1fb;border-color:#d3e0f3;color:#2f5687}
+.score{background:#faf3e4;border-color:#ead7b0;color:#8a6420}
+.seen{font-size:12px;color:var(--green);font-weight:600}
+.rt{display:flex;align-items:center;gap:10px;justify-content:flex-end}
+.prem{font-size:12px;color:#8a6420;font-weight:600}
+/* the old celebration: confetti burst + trophy toast */
+.burst{position:absolute;left:32px;top:50%;pointer-events:none}
+.burst i{position:absolute;width:7px;height:4px;border-radius:1px;opacity:0}
+.it.pop .burst i{animation:fly 1.2s ease-out forwards}
+@keyframes fly{0%{opacity:1;transform:translate(0,0) rotate(0)}100%{opacity:0;transform:translate(var(--x),var(--y)) rotate(var(--r))}}
+.it.static .burst i{opacity:1;transform:translate(calc(var(--x)*.55),calc(var(--y)*.55)) rotate(var(--r))}
+.toast{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);width:min(440px,calc(100% - 32px));transition:opacity .3s;display:flex;gap:12px;align-items:center;background:#fff;border:1px solid #e3cfa5;border-radius:13px;padding:12px 14px;box-shadow:0 18px 40px -18px rgba(20,36,63,.45);z-index:20}
+.toast .tr{width:32px;height:32px;border-radius:50%;background:var(--brass);color:#fff;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.toast p{margin:0;flex:1;font-size:13.5px;font-weight:600}
+.reset{display:flex;justify-content:space-between;flex-wrap:wrap;gap:6px;font-size:12.5px;color:var(--ink-mute);margin-top:10px;padding:0 4px}
+.celeb{margin-top:18px}.celeb .cap{font-size:12.5px;font-weight:600;color:var(--ink-soft);margin-bottom:8px}
+.toast.demo{position:static;transform:none;width:auto;max-width:440px}
+.toast.live{opacity:0;pointer-events:none}.toast.live.show{opacity:1;pointer-events:auto}
+.fixlink{margin-top:18px;display:flex;align-items:center;gap:12px;padding:13px 18px}
+@media (max-width:859px){
+  .sb{display:none}
+  .topbar{display:flex;align-items:center;justify-content:space-between;background:var(--ink);color:#fff;padding:12px 16px}
+  .topbar .tb-r{font-size:12px;color:#B7C4D8}
+  .tbtabs{display:flex;gap:6px;padding:8px 16px;background:#1b2d4c;overflow-x:auto}
+  .tbtabs a{font-size:12.5px;font-weight:600;color:#B7C4D8;border-radius:99px;padding:5px 12px;border:1px solid rgba(255,255,255,.12);white-space:nowrap}
+  .tbtabs a.on{background:#fff;color:var(--ink);border-color:#fff}
+  .wrap{padding:18px 16px 110px}
+  h1{font-size:25px}
+  .tier{padding:16px}
+  .tier .row1{flex-direction:column;gap:14px}
+  .needs{border-left:0;padding-left:0;border-top:1px solid #efe9dc;padding-top:12px;min-width:0;width:100%}
+  .steps div{font-size:10.5px;padding:6px 3px}
+  .steps div small{font-size:9.5px}
+  .weeks div{font-size:9px}
+  .clh{flex-direction:column;align-items:flex-start;gap:6px}
+  .prog{margin-left:0}
+  .it{grid-template-columns:30px minmax(0,1fr);padding:14px}
+  .rt{grid-column:2;justify-content:flex-start;flex-wrap:wrap;margin-top:6px}
+}
+</style></head><body>
+<div class="app">
+<aside class="sb">
+  <div class="logo"><span class="p">Post</span><span class="s">Score</span></div>
+  <div class="biz"><b>Hair express on Broadway</b><span>9 S Broadway, Tarrytown, NY 10591</span></div>
+  <div class="tabs"><div class="tab">Presence</div><div class="tab on">Growth</div></div>
+  <nav class="nav">
+    <a class="ni on">Growth plan <span class="cnt">2/5</span></a>
+    <a class="ni">Google results</a>
+    <a class="ni">Get more reviews</a>
+    <a class="ni">Customer offers</a>
+    <a class="ni">Campaigns</a>
+    <a class="ni">Local events <span class="soon">Coming soon</span></a>
+    <div class="nav-sep"></div>
+    <a class="ni">Reports</a>
+  </nav>
+</aside>
+<main class="main">
+  <div class="topbar"><div class="logo"><span class="p">Post</span><span class="s">Score</span></div><div class="tb-r">Hair express ▾</div></div>
+  <div class="tbtabs"><a class="on">Growth plan</a><a>Google results</a><a>Get more reviews</a><a>Customer offers</a></div>
+  <div class="wrap">
+    <div class="eyebrow">Growth · Tier 2 Building <span class="pill test" style="margin-left:6px;letter-spacing:0;text-transform:none">Test account</span></div>
+    <h1>Growth plan</h1>
+    <p class="sub">A few habits each week that bring customers in. Separate from your PostScore score.</p>
+
+    <!-- tier card stays on top -->
+    <section class="card tier">
+      <div class="row1">
+        <div style="flex:1;min-width:0">
+          <div class="eyebrow" style="color:var(--ink-mute);letter-spacing:.08em">Your Growth tier · updated Mondays</div>
+          <div class="nm" style="margin-top:6px">Building</div>
+          <div class="mute" style="font-size:13px">Tier 2 of 5</div>
+          <div class="on">On track for Growing on Mon, Dec 7</div>
+          <div class="weeks">
+            <div><i></i>Oct 5</div><div><i></i>Oct 12</div><div class="a"><i></i>Oct 19</div><div class="a"><i></i>Oct 26</div><div><i></i>Nov 2</div><div class="a"><i></i>Nov 9</div><div class="a"><i></i>Nov 16</div><div class="now"><i></i>This week</div>
+          </div>
+          <div class="steps"><div class="done">Starting out<small>Tier 1</small></div><div class="cur">Building<small>Tier 2 · you</small></div><div>Growing<small>Tier 3</small></div><div>Thriving<small>Tier 4</small></div><div>Local favorite<small>Tier 5</small></div></div>
+        </div>
+        <div class="needs">
+          <h4>To reach Growing · 1 of 2</h4>
+          <div class="req"><span class="c n"></span><div>5 active weeks out of the last 6<div class="mute" style="font-size:12px">You have 4, with this week.</div></div></div>
+          <div class="req"><span class="c y">✓</span><div>One real result<div class="mute" style="font-size:12px">Customer actions from Google up on last year.</div></div></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- the weekly checklist -->
+    <section class="cl">
+      <div class="clh">
+        <div><h2>This week's checklist</h2><div class="mute" style="font-size:13px;margin-top:2px">Nov 23 – 29 · resets Monday</div></div>
+        <div class="prog"><span id="pc">2 of 5 done</span><span class="bar"><i id="pb"></i></span></div>
+      </div>
+      <div class="counts"><b>✓ This week counts toward your tier.</b> <span>Two habits done. Every extra one is more customers.</span></div>
+      <div class="card list" id="list">
+        <div class="it done static" data-i>
+          <span class="box" role="checkbox" aria-checked="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L20 7"/></svg></span>
+          <div>
+            <div class="tt">Post on Google</div>
+            <div class="hw">This week's post: an invitation to book a new color or cut this season.</div>
+            <div class="meta"><span class="pill auto">⟳ Checked by PostScore</span><span class="seen">Saw it go out Tue, Nov 24</span></div>
+          </div>
+          <div class="rt"><a class="link">See the post</a></div>
+          <span class="burst">
+            <i style="background:#b8862f;--x:-46px;--y:-38px;--r:140deg"></i><i style="background:#2e6b45;--x:-10px;--y:-56px;--r:-90deg"></i><i style="background:#d9a443;--x:28px;--y:-48px;--r:200deg"></i><i style="background:#8fa6c4;--x:52px;--y:-20px;--r:60deg"></i><i style="background:#b23a2f;--x:-58px;--y:-8px;--r:-160deg"></i><i style="background:#14243f;--x:12px;--y:-70px;--r:110deg"></i><i style="background:#2e6b45;--x:66px;--y:-46px;--r:-40deg"></i><i style="background:#b8862f;--x:-30px;--y:-66px;--r:30deg"></i>
+          </span>
+        </div>
+        <div class="it" data-i>
+          <span class="box" role="checkbox" aria-checked="false"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L20 7"/></svg></span>
+          <div>
+            <div class="tt">Ask 3 customers for a review</div>
+            <div class="hw">Send your review link or show the QR to a few happy customers at checkout.</div>
+            <div class="meta"><span class="pill score">Also helps your score: reviews</span><span class="pill">You check it off</span></div>
+          </div>
+          <div class="rt"><a class="btn">Get your review link &amp; QR</a></div>
+          <span class="burst"></span>
+        </div>
+        <div class="it done" data-i>
+          <span class="box" role="checkbox" aria-checked="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L20 7"/></svg></span>
+          <div>
+            <div class="tt">Add a photo to Google</div>
+            <div class="hw">Fresh photos of your work, your salon or your team.</div>
+            <div class="meta"><span class="pill auto">⟳ Checked by PostScore</span><span class="pill score">Also helps your score: photos</span><span class="seen">New photo seen Wed, Nov 25</span></div>
+          </div>
+          <div class="rt"><a class="link">Add another</a></div>
+          <span class="burst"></span>
+        </div>
+        <div class="it" data-i>
+          <span class="box" role="checkbox" aria-checked="false"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L20 7"/></svg></span>
+          <div>
+            <div class="tt">Run or refresh an offer</div>
+            <div class="hw">A first-visit, referral or loyalty offer gives people a reason to come in this week.</div>
+            <div class="meta"><span class="pill auto">⟳ Checks itself when you start one in PostScore</span></div>
+          </div>
+          <div class="rt"><a class="btn">Customer offers</a></div>
+          <span class="burst"></span>
+        </div>
+        <div class="it" data-i>
+          <span class="box" role="checkbox" aria-checked="false"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L20 7"/></svg></span>
+          <div>
+            <div class="tt">Christmas is Dec 25: plan something for it</div>
+            <div class="hw">A holiday post or a gift-card offer, ready a week or two before.</div>
+            <div class="meta"><span class="pill">Seasonal idea</span><span class="pill">You check it off</span></div>
+          </div>
+          <div class="rt"><a class="btn">Plan a holiday offer</a></div>
+          <span class="burst"></span>
+        </div>
+      </div>
+      <div class="reset"><span>Unchecked habits don't carry over: Monday starts a fresh list.</span><span>Premium writes and posts the Google post for you; Grow drafts it for you to post.</span></div>
+    </section>
+
+    <div class="celeb"><div class="cap">The old celebration, when the week first counts (it sits at the bottom of the screen for 7 s):</div>
+      <div class="toast demo"><span class="tr"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0V4zM5 4H3v2a3 3 0 0 0 3 3M19 4h2v2a3 3 0 0 1-3 3"/></svg></span><p>This week counts toward your tier. Nice work!</p><span class="mute">✕</span></div>
+    </div>
+
+    <section class="card fixlink">
+      <div style="flex:1"><b>Score fixes live in Fix plan.</b> <span class="soft">Review replies, listing details and hours: 78 → 87 this week.</span></div>
+      <a class="link">Fix plan →</a>
+    </section>
+
+    <div class="note">
+      <b>How the Growth checklist works (design notes, not on the page)</b>
+      <ul>
+        <li><b>A checklist, not a second plan.</b> 4–6 habits a week (the seasonal idea only when a holiday is within ~6 weeks). No replies, listing details or hours here: those are Fix plan's.</li>
+        <li><b>Checking off</b> plays the old celebration: a confetti burst at the box, and when the week first counts, the trophy toast. Reduce-motion skips the confetti.</li>
+        <li><b>Auto-checks</b> what PostScore can see (connected): the post went out, a new photo, an offer started in PostScore. The owner can still tick anything by hand.</li>
+        <li><b>The tier</b> reads these check-offs (an active week). <b>"Also helps your score"</b> marks habits that feed a Fix plan outcome (reviews, photos), without repeating the fix.</li>
+        <li><b>Resets Monday</b> in the business's own time zone. Click any box here to try the animation.</li>
+      </ul>
+    </div>
+  </div>
+</main>
+</div>
+<div class="toast live" id="toast"><span class="tr"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0V4zM5 4H3v2a3 3 0 0 0 3 3M19 4h2v2a3 3 0 0 1-3 3"/></svg></span><p>This week counts toward your tier. Nice work!</p><span class="mute">✕</span></div>
+<script>
+// Mockup only: click a box to toggle it and replay the confetti.
+const bits = ["#b8862f","#2e6b45","#d9a443","#8fa6c4","#b23a2f","#14243f"];
+document.querySelectorAll(".it").forEach((it) => {
+  const burst = it.querySelector(".burst");
+  if (!burst.children.length) for (let i = 0; i < 10; i++) {
+    const b = document.createElement("i"); const a = -Math.PI / 2 + (Math.random() - .5) * 2.2; const d = 40 + Math.random() * 36;
+    b.style.cssText = `background:${bits[i % bits.length]};--x:${Math.cos(a) * d}px;--y:${Math.sin(a) * d}px;--r:${Math.random() * 360}deg`;
+    burst.appendChild(b);
+  }
+  it.querySelector(".box").addEventListener("click", () => {
+    it.classList.remove("static");
+    const on = !it.classList.contains("done");
+    it.classList.toggle("done", on);
+    it.querySelector(".box").setAttribute("aria-checked", on);
+    if (on) { it.classList.remove("pop"); void it.offsetWidth; it.classList.add("pop"); const t = document.getElementById("toast"); t.classList.add("show"); setTimeout(() => t.classList.remove("show"), 3000); }
+    const n = document.querySelectorAll(".it.done").length, all = document.querySelectorAll(".it").length;
+    document.getElementById("pc").textContent = `${n} of ${all} done`;
+    document.getElementById("pb").style.width = `${(n / all) * 100}%`;
+  });
+});
+</script>
+</body></html>

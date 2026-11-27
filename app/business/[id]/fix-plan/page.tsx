@@ -79,6 +79,16 @@ export default async function FixPlanRoute({ params }: { params: { id: string } 
   // The scored hours check as it is now (waiting on Google: still This week, tagged "Waiting for Google").
   const hoursCheck = await loadHoursCheck(params.id, scored.scoringBusiness ?? scored.business, actionPlan.tasks).catch(() => null);
   const fixPlan = buildFixPlan({ tasks: actionPlan.tasks, websiteBanner: actionPlan.websiteBanner, breakdown });
+  // A holiday in the next 30 days with no hours set on the listing (read live from Business Profile; not
+  // connected: unknown, no row) — "Protects customers · no points".
+  const holiday = gbpConnected
+    ? await (async () => {
+        const [{ listingExtras }, { holidayPlan }, { holidayRowFor }, { createAdminClient }] = await Promise.all([import("@/lib/gbpRealListing.server"), import("@/lib/googleRecommendations"), import("@/lib/fixPlan"), import("@/lib/supabase/admin")]);
+        const extras = await listingExtras(createAdminClient(), params.id).catch(() => null);
+        if (!extras) return null;
+        return holidayRowFor(holidayPlan(extras.specialPeriods, Date.now(), business.time_zone ?? "America/New_York"), new Date());
+      })().catch(() => null)
+    : null;
   const row = scored.business;
   return (
     <DashboardShell upgrade={upgrade} business={business}>
@@ -101,6 +111,7 @@ export default async function FixPlanRoute({ params }: { params: { id: string } 
         }}
       >
         <FixPlanView
+          holiday={holiday}
           businessId={params.id}
           plan={fixPlan}
           every={{ score: scored.result.projectedBreakdown.total, grade: scored.result.projectedBreakdown.grade }}

@@ -7,7 +7,6 @@
 // content only: no listing rows, no OK / to fix counts, no points. The
 // sections are also the old Google Profile tab's 1–3.
 
-import { useTierOrder } from "@/components/growth/TierPlanContext";
 import Link from "next/link";
 import { googleListingHref } from "@/lib/routes";
 import { useEffect, useRef, useState, type ReactNode } from "react";
@@ -24,12 +23,11 @@ import { loadMonthSoFar, saveVisitShare, type MonthSoFarResult, type SinceResult
 import { saveAverageVisitValue } from "@/app/actions/averageVisit";
 import { ThisWeekList } from "@/components/gbp/ThisWeekList";
 import { IconLock } from "@tabler/icons-react";
-import { RecItem } from "@/components/gbp/GoogleRecs";
 import { UpgradeTrigger } from "@/components/upgrade/UpgradeTrigger";
 import { gbpResultText } from "@/components/gbp/GbpResultMessage";
 import { GBP_PROFILE_ANCHOR, gbpConnectHref } from "@/lib/gbpLanding";
-import { growthPlanHref, offersHref } from "@/lib/routes";
-import { isPremiumPlan, type Plan } from "@/lib/plan";
+import { growthPlanHref, offersHref, reviewsHref } from "@/lib/routes";
+import type { Plan } from "@/lib/plan";
 import { RESULTS_SECTIONS, type JumpSectionId } from "@/lib/googleProfileTab";
 import { SAMPLE_INSIGHTS } from "@/lib/googleProfileTab";
 import { audience, SAMPLE_AUDIENCE } from "@/lib/gbpInsights";
@@ -1100,7 +1098,7 @@ function DevicesCard({ a, className, span, props, page = false }: { a: Audience;
 /** `page` (Google results): section 4, "How searches became actions". */
 export function FunnelSection({ months, sample, who, props, page = false }: { months: InsightsMonth[]; sample: boolean; who: Audience | null; props: GoogleProfileTabProps; page?: boolean }) {
   const locale = useLocale();
-  const n = page ? 4 : 2;
+  const n = page ? 3 : 2;
   const title = t(locale, page ? "dashboard.googlePages.results.funnelTitle" : K("s2.title"));
   const { last } = lastTwo(months);
   if (!last) {
@@ -1209,7 +1207,7 @@ export function FunnelSection({ months, sample, who, props, page = false }: { mo
 
 export function SearchesSection({ months, sample, page = false }: { months: InsightsMonth[]; sample: boolean; page?: boolean }) {
   const locale = useLocale();
-  const n = page ? 5 : 3;
+  const n = page ? 4 : 3;
   const { last } = lastTwo(months);
   if (!last) {
     return (
@@ -1255,7 +1253,6 @@ export interface GoogleResultsProps extends GoogleProfileTabProps {
 }
 
 const RESULTS_LABELS: Partial<Record<string, MessageKey>> = {
-  thisWeek: "dashboard.googlePages.results.jump.thisWeek",
   since: "dashboard.googlePages.results.jump.since",
   funnel: "dashboard.googlePages.results.jump.funnel",
 };
@@ -1354,7 +1351,6 @@ function ResultsConnected(props: GoogleResultsProps) {
   const sample = props.practice && !(props.insights && props.insights.length > 0);
   const months = props.insights && props.insights.length > 0 ? props.insights : sample ? SAMPLE_INSIGHTS : [];
   const who = sample ? SAMPLE_AUDIENCE : audience(months);
-  const premium = isPremiumPlan(props.plan);
   const ls = levers({
     businessId: props.businessId,
     replies: props.replyCounts ? { replied: props.replyCounts.replied, inWindow: props.replyCounts.reviewsInWindow } : null,
@@ -1362,7 +1358,6 @@ function ResultsConnected(props: GoogleResultsProps) {
     website: props.website,
     media: props.media ?? null,
   });
-  const chips = <LeverChips levers={ls} page={{ businessId: props.businessId }} />;
   return (
     <SyncContext.Provider value={sync}>
       <div className="flex flex-col" data-sync={sync.status}>
@@ -1380,12 +1375,9 @@ function ResultsConnected(props: GoogleResultsProps) {
         </p>
         <JumpMenu sample={sample} sections={RESULTS_SECTIONS} labels={RESULTS_LABELS} />
         <LastMonthSection {...props} months={months} sample={sample} page />
-        <SectionHead n={2} id={"this-week" satisfies JumpSectionId} title={t(locale, K("s1.todo.title"))}>
-          <Box className="mt-3 p-5 sm:p-6 lg:px-5 lg:py-4" data-testid="google-results-this-week">
-            {premium ? <ThisWeek props={props} chips={chips} noTitle /> : <GrowThisWeek props={props} chips={chips} />}
-          </Box>
-        </SectionHead>
-        <SectionHead n={3} id={"since" satisfies JumpSectionId} title={t(locale, K("since.title"))}>
+        {/* No tasks here: what moves these numbers, each to where it's done; the weekly checklist is on Growth plan. */}
+        <DriverChips businessId={props.businessId} levers={ls} />
+        <SectionHead n={2} id={"since" satisfies JumpSectionId} title={t(locale, K("since.title"))}>
           <div className="mt-3">
             <SinceCard businessId={props.businessId} connected={props.connected} sample={sample} events={props.actionEvents ?? []} recap={<RecapLine saved={props.saved} />} page />
           </div>
@@ -1397,31 +1389,35 @@ function ResultsConnected(props: GoogleResultsProps) {
   );
 }
 
-/** Grow: the same to-dos as Premium's list, each with the steps to do it
- * yourself (and its draft), and "Premium approves all of these in one click →". */
-export function GrowThisWeek({ props, chips }: { props: GoogleProfileTabProps; chips: ReactNode }) {
+/** Under Last month: what's driving these numbers — the five levers as small read-only chips, each a link to where
+ * it's done (no buttons, no tasks), and the one line to the weekly checklist on Growth plan. */
+export function DriverChips({ businessId, levers: ls }: { businessId: string; levers: Lever[] }) {
   const locale = useLocale();
-  const { recs, type } = useTabIdeas(props);
-  // Growth plan (Day 25B step 6): the same order, by what each task does for the tier.
-  const list = useTierOrder(thisWeekRecs(recs));
+  const DOT: Record<Tone, string> = { ok: "bg-green", warn: "bg-amber", bad: "bg-red", neutral: "bg-paper-deep" };
+  const to: Record<LeverId, string> = {
+    reviews: reviewsHref(businessId, { hash: "reply-to-reviews" }),
+    photos: growthPlanHref(businessId, { hash: "this-week" }),
+    posts: growthPlanHref(businessId, { hash: "this-week" }),
+    deals: offersHref(businessId),
+    website: `/business/${businessId}/website`,
+  };
+  const label = (lever: Lever) =>
+    lever.id === "website" && lever.status === "score" ? `${t(locale, K("lever.short.website.title"))} ${lever.tone === "ok" ? "✓" : `· ${t(locale, "dashboard.googlePages.results.websiteWork")}`}` : leverShort(lever, locale);
   return (
-    <div className="flex flex-col gap-3" data-testid="google-results-grow-week">
-      {chips}
-      <p className="text-[12.5px] text-ink-mute">{t(locale, K("grow.sub"))}</p>
-      {list.length > 0 && (
-        <Link href={`/business/${props.businessId}/settings#compare-plans`} className="w-fit text-[13px] font-medium text-ink-mute underline decoration-brass/60 underline-offset-2 hover:text-ink" data-testid="premium-approve-all-line">
-          {t(locale, K("w.grow.premiumAll"))}
-        </Link>
-      )}
-      {list.length > 0 ? (
-        <ul>
-          {list.map((rec) => (
-            <RecItem key={rec.kind} rec={rec} businessId={props.businessId} premium={false} canEdit={false} type={type} drafts />
-          ))}
-        </ul>
-      ) : (
-        <p className="text-[13px] text-ink-soft">{t(locale, K("grow.none"))}</p>
-      )}
+    <div id="google-tab-levers" className="mt-4 flex scroll-mt-20 flex-col gap-2" data-testid="google-results-drivers">
+      <p className="text-[11px] font-bold uppercase tracking-[0.1em] text-ink-mute">{t(locale, "dashboard.googlePages.results.drivers.title")}</p>
+      <div className="flex flex-wrap gap-1.5">
+        {ls.map((lever) => (
+          <Link key={lever.id} href={to[lever.id]} title={t(locale, K(`lever.${lever.id}.why`))} className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border border-paper-line bg-white px-2.5 py-1 text-[12.5px] text-ink hover:border-ink" data-testid={`driver-${lever.id}`}>
+            <span className="text-brass">{LEVER_ICON[lever.id]}</span>
+            <span className="font-semibold">{label(lever)}</span>
+            <span className={cn("h-2 w-2 shrink-0 rounded-full", DOT[lever.tone])} aria-label={leverText(lever, locale).pill} data-tone={lever.tone} />
+          </Link>
+        ))}
+      </div>
+      <Link href={growthPlanHref(businessId, { hash: "this-week" })} className="w-fit text-[13px] font-semibold text-ink underline decoration-brass underline-offset-2" data-testid="google-results-checklist-link">
+        {t(locale, "dashboard.googlePages.results.drivers.checklist")}
+      </Link>
     </div>
   );
 }

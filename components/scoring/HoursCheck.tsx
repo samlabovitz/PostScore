@@ -30,12 +30,15 @@ export function dayHoursText(d: DayHours, locale: Locale): string {
 /** "Thursday: website 9:30 AM – 6:00 PM · Google 10:00 AM – 5:00 PM", one line per day (3 at most). */
 export function HoursDiffLines({ state }: { state: Extract<HoursCheckState, { kind: "differs" }> }) {
   const locale = useLocale();
-  const shown = state.days.slice(0, HOURS_CHECK_DAYS_SHOWN);
+  // Never the same value on both sides: only the days whose shown hours really differ.
+  const shown = state.days.filter((d) => dayHoursText(d.website, locale) !== dayHoursText(d.google, locale)).slice(0, HOURS_CHECK_DAYS_SHOWN);
+  // Each side's real source: Google Maps (what customers see), or the Business Profile when Maps couldn't be read.
+  const key = state.googleSource === "profile" ? "differProfile" : "differMaps";
   return (
     <div data-testid="hours-diff" className="flex flex-col gap-0.5 text-[12.5px] leading-snug text-ink-soft">
       {shown.map((d) => (
         <span key={d.day} data-testid={`hours-diff-${d.day}`}>
-          {t(locale, K("differ"), { day: dayName(d.day, locale), website: dayHoursText(d.website, locale), google: dayHoursText(d.google, locale) })}
+          {t(locale, K(key), { day: dayName(d.day, locale), website: dayHoursText(d.website, locale), google: dayHoursText(d.google, locale) })}
         </span>
       ))}
       {state.days.length > shown.length && <span>{t(locale, K("more"), { count: state.days.length - shown.length })}</span>}

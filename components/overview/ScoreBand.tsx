@@ -17,6 +17,9 @@ import { BREAKDOWN_ANCHOR } from "@/components/overview/ScoreBreakdownPanel";
 import { SeeHowToFix } from "@/components/overview/FixPlanUpsell";
 import { GRADE_THRESHOLDS, type Grade, type Suggestion } from "@/lib/scoring";
 import { scoreChangeSinceLastScan } from "@/lib/overviewTiles";
+import type { scoreMoves } from "@/lib/scanSplit";
+
+type SinceMoves = NonNullable<ReturnType<typeof scoreMoves>>;
 import type { ScoreHistoryRow } from "@/app/actions/scoring";
 import { formatShortDate, t, tPlural, useLocale, useTimeZone } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
@@ -85,7 +88,7 @@ function GradeExplainer({ grade }: { grade: Grade }) {
  * "No change", "↑ 2 points", or (when PostScore's scoring changed in
  * between) the honest scoring-update wording instead of a delta. The
  * arrow opens the recent scans it came from. */
-export function SinceLastScanControl({ history }: { history: ScoreHistoryRow[] }) {
+export function SinceLastScanControl({ history, moves = null }: { history: ScoreHistoryRow[]; moves?: SinceMoves | null }) {
   const locale = useLocale();
   const timeZone = useTimeZone();
   const [open, setOpen] = useState(false);
@@ -112,7 +115,12 @@ export function SinceLastScanControl({ history }: { history: ScoreHistoryRow[] }
           <span className="text-[11px] font-medium uppercase tracking-[0.08em] text-[color:color-mix(in_srgb,var(--color-paper)_70%,transparent)]">{t(locale, "dashboard.overview.sinceLastScanLabel")}</span>
           <IconChevronDown size={15} className={cn("shrink-0 text-[color:color-mix(in_srgb,var(--color-paper)_80%,transparent)] transition-transform", open && "rotate-180")} aria-hidden />
         </div>
-        {change.kind === "scoring_updated" ? (
+        {change.kind === "scoring_updated" && moves?.rescored ? (
+          // Every check that moved (lib/scanSplit.ts scoreMoves): gains and losses, the update's counted like any other.
+          <div data-testid="since-box-split" className="mt-1 font-serif text-xl font-bold text-paper">
+            {t(locale, "dashboard.overview.band.gainedLost", { gained: signedTenth(moves.gained), lost: signedTenth(moves.lost) })}
+          </div>
+        ) : change.kind === "scoring_updated" ? (
           <div className="mt-1.5 text-[14px] font-semibold leading-snug text-paper">{t(locale, "dashboard.overview.scoreCard.scoringUpdated")}</div>
         ) : (
           <div className="mt-1 flex items-center gap-2 font-serif text-2xl font-bold text-paper">
@@ -154,6 +162,12 @@ export function SinceLastScanControl({ history }: { history: ScoreHistoryRow[] }
   );
 }
 
+/** "+3.8" / "−2.9": one decimal, a real minus sign. */
+function signedTenth(n: number): string {
+  const v = Math.round(n * 10) / 10;
+  return v > 0 ? `+${v}` : v < 0 ? `−${Math.abs(v)}` : "0";
+}
+
 /** "up to +4.7 pts": one decimal under 10, whole from 10 up (lib/pointRange.ts displayPoints). */
 export function boostPoints(points: number): string {
   return String(displayPoints(points));
@@ -172,7 +186,10 @@ export function ScoreBand({
   freeWaitingPoints,
   onHold = false,
   someTakeMonths = false,
+  sinceMoves = null,
 }: {
+  /** Every check that moved between the two latest scans, gains and losses (lib/scanSplit.ts scoreMoves). */
+  sinceMoves?: SinceMoves | null;
   businessId: string;
   score: number;
   grade: Grade;
@@ -305,7 +322,7 @@ export function ScoreBand({
           </div>
         )}
 
-        <SinceLastScanControl history={history} />
+        <SinceLastScanControl history={history} moves={sinceMoves} />
       </div>
     </section>
   );

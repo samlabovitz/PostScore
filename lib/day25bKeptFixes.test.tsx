@@ -1,7 +1,7 @@
 // Day 25B: the drafts written in the background and the score breakdown's clickable rows — and (Nov 26) §2d "one home
 // per task" taken back out: Fix plan's This week holds every quick fix again, the Growth plan keeps replies and answers.
 import { describe, expect, test, vi } from "vitest";
-import { existsSync, readFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { renderToStaticMarkup } from "react-dom/server";
 import type { ReactNode } from "react";
 
@@ -22,25 +22,16 @@ const wrap = (node: ReactNode, locale: Locale = "en") =>
   );
 const text = (html: string) => html.replace(/<[^>]+>/g, " ").replace(/&#x27;/g, "'").replace(/&amp;/g, "&").replace(/\s+/g, " ").trim();
 
-describe("§2d taken back out (Nov 26)", () => {
+describe("§2d taken back out (Nov 26); Fix plan v3 and the Growth checklist since (lib/fixPlanV3.test.tsx)", () => {
   const recs = (["replies", "photos", "posts", "answers", "description"] as const).map((kind) => ({ kind, plan: {} })) as never;
-  test("the Growth week keeps the replies, photos, the post and the answers (one list, both designs)", () => {
+  test("Google results' week list keeps the replies, photos, the post and the answers (the Growth plan has its own checklist)", () => {
     expect(weekKinds(recs).map((r) => r.kind)).toEqual(["replies", "photos", "posts", "answers"]);
     expect(thisWeekKinds(recs).map((r) => r.kind)).toEqual(["replies", "photos", "posts", "answers"]);
-    expect(existsSync("lib/growthWeek.ts")).toBe(false);
   });
-  test("Fix plan: no 'Approve fixes' box, no holiday row, no tier tag; the Growth plan keeps 'Check your hours' and its answers card", () => {
-    const view = readFileSync("components/fixPlan/FixPlanView.tsx", "utf8");
-    expect(view).not.toContain("ApproveFixes");
-    expect(view).not.toContain("HolidayRow");
-    expect(readFileSync("app/business/[id]/ActionPlanSection.tsx", "utf8")).not.toContain("countsTowardTier");
-    expect(readFileSync("components/growth/GrowthPlanView.tsx", "utf8")).toContain('const ROUTINE_EXTRAS: WeeklyChecklistItemId[] = ["share_review_link", "check_hours"];');
-    expect(readFileSync("components/gbp/MoreWaysCards.tsx", "utf8")).not.toContain("AnswersCard");
-  });
-  test("check-offs: only the app's own ids are written (the security fix stays)", () => {
+  test("check-offs: only the app's own ids are written (the security fix stays; the Growth checklist's habits included)", () => {
     expect(isWeeklyChecklistItemId("check_hours")).toBe(true);
-    expect(isWeeklyChecklistItemId("answer_questions")).toBe(true);
-    expect(isWeeklyChecklistItemId("start_offer")).toBe(false);
+    expect(isWeeklyChecklistItemId("start_offer")).toBe(true);
+    expect(isWeeklyChecklistItemId("seasonal_idea")).toBe(true);
     expect(isWeeklyChecklistItemId("anything")).toBe(false);
     expect(readFileSync("app/actions/weeklyChecklist.ts", "utf8")).toContain("if (!isWeeklyChecklistItemId(itemId))");
   });
@@ -78,11 +69,13 @@ describe("score breakdown: rows that look and act clickable", () => {
   const category = { id: "visibility", label: "Reviews", earnedPoints: 0, possiblePoints: 6, relativeScore: 0, weight: 40, checks: [check] };
   test("the whole row toggles; keyboard Enter/Space; aria-expanded; a chevron with 'Details' from 1024 px; buttons inside don't toggle", () => {
     const html = wrap(<CategoryCard category={category as never} embedded businessId="b1" />);
-    expect(html).toMatch(/role="button" tabindex="0" aria-expanded="false" aria-controls="more-check-review_replies"/);
+    // Losing points: it starts open (Nov 27); the chevron still closes it.
+    expect(html).toMatch(/role="button" tabindex="0" aria-expanded="true" aria-controls="more-check-review_replies"/);
     expect(html).toContain('data-testid="row-chevron"');
     expect(html).toMatch(/<span class="hidden lg:inline">Details<\/span>/);
     expect(html).toContain("cursor-pointer");
-    expect(html).toContain("hover:bg-paper");
+    // A closed row tints on hover (this one starts open: it's losing points).
+    expect(readFileSync("components/scoring/CategoryCard.tsx", "utf8")).toContain('"border-transparent hover:rounded-lg hover:bg-paper"');
     const src = readFileSync("components/scoring/CategoryCard.tsx", "utf8");
     expect(src).toContain('if ((e.target as HTMLElement).closest("a, button, input, label, summary")) return;');
     expect(src).toContain('if (e.key !== "Enter" && e.key !== " ") return;');

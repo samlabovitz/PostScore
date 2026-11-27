@@ -1,6 +1,13 @@
 "use client";
 
-// Day 25B step 3, v2 (docs/mockups/day25b/fix-plan-v2.html): Presence → Fix
+// Day 25B v3 (docs/mockups/day25b/fix-plan-v3.html): the ONE weekly plan for
+// the score. Above the rows, two separate sends — "Post {n} review replies" and
+// "Update your Google listing ({m})", each with a confirm step naming what goes
+// (Premium; Grow sees what's drafted and the Premium line); the
+// replies and listing-details rows read the same drafts (the real saved ones),
+// the review-earning rows name the Growth habit that earns them, and a holiday
+// with no hours set gets its own row ("Protects customers · no points").
+// From v2 (docs/mockups/day25b/fix-plan-v2.html): Presence → Fix
 // plan. A slim top card ("This week: 78 → 87" · "When every fix is done:
 // 100 · A"), then the fixes under "This week" · "Takes a few weeks" · "Takes
 // months", each with its subtotal, as compact rows: number, priority, title,
@@ -16,8 +23,19 @@
 // the one-click action.
 
 import Link from "next/link";
+import { createContext, useContext, type ReactNode } from "react";
 import { IconWorld } from "@tabler/icons-react";
-import { TaskCard, CompletedTasksCard, FixPriorityTag, ReviewGoalLinesContext, type WebsiteRecheckProps } from "@/app/business/[id]/ActionPlanSection";
+import { TaskCard, CompletedTasksCard, FixPriorityTag, ReviewGoalLinesContext, type FixRowExtra, type WebsiteRecheckProps } from "@/app/business/[id]/ActionPlanSection";
+import { answersReady } from "@/components/gbp/ApproveAll";
+import { SendToGoogle } from "@/components/fixPlan/SendToGoogle";
+import { useWeekReplies, type WeekRepliesState } from "@/components/gbp/RepliesPreview";
+import { useAnswers, type AnswersState } from "@/components/gbp/AnswersPreview";
+import { useGbpEdit } from "@/components/gbp/CustomerDetailsGoogleEdit";
+import { ListingAnswersEditor } from "@/components/gbp/MoreWaysCards";
+import { MERGED_REVIEW_CHECK_ID } from "@/lib/actionPlan";
+import { isReviewGrowthRow } from "@/lib/overviewTiles";
+import type { HolidayId } from "@/lib/gbpListingFields";
+import { googleListingHref, growthPlanHref, reviewsHref } from "@/lib/routes";
 import { WeeklyPlanCelebration } from "@/app/business/[id]/growth/WeeklyPlanCelebration";
 import { DetailsMismatchTasks } from "@/components/overview/DetailsMismatchTasks";
 import { FIX_BUTTON_CLASS } from "@/components/scoring/FixButton";
@@ -129,6 +147,159 @@ export function TopCard({ plan, every, lastScanAt }: { plan: FixPlan; every: { s
   );
 }
 
+// ------------------------------------------------------------------ this week's one-click items (v3)
+
+/** The drafts behind "Approve this week" and the rows that show them: one state, so a reply left out on its row is
+ * left out of the button too. Premium: posting on; Grow: the same drafts, read only. */
+interface FixWeek {
+  replies: WeekRepliesState | null;
+  answers: AnswersState | null;
+  /** Premium, Google connected (or practice): one click sends them. */
+  oneClick: boolean;
+  /** Grow, connected: the drafts to read and copy; Premium does them in one click. */
+  grow: boolean;
+  premium: boolean;
+}
+const FixWeekContext = createContext<FixWeek>({ replies: null, answers: null, oneClick: false, grow: false, premium: false });
+
+function FixWeekProvider({ businessId, free, children }: { businessId: string; free: boolean; children: ReactNode }) {
+  const gbp = useGbpEdit();
+  const connected = gbp.enabled && (gbp.connected || !!gbp.practice);
+  const oneClick = connected && gbp.premium;
+  const grow = connected && !gbp.premium && !free;
+  // Every drafted reply (the same set and count as Reviews' "Approve all replies"); Grow reads them, never posts.
+  const replies = useWeekReplies(businessId, { auto: oneClick || grow, all: true });
+  const answers = useAnswers(businessId, { auto: oneClick || grow, suggest: [] });
+  return <FixWeekContext.Provider value={{ replies: oneClick || grow ? replies : null, answers: oneClick || grow ? answers : null, oneClick, grow, premium: gbp.premium }}>{children}</FixWeekContext.Provider>;
+}
+
+/** Premium: two separate sends (components/fixPlan/SendToGoogle.tsx), each with its own confirm step. Grow: what's
+ * drafted, and the Premium line. */
+function ApproveWeek({ businessId }: { businessId: string }) {
+  const locale = useLocale();
+  const gbp = useGbpEdit();
+  const week = useContext(FixWeekContext);
+  if (week.oneClick) return <SendToGoogle businessId={businessId} replies={week.replies} answers={week.answers} canEdit={gbp.canEdit === true} practice={!!gbp.practice} />;
+  if (!week.grow || !week.replies || week.replies.status !== "ok") return null;
+  const drafted = week.replies.items.filter((i) => i.reply).length;
+  const total = week.replies.items.length + (week.answers?.status === "ok" ? week.answers.ready.length : 0);
+  if (drafted === 0 && total === 0) return null;
+  return (
+    <section className="flex flex-col gap-1 rounded-2xl border border-paper-deep bg-white px-4 py-3.5 shadow-card sm:flex-row sm:items-center sm:justify-between sm:px-5" data-testid="approve-week-grow">
+      <p className="text-[14px] font-semibold text-ink">{tPlural(locale, "dashboard.fixPlan.approve.grow", drafted, { count: drafted })}</p>
+      <Link href={`/business/${businessId}/settings#compare-plans`} className="text-[13px] font-semibold text-[#8a6420] underline decoration-brass/60 underline-offset-2 hover:text-ink" data-testid="approve-week-premium">
+        {total > 0 ? t(locale, "dashboard.fixPlan.approve.growPremium", { count: total }) : t(locale, "dashboard.fixPlan.approve.growPremiumNoCount")}
+      </Link>
+    </section>
+  );
+}
+
+/** The replies row's panel: the real drafts (the ones that passed the checks), up to 5, each with "Include". */
+function RepliesPanel({ businessId }: { businessId: string }) {
+  const locale = useLocale();
+  const week = useContext(FixWeekContext);
+  const items = (week.replies?.items ?? []).filter((i) => i.reply);
+  if (items.length === 0) return <p className="text-[13px] text-ink-soft">{t(locale, "dashboard.fixPlan.repliesPanel.none")}</p>;
+  return (
+    <div className="flex flex-col gap-2" data-testid="fix-replies-panel">
+      <p className="text-[13px] text-ink-soft">{t(locale, week.oneClick ? "dashboard.fixPlan.repliesPanel.note" : "dashboard.fixPlan.repliesPanel.growNote")}</p>
+      <ul className="flex flex-col gap-1.5">
+        {items.slice(0, 5).map((i) => (
+          <li key={i.reviewId} className="flex items-start gap-2.5 rounded-lg border border-paper-line bg-paper/50 px-3 py-2" data-testid="fix-reply-draft">
+            {week.oneClick && <input type="checkbox" checked={i.include} onChange={(e) => week.replies!.setInclude(i.reviewId, e.target.checked)} className="mt-1 accent-ink" aria-label={i.reviewer ?? ""} />}
+            <div className="min-w-0">
+              <p className="text-[12.5px] font-semibold text-ink">
+                {i.reviewer ?? "—"} {i.stars ? <span className="text-brass">{"★".repeat(i.stars)}</span> : null}
+              </p>
+              <p className="text-[12.5px] text-ink-soft">“{i.text || i.reply}”</p>
+            </div>
+          </li>
+        ))}
+      </ul>
+      <Link href={reviewsHref(businessId)} className="w-fit text-[13px] font-semibold text-ink underline decoration-brass underline-offset-[3px]">
+        {t(locale, "dashboard.fixPlan.repliesPanel.all")}
+      </Link>
+    </div>
+  );
+}
+
+const TAG = "inline-flex w-fit items-center rounded-full border px-2 py-0.5 text-[11.5px] font-semibold";
+
+/** What a row adds on v3 (never on Free: its rows are the locked audit). */
+function useRowExtra(businessId: string, task: ActionPlanTask, free: boolean): FixRowExtra | null {
+  const locale = useLocale();
+  const week = useContext(FixWeekContext);
+  if (free) return null;
+  if (task.checkId === "visibility.review_replies") {
+    const ready = week.oneClick && week.replies?.canPost ? new Set(week.replies.ready).size : 0;
+    const drafted = (week.replies?.items ?? []).filter((i) => i.reply).length;
+    return {
+      badge: ready > 0 ? <span className={cn(TAG, "border-[#cfe3d5] bg-[#eaf3ec] text-green")} data-testid="in-approve">✓ {tPlural(locale, "dashboard.fixPlan.inApprove.replies", ready, { count: ready })}</span> : null,
+      label: drafted > 0 ? t(locale, "dashboard.fixPlan.readReplies") : undefined,
+      panel: <RepliesPanel businessId={businessId} />,
+    };
+  }
+  if (task.checkId === "completeness.customer_details") {
+    const inApprove = week.oneClick && answersReady(week.answers);
+    return {
+      title: t(locale, "dashboard.fixPlan.listing.title"),
+      why: t(locale, "dashboard.fixPlan.listing.why"),
+      badge: inApprove ? <span className={cn(TAG, "border-[#cfe3d5] bg-[#eaf3ec] text-green")} data-testid="in-approve">✓ {t(locale, "dashboard.fixPlan.inApprove.listing")}</span> : null,
+      label: week.answers ? t(locale, "dashboard.fixPlan.readDrafts") : undefined,
+      panel: week.answers ? <ListingAnswersEditor businessId={businessId} premium={week.premium} state={week.answers} /> : null,
+    };
+  }
+  if (task.checkId === MERGED_REVIEW_CHECK_ID || isReviewGrowthRow(task)) {
+    return {
+      habit: (
+        <span className="inline-block rounded-lg border border-[#cfe3d5] bg-[#eef5f0] px-2.5 py-1 text-[12.5px] text-[#234f35]" data-testid="from-habit">
+          ↻ {t(locale, "dashboard.fixPlan.fromHabit.before")}{" "}
+          <Link href={growthPlanHref(businessId, { hash: "this-week" })} className="font-semibold underline underline-offset-2">
+            {t(locale, "dashboard.habits.reviews.title")}
+          </Link>{" "}
+          {t(locale, "dashboard.fixPlan.fromHabit.after")}
+        </span>
+      ),
+    };
+  }
+  return null;
+}
+
+/** A row of the plan, with its v3 extras. */
+function PlanRow(props: Parameters<typeof TaskCard>[0] & { free: boolean }) {
+  const { free, ...card } = props;
+  const extra = useRowExtra(card.businessId, card.task, free);
+  return <TaskCard {...card} fixPlan={card.fixPlan ? { ...card.fixPlan, compact: card.fixPlan.compact ? { ...card.fixPlan.compact, extra } : undefined } : null} />;
+}
+
+/** A holiday within 30 days with no hours on the listing: set them. No points — it protects customers. */
+function HolidayRow({ businessId, holiday }: { businessId: string; holiday: { holiday: HolidayId; date: string } }) {
+  const locale = useLocale();
+  const name = t(locale, `dashboard.googleTab.fields.holiday.${holiday.holiday}` as Parameters<typeof t>[1]);
+  const date = formatShortDate(`${holiday.date}T12:00:00Z`, locale, "UTC");
+  return (
+    <li className="border-t border-paper-line first:border-t-0" data-testid="fix-plan-holiday">
+      <div className="grid grid-cols-[26px_minmax(0,1fr)] items-center gap-x-3 gap-y-2 px-4 py-3.5 sm:px-5 nav:grid-cols-[26px_112px_minmax(0,1fr)_auto]">
+        <span aria-hidden className="flex h-6 w-6 items-center justify-center rounded-full border border-dashed border-paper-deep text-[12px] text-ink-mute">–</span>
+        <span className="hidden nav:block" />
+        <div className="col-start-2 min-w-0 nav:col-start-3">
+          <p className="text-[14.5px] font-semibold text-ink">{t(locale, "dashboard.fixPlan.holiday.title", { holiday: name, date })}</p>
+          <p className="mt-0.5 text-[12.5px] leading-snug text-ink-mute">{t(locale, "dashboard.fixPlan.holiday.why")}</p>
+          <span className={cn(TAG, "mt-1.5 border-paper-deep bg-paper text-ink-soft")} data-testid="holiday-tag">
+            {t(locale, "dashboard.fixPlan.holiday.tag")}
+          </span>
+        </div>
+        <div className="col-start-2 flex items-center justify-end gap-3 nav:col-start-4">
+          <Link href={googleListingHref(businessId, { hash: "edit-holiday" })} data-testid="fix-button" data-kind="holiday" className={FIX_BUTTON_CLASS}>
+            {t(locale, "dashboard.fixPlan.holiday.button")} →
+          </Link>
+          <span className="w-4" aria-hidden />
+        </div>
+      </div>
+    </li>
+  );
+}
+
 /** The other website checks, as one compact row to the Website page. */
 function WebsiteRow({ row, step, businessId, outline }: { row: Extract<FixPlanRow, { kind: "website" }>; step: number; businessId: string; outline: boolean }) {
   const locale = useLocale();
@@ -170,7 +341,10 @@ export function FixPlanView({
   detailsMismatch = null,
   hoursCheck = null,
   reviewGoalLines = [],
+  holiday = null,
 }: {
+  /** A holiday within 30 days with no hours set (Business Profile read; null when unknown or none). */
+  holiday?: { holiday: HolidayId; date: string } | null;
   businessId: string;
   plan: FixPlan;
   /** The Overview's projection: every fix done. */
@@ -194,14 +368,16 @@ export function FixPlanView({
   const weekTasks: ActionPlanTask[] = plan.rows.flatMap((r) => (r.kind === "task" && r.when === "this_week" ? [r.task] : []));
   return (
     <ReviewGoalLinesContext.Provider value={reviewGoalLines}>
+      <FixWeekProvider businessId={businessId} free={free}>
       <div className="flex flex-col gap-6 nav:gap-8" data-testid="fix-plan">
         <div>
           <h1 className="font-serif text-2xl font-semibold text-ink nav:text-[30px]">{t(locale, "dashboard.fixPlan.title")}</h1>
-          <p className="mt-1 text-sm text-ink-soft">{t(locale, "dashboard.fixPlan.subtitle")}</p>
+          <p className="mt-1 text-sm text-ink-soft">{t(locale, "dashboard.fixPlan.subtitleV3")}</p>
         </div>
 
         {!free && <WeeklyPlanCelebration businessId={businessId} weekStart={weekStart} today={plan.today} weeklyTasks={weekTasks} completed={completed} gbpConnected={gbpConnected} lastScanAt={lastScanAt} />}
         <TopCard plan={plan} every={every} lastScanAt={lastScanAt} />
+        <ApproveWeek businessId={businessId} />
 
         {standalone.length > 0 && <DetailsMismatchTasks businessId={businessId} mismatches={standalone} owner={detailsMismatch?.owner ?? null} />}
 
@@ -232,8 +408,9 @@ export function FixPlanView({
                       return row.kind === "website" ? (
                         <WebsiteRow key={row.key} row={row} step={step} businessId={businessId} outline={outline} />
                       ) : (
-                        <TaskCard
+                        <PlanRow
                           key={row.key}
+                          free={free}
                           task={mismatchesCoveredBy(row.task, mismatches).some((m) => URGENT_DETAILS.includes(m.field)) ? { ...row.task, urgent: true } : row.task}
                           businessId={businessId}
                           context="weekly"
@@ -247,6 +424,7 @@ export function FixPlanView({
                         />
                       );
                     })}
+                    {g.when === "this_week" && holiday && <HolidayRow businessId={businessId} holiday={holiday} />}
                     {g.when === "weeks" && plan.speed && (
                       <li className="grid grid-cols-[26px_minmax(0,1fr)] items-center gap-x-3 gap-y-1 border-t border-dashed border-paper-deep bg-paper/60 px-4 py-3.5 first:border-t-0 sm:px-5 nav:grid-cols-[26px_112px_minmax(0,1fr)_auto]" data-testid="fix-plan-speed">
                         <span aria-hidden className="flex h-6 w-6 items-center justify-center rounded-full border border-dashed border-paper-deep text-[12px] text-ink-mute">–</span>
@@ -271,6 +449,7 @@ export function FixPlanView({
 
         {!free && <CompletedTasksCard completed={completed} />}
       </div>
+      </FixWeekProvider>
     </ReviewGoalLinesContext.Provider>
   );
 }

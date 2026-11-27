@@ -176,7 +176,7 @@ describe("listing reviews: one page, live from Google, never stored", () => {
 });
 
 describe("posting: only the owner's click, read back from Google, logged without the text", () => {
-  test("post: read → PUT the reply → read back → ok, and one log row (who, which review, length — no text)", async () => {
+  test("post: read → PUT the reply → read back → ok, and one log row (who, which review, length, and our own reply text — Nov 28)", async () => {
     const { fetchImpl, calls } = fakeGoogle();
     const { admin, logged } = fakeAdmin();
     const out = await changeReplyWithClient(admin, TARGET, { action: "post", reviewId: "r1", text: "Thank you, Maria — we're so glad you love it!" }, fetchImpl);
@@ -184,8 +184,10 @@ describe("posting: only the owner's click, read back from Google, logged without
     expect(out.status === "ok" && out.review.reply?.comment).toBe("Thank you, Maria — we're so glad you love it!");
     expect(calls.map((c) => `${c.method} ${c.url}`)).toEqual([`GET ${REVIEW_URL}`, `PUT ${REVIEW_URL}/reply`, `GET ${REVIEW_URL}`]);
     expect(JSON.parse(calls[1].body!)).toEqual({ comment: "Thank you, Maria — we're so glad you love it!" });
-    expect(logged).toEqual([{ business_id: "b1", user_id: "owner-1", action: "post", review_id: "r1", reply_length: 45, status: "ok", error_reason: null }]);
-    expect(JSON.stringify(logged)).not.toMatch(/Maria|Angelica|color/);
+    // Our own reply as sent (supabase/day25b-reply-log-text.sql), so a reply Google is slow to show is shown — never the review.
+    expect(logged).toEqual([{ business_id: "b1", user_id: "owner-1", action: "post", review_id: "r1", reply_length: 45, status: "ok", error_reason: null, reply_text: "Thank you, Maria — we're so glad you love it!" }]);
+    // Never the review's own words (only our reply, which names the reviewer).
+    expect(JSON.stringify(logged)).not.toMatch(/Angelica|color/);
   });
 
   test("a review that already has a reply is never overwritten by “post” — nothing sent", async () => {

@@ -19,8 +19,15 @@ import { t, type MessageKey, useLocale } from "@/lib/i18n";
 const W = (key: string) => `dashboard.googleTab.w.${key}` as MessageKey;
 
 function Answers({ businessId, premium }: { businessId: string; premium: boolean }) {
-  const locale = useLocale();
   const state = useAnswers(businessId, { auto: true, suggest: [] });
+  return <ListingAnswersEditor businessId={businessId} premium={premium} state={state} />;
+}
+
+/** "Answer your customers' common questions": the one editor for the listing details (description, services,
+ * customer details) — here, and in Fix plan's "Complete your listing details" row. The description draft is the
+ * one PostScore saved in the background (post_drafts), so both places show the same draft. */
+export function ListingAnswersEditor({ businessId, premium, state }: { businessId: string; premium: boolean; state: ReturnType<typeof useAnswers> }) {
+  const locale = useLocale();
   if (premium) return <AnswersPreview businessId={businessId} state={state} />;
   return (
     <div className="flex flex-col gap-2">

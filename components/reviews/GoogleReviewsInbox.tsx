@@ -33,6 +33,8 @@ import {
   INBOX_FIRST,
   INBOX_SORTS,
   isInboxSort,
+  isReplied,
+  sentNotShown,
   MAX_POSTED_REPLY_CHARS,
   needsReadMore,
   newestFirst,
@@ -44,6 +46,8 @@ import {
 } from "@/lib/gbpReviewInbox";
 import { formatShortDate, t, tPlural, useLocale, useTimeZone, type Locale, type MessageKey } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
+import { useLocalWriteGuard } from "@/components/gbp/LocalWriteGuard";
+import { reviewerList } from "@/components/fixPlan/SendToGoogle";
 
 const K = (key: string) => `dashboard.googleReviews.${key}` as MessageKey;
 export const SORT_STORAGE_KEY = "postscore.reviewInbox.sort";
@@ -123,7 +127,9 @@ type RowState =
   | { kind: "editing"; text: string; action: "post" | "edit" }
   | { kind: "sending"; text: string; action: "post" | "edit" }
   | { kind: "confirm_delete" }
-  | { kind: "deleting" };
+  | { kind: "deleting" }
+  /** A reply PostScore sent that Google never showed (48 h+): "Post it again?" asks first. */
+  | { kind: "confirm_repost" };
 
 type Done = { action: "post" | "edit" | "delete" | "shown"; reviewer: string | null };
 
@@ -230,7 +236,8 @@ function ReviewRow({
   const { grow, googleHref } = useContext(InboxPlanContext);
   const [copied, setCopied] = useState(false);
   // A saved draft that fits this version of the review opens ready to read, edit and post.
-  const fits = !review.reply && !!saved?.reply && saved.reviewUpdated === (review.updateTime ?? null);
+  // A review PostScore already replied to (Google not showing it yet) never opens a draft again.
+  const fits = !isReplied(review) && !!saved?.reply && saved.reviewUpdated === (review.updateTime ?? null);
   const [state, setState] = useState<RowState>(fits ? { kind: "editing", text: saved!.reply!, action: "post" } : { kind: "idle" });
   const [include, setInclude] = useState(saved?.include !== false);
   const [message, setMessage] = useState<{ text: string; tone: MessageTone } | null>(null);
@@ -323,12 +330,44 @@ function ReviewRow({
           {t(locale, K(waiting!.action === "delete" ? "waiting.delete" : "waiting.reply"))}
         </p>
       )}
-      {waiting?.phase === "timed_out" && (
+      {/* A reply PostScore sent has its own line below ("Posted · waiting for Google to show it"). */}
+      {waiting?.phase === "timed_out" && !review.sent && (
         <p data-testid="reply-timed-out" role="status" className="rounded-lg border border-[color:color-mix(in_srgb,var(--color-amber)_45%,white)] bg-[color:color-mix(in_srgb,var(--color-amber)_10%,white)] px-3 py-2 text-[13px] text-ink">
           {t(locale, K("waiting.timedOut"))}
         </p>
       )}
 
+      {/* PostScore posted a reply Google isn't showing yet: Replied, with the text we sent and no buttons. After 48 h
+          still not shown: "Post it again?", behind its own confirm step. */}
+      {!review.reply && review.sent && !locked && state.kind !== "editing" && state.kind !== "sending" && (
+        <div data-testid="reply-sent-waiting" className="flex flex-col gap-1.5 rounded-xl border border-paper-deep bg-paper p-3">
+          <span className="text-[11.5px] font-semibold uppercase tracking-[0.06em] text-ink-soft">{t(locale, K("sent.waiting"))}</span>
+          {review.sent.text && <ReviewText text={review.sent.text} />}
+          {sentNotShown(review, Date.now()) &&
+            (state.kind === "confirm_repost" ? (
+              <div role="alertdialog" aria-label={t(locale, K("sent.repost"))} className="flex flex-col gap-2 rounded-lg border border-paper-deep bg-white p-2.5" data-testid="repost-confirm">
+                <p className="text-[13px] text-ink">{t(locale, K("sent.repostConfirm"))}</p>
+                <div className="flex flex-wrap gap-2">
+                  <button type="button" autoFocus onClick={() => setState({ kind: "idle" })} className="rounded-lg border border-paper-deep bg-white px-3 py-1.5 text-[13px] font-medium text-ink" data-testid="repost-cancel">
+                    {t(locale, K("cancel"))}
+                  </button>
+                  <button type="button" disabled={!canPost || !review.sent.text} onClick={() => void send("post", review.sent!.text)} className="rounded-lg border border-ink bg-ink px-3 py-1.5 text-[13px] font-semibold text-paper disabled:opacity-60" data-testid="repost-go">
+                    {t(locale, K("sent.repostYes"))}
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <p className="flex flex-wrap items-center gap-2 text-[13px] text-ink" data-testid="sent-not-shown">
+                {t(locale, K("sent.notShown"))}
+                {canPost && review.sent.text && (
+                  <button type="button" onClick={() => setState({ kind: "confirm_repost" })} className="font-semibold underline decoration-brass underline-offset-2">
+                    {t(locale, K("sent.repost"))}
+                  </button>
+                )}
+              </p>
+            ))}
+        </div>
+      )}
       {review.reply && !editing && !locked && (
         <div data-testid="google-review-reply" className="flex flex-col gap-1.5 rounded-xl border border-paper-deep bg-paper p-3">
           <span className="text-[11.5px] font-semibold uppercase tracking-[0.06em] text-ink-soft">{t(locale, K("yourReply"))}</span>
@@ -386,7 +425,7 @@ function ReviewRow({
       )}
 
       {/* Premium's pre-drafted inbox never falls back to the old buttons: the same reply box, with what happened. */}
-      {!review.reply && !editing && !locked && !grow && !fits && (
+      {!isReplied(review) && !editing && !locked && !grow && !fits && (
         <div data-testid="no-draft-box" data-failed={saved?.failed || undefined} className="flex flex-col gap-2 rounded-xl border border-paper-deep bg-paper p-3">
           <span className="text-[12.5px] font-semibold text-ink">{t(locale, K("replyLabel"))}</span>
           <p className="text-[13px] text-ink-soft">{t(locale, K(saved?.failed ? "draftFailed" : "noDraftYet"))}</p>
@@ -411,7 +450,7 @@ function ReviewRow({
         </div>
       )}
 
-      {!review.reply && !editing && !locked && (grow || fits) && (
+      {!isReplied(review) && !editing && !locked && (grow || fits) && (
         <div className="flex flex-wrap items-center gap-2">
           {fits ? (
             // Skipped for now: the saved draft is still there.
@@ -556,7 +595,7 @@ function ReviewRow({
 export function approveAllReplyIds(reviews: InboxReview[], drafts: Map<string, SavedDraft>, waitingIds: string[] = []): string[] {
   const waiting = new Set(waitingIds);
   return reviews
-    .filter((r) => !r.reply && !waiting.has(r.reviewId))
+    .filter((r) => !isReplied(r) && !waiting.has(r.reviewId))
     .filter((r) => {
       const d = drafts.get(r.reviewId);
       return !!d?.reply?.trim() && d.include !== false && !d.failed && d.reviewUpdated === (r.updateTime ?? null);
@@ -579,7 +618,10 @@ function ApproveAllReplies({
   waitingIds,
   onPosted,
   onPending,
+  practice = false,
 }: {
+  /** Practice mode's fake Google: no typed name on localhost. */
+  practice?: boolean;
   businessId: string;
   reviews: InboxReview[];
   drafts: Map<string, SavedDraft>;
@@ -593,6 +635,8 @@ function ApproveAllReplies({
   const [step, setStep] = useState<"idle" | "confirm" | "posting" | "done">("idle");
   const [progress, setProgress] = useState({ done: 0, of: 0 });
   const [result, setResult] = useState<{ sent: number; failed: Array<{ name: string; why: string }> } | null>(null);
+  // Localhost only: a real send asks for the business name first (never in practice mode).
+  const guard = useLocalWriteGuard(practice);
   const ids = approveAllReplyIds(reviews, drafts, waitingIds);
   const n = ids.length;
   if (n === 0 && step !== "posting" && step !== "done") return null;
@@ -652,12 +696,21 @@ function ApproveAllReplies({
       {step === "confirm" && (
         <div role="alertdialog" aria-label={t(locale, K("all.button"), { count: n })} data-testid="approve-all-replies-confirm" className="mt-2 flex flex-col gap-2 border-t border-paper-line pt-2">
           <p className="text-[13px] text-ink">{tPlural(locale, "dashboard.googleReviews.all.confirm", n, { count: n })}</p>
-          <div className="flex flex-wrap gap-2">
-            <button type="button" data-testid="approve-all-replies-post" onClick={() => void run()} className="rounded-lg border border-ink bg-ink px-3.5 py-1.5 text-[13px] font-semibold text-paper">
-              {t(locale, K("all.post"))}
+          {/* Exactly who gets a reply, and the way to read them first. */}
+          <p className="text-[13px] text-ink" data-testid="approve-all-replies-reviewers">
+            {reviewerList(ids.map((id) => reviews.find((r) => r.reviewId === id)?.reviewer ?? null), locale)}{" "}
+            <button type="button" onClick={() => setStep("idle")} className="font-semibold underline decoration-brass underline-offset-2" data-testid="approve-all-replies-read-first">
+              {t(locale, "dashboard.fixPlan.send.readFirst")}
             </button>
-            <button type="button" data-testid="approve-all-replies-cancel" onClick={() => setStep("idle")} className="rounded-lg border border-paper-deep bg-white px-3 py-1.5 text-[13px] font-medium text-ink">
+          </p>
+          {guard.field}
+          <div className="flex flex-wrap gap-2">
+            {/* Cancel first and focused: Enter never sends by accident. */}
+            <button type="button" autoFocus data-testid="approve-all-replies-cancel" onClick={() => setStep("idle")} className="rounded-lg border border-paper-deep bg-white px-3 py-1.5 text-[13px] font-medium text-ink">
               {t(locale, K("cancel"))}
+            </button>
+            <button type="button" data-testid="approve-all-replies-post" disabled={!guard.ok} onClick={() => void run()} className="rounded-lg border border-ink bg-ink px-3.5 py-1.5 text-[13px] font-semibold text-paper disabled:opacity-50">
+              {t(locale, K("all.post"))}
             </button>
           </div>
         </div>
@@ -894,6 +947,7 @@ export function InboxBody({
       </div>
 
       <ApproveAllReplies
+        practice={practice}
         businessId={businessId}
         reviews={reviews}
         drafts={drafts}

@@ -29,6 +29,7 @@ import { ScoreBand } from "@/components/overview/ScoreBand";
 import { ListingPhoto } from "@/components/overview/ListingPhoto";
 import { ListingChips } from "@/components/overview/ListingChips";
 import { SinceLastScanCard } from "@/components/overview/SinceLastScanCard";
+import { scoreMoves } from "@/lib/scanSplit";
 import { NextRescanNote, RescanCompetitorsNote, RescanButton, RescanMessages, ScanFreshnessLine, SnapshotNotice, useRescan } from "@/components/scoring/ScanStatusStrip";
 import { StatTile } from "@/components/ui/StatTile";
 import { LocalBenchmarkTile } from "@/components/dashboard/LocalBenchmarkTile";
@@ -157,6 +158,13 @@ export function BusinessScoreView({
    * (lib/serviceOptions.ts) — information on the Completeness card, no points. */
   serviceOptions?: ServiceOptions | null;
 }) {
+  // "Since last scan": every check that moved, gains and losses (lib/scanSplit.ts scoreMoves).
+  const sinceMoves = (() => {
+    const [cur, prev] = recentSnapshots;
+    if (!cur || !prev) return null;
+    const same = !isScoringUpdate(prev.scoring_version, cur.scoring_version, (cur.breakdown_json as { scanKind?: string } | null)?.scanKind);
+    return scoreMoves(prev, cur, same);
+  })();
   const locale = useLocale();
   const { breakdown, projectedBreakdown } = result;
   // Real stored spam findings only — see hackSignsFor (lib/siteSecurity.ts).
@@ -254,6 +262,7 @@ export function BusinessScoreView({
             score={breakdown.total}
             grade={breakdown.grade}
             history={history}
+          sinceMoves={sinceMoves}
             projectedScore={projectedBreakdown.total}
             projectedGrade={projectedBreakdown.grade}
             biggestBoost={null}
@@ -337,6 +346,7 @@ export function BusinessScoreView({
           score={breakdown.total}
           grade={breakdown.grade}
           history={history}
+          sinceMoves={sinceMoves}
           projectedScore={projectedBreakdown.total}
           projectedGrade={projectedBreakdown.grade}
           // The first Top recommendation — the same source, so the two

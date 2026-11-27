@@ -39,10 +39,13 @@ export type WeekRepliesResult = { status: "ok"; canPost: boolean; practice: bool
 
 
 /** The week's replies — READ ONLY: the newest unanswered reviews as Google shows them now, each with its saved
- * draft (lib/replyBatch.server.ts writes them in the background, never here). `missing`: no draft yet. */
-export async function draftWeekReplies(businessId: string): Promise<WeekRepliesResult> {
+ * draft (lib/replyBatch.server.ts writes them in the background, never here). `missing`: no draft yet.
+ * Grow reads the full set too (Fix plan: "10 replies drafted for you to post"), never able to post from here. */
+export async function draftWeekReplies(businessId: string, opts: { all?: boolean } = {}): Promise<WeekRepliesResult> {
   const [{ getPlan }, { isPremiumPlan }] = await Promise.all([import("@/lib/premium"), import("@/lib/plan")]);
-  if (!isPremiumPlan(await getPlan())) return { status: "blocked", reason: "not_premium" };
+  const plan = await getPlan();
+  const premium = isPremiumPlan(plan);
+  if (!premium && !(opts.all && plan !== "free")) return { status: "blocked", reason: "not_premium" };
   const { listGoogleReviews } = await import("@/app/actions/googleReviews");
   const page = await listGoogleReviews(businessId);
   if (page.status !== "ok") return page.status === "blocked" ? { status: "blocked", reason: page.reason } : { status: "error", error: page.error };
@@ -50,7 +53,12 @@ export async function draftWeekReplies(businessId: string): Promise<WeekRepliesR
   const db = createClient();
   const voice = await loadReplyVoice(db, businessId);
   const saved = await loadSavedReplyDrafts(db, businessId, voice);
-  const { list, more } = replyTargets(page.reviews, new Set((page.pending ?? []).map((p: { reviewId: string }) => p.reviewId)));
+  const pendingIds = new Set((page.pending ?? []).map((p: { reviewId: string }) => p.reviewId));
+  // `all` (Fix plan's "Approve this week", Reviews' "Approve all replies" — one set, one count): every unanswered
+  // review on Google's first page, newest first. Otherwise the week's newest 10 (today's Growth "Approve all").
+  const { list, more } = opts.all
+    ? { list: page.reviews.filter((r) => !r.reply && !r.sent && !pendingIds.has(r.reviewId)).sort((a, b) => (b.createTime ?? "").localeCompare(a.createTime ?? "")), more: 0 }
+    : replyTargets(page.reviews.filter((r) => !r.sent), pendingIds);
   const byId = new Map((saved.ok ? saved.drafts : []).map((d) => [d.reviewId, d]));
   const items: WeekReply[] = list.map((r) => {
     const d = byId.get(r.reviewId);
@@ -58,7 +66,7 @@ export async function draftWeekReplies(businessId: string): Promise<WeekRepliesR
     const fits = d && d.reviewUpdated === (r.updateTime ?? null) && d.status === "ready";
     return { reviewId: r.reviewId, reviewer: r.reviewer, stars: r.stars, comment: r.comment, createTime: r.createTime, reply: fits ? d!.reply : null, include: fits ? d!.include : false, length: fits ? d!.length : "medium", failed: d?.status === "failed" };
   });
-  return { status: "ok", canPost: page.canPost, practice: page.practice, items, more, voice, ready: saved.ok };
+  return { status: "ok", canPost: premium && page.canPost, practice: page.practice, items, more, voice, ready: saved.ok };
 }
 
 export type RedraftReplyResult = { status: "ok"; reply: string } | { status: "error" } | Blocked;

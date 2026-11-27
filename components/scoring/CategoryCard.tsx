@@ -15,10 +15,11 @@ import { ChangedOnGoogleNote } from "@/components/scoring/ChangedOnGoogleNote";
 // Kept here for the UI that already imports them from this file.
 export { checkOutcome, formatPoints, ChangedOnGoogleNote };
 import { t, tPlural, useLocale, type Locale, type MessageKey } from "@/lib/i18n";
-import type { HoursCheckState } from "@/lib/hoursCheck";
+import { hoursExplanation, type HoursCheckState } from "@/lib/hoursCheck";
 import { HoursDiffLines, StillWaitingLine, WaitingForGoogleTag } from "@/components/scoring/HoursCheck";
 import { LockedFixRow } from "@/components/overview/FixPlanUpsell";
 import { checkAnchorId } from "@/lib/postaiLinks";
+import { readStorage, writeStorage } from "@/lib/signStudio/design";
 import { timeEstimateText, type CheckHowTo } from "@/lib/actionPlan";
 import { FixButton } from "@/components/scoring/FixButton";
 import { PremiumOneClickLine } from "@/components/scoring/PremiumOneClickLine";
@@ -225,15 +226,31 @@ function CompactRow({
   gainPoints: boolean;
 }) {
   const locale = useLocale();
-  const [show, setShow] = useState(false);
   const hoursState = useContext(HoursStateContext);
   const hours = hoursRowState(check, hoursState);
   const sinceScan = hours === "stale";
   const waiting = hours === "waiting";
   const id = checkAnchorId(check.id);
+  // Rows losing points (and waiting on Google) start open; passed ones closed. The owner's own open/close for a row
+  // is kept in this browser only (read after the first paint, so the server and the page agree).
+  const losing = check.earnedPoints !== null && check.earnedPoints < check.maxPoints;
+  const startOpen = losing || waiting;
+  const memo = rowMemoKey(businessId, check.id);
+  const [show, setShowState] = useState(startOpen);
+  const [more, setMore] = useState(false);
+  useEffect(() => {
+    const saved = readStorage(memo);
+    if (saved === "open" || saved === "closed") setShowState(saved === "open");
+  }, [memo]);
+  const setShow = (next: boolean | ((v: boolean) => boolean)) =>
+    setShowState((v) => {
+      const value = typeof next === "function" ? next(v) : next;
+      writeStorage(memo, value === startOpen ? null : value ? "open" : "closed");
+      return value;
+    });
   // A link to this check (Top issue, PostAI) opens its description.
   useEffect(() => {
-    const open = () => window.location.hash.slice(1) === id && setShow(true);
+    const open = () => window.location.hash.slice(1) === id && setShowState(true);
     open();
     window.addEventListener("hashchange", open);
     return () => window.removeEventListener("hashchange", open);
@@ -330,7 +347,13 @@ function CompactRow({
         {/* A live hours state replaces the scan's words (their Google side can be the Business Profile, not Maps). */}
         {hours ? null : (
           <>
-            <RowStatus check={check} businessId={businessId} />
+            {/* One or two lines (what we found, and the target); longer help behind "More help". */}
+            <RowStatus check={check} businessId={businessId} short={!more} />
+            {helpSplit(hoursExplanation(check, locale)).rest && (
+              <button type="button" onClick={() => setMore((m) => !m)} aria-expanded={more} className="ml-[25px] w-fit text-[12px] font-medium text-ink-mute underline decoration-paper-deep underline-offset-2 hover:text-ink" data-testid="row-more-help">
+                {t(locale, more ? "dashboard.breakdown.lessHelp" : "dashboard.breakdown.moreHelp")}
+              </button>
+            )}
             {outcome === "needs_work" && lockedFixes && (
               <div data-testid="row-actions" className="ml-[25px] mt-1">
                 <LockedFixRow blurred />
@@ -414,7 +437,20 @@ function PassedChecks({ count, allPass, anchors, initialOpen, children }: { coun
 
 /** The row's status: what's missing, always in full (long URLs wrap).
  * Customer details: the scored groups still missing on Google. */
-function RowStatus({ check, businessId = null }: { check: CheckResult; businessId?: string | null }) {
+/** Where a row's own open/close is kept (this browser only). */
+function rowMemoKey(businessId: string | null, checkId: string): string {
+  return `postscore.breakdownRow.${businessId ?? "-"}.${checkId}`;
+}
+
+/** The scan's words split for a row: the first sentence (what we found, usually with the target) and the rest. */
+export function helpSplit(text: string): { first: string; rest: string | null } {
+  const parts = text.split(/(?<=[.!?])\s+(?=[A-ZÁÉÍÓÚÑ¿¡"“(])/);
+  const first = parts[0] ?? text;
+  const rest = parts.slice(1).join(" ").trim();
+  return { first, rest: rest || null };
+}
+
+function RowStatus({ check, businessId = null, short = false }: { check: CheckResult; businessId?: string | null; short?: boolean }) {
   const locale = useLocale();
   // Day 23 2d-4: Google reads differently now than this saved result —
   // never words that contradict it; the page's own note covers "couldn't load".
@@ -430,7 +466,11 @@ function RowStatus({ check, businessId = null }: { check: CheckResult; businessI
       </p>
     );
   }
-  return <p data-testid="row-status" className="break-words pl-[25px] text-[13px] text-ink-mute">{check.explanation}</p>;
+  // Short: the first sentence, whole (what we found and the target); the rest once "More help" is open. Never cut.
+  // Never a hours line with the same value on both sides (lib/hoursCheck.ts hoursExplanation).
+  const words = hoursExplanation(check, locale);
+  const text = short ? helpSplit(words).first : words;
+  return <p data-testid="row-status" className="break-words pl-[25px] text-[13px] text-ink-mute">{text}</p>;
 }
 
 /** Customer details: the scored groups not on Google yet (null: not known). */

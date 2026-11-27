@@ -7,7 +7,7 @@ import { hoursWaitingOnGoogle, isHoursCheck, shownHoursState, type HoursCheckSta
 import { fixRowSteps, moreHelpLinks, oneClickSentence } from "@/lib/fixRow";
 import { isFixPlanStepsHref } from "@/lib/routes";
 import { HoursDiffLines, RescanNowButton, WaitingForGoogleTag } from "@/components/scoring/HoursCheck";
-import { useEffect, useState, createContext, useContext } from "react";
+import { useEffect, useState, createContext, useContext, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { IconChevronDown, IconLock, IconBrandGoogle, IconCircleCheck, IconPhoto, IconTag, IconTicket, IconTrendingUp, IconUsers, IconWorld } from "@tabler/icons-react";
@@ -388,6 +388,17 @@ export function FixWhenTag({ when }: { when: FixWhen }) {
 const POINTS_CHIP =
   "inline-flex w-fit items-center whitespace-nowrap rounded-full border border-[color:color-mix(in_srgb,var(--color-brass)_40%,white)] bg-[color:color-mix(in_srgb,var(--color-brass)_10%,white)] px-2.5 py-0.5 text-[12px] font-semibold text-ink";
 
+/** Fix plan v3: what a row adds besides its primary button — a title/why for this plan, a tag ("29 drafted · in
+ * Approve this week"), the habit that earns it, and a secondary text link that opens a panel (the real drafts). */
+export interface FixRowExtra {
+  title?: string;
+  why?: string;
+  badge?: ReactNode;
+  habit?: ReactNode;
+  label?: string;
+  panel?: ReactNode;
+}
+
 export function TaskCard({
   task,
   businessId,
@@ -404,7 +415,7 @@ export function TaskCard({
   businessId: string;
   /** Day 25B step 3, Fix plan: its priority, the running score after it, and
    * Free's lock (the steps are a locked preview; no "I did this"). */
-  fixPlan?: { priority: FixPriority; running: number; locked: boolean; compact?: { open: boolean; outline: boolean } } | null;
+  fixPlan?: { priority: FixPriority; running: number; locked: boolean; compact?: { open: boolean; outline: boolean; extra?: FixRowExtra | null } } | null;
   /** Day 23B: the details mismatches this task shows with every version (one task per field). */
   merged?: DetailsMismatch[];
   /** Day 23B: this hours check as it is now — matching (re-scan) or the exact days that differ. */
@@ -426,6 +437,7 @@ export function TaskCard({
   const [expanded, setExpanded] = useState(false);
   // Fix plan v2 (compact rows): the row itself opens; only the first starts open.
   const [rowOpen, setRowOpen] = useState(!!fixPlan?.compact?.open);
+  const [extraOpen, setExtraOpen] = useState(false);
   const [state, setState] = useState<MarkState>({ kind: "idle" });
   const fixCtx = useFixContext(businessId);
   // Day 23B: ONE button (lib/fixDestination.ts). Premium with Google writes:
@@ -635,6 +647,7 @@ export function TaskCard({
   // Fix plan v2: one compact row — number, priority, title, status dot, one short "why", "+6 pts → 84" and the
   // main button; the row opens to the evidence, how to fix it, "I did this" / "Check again".
   if (fixPlan?.compact) {
+    const extra = fixPlan.compact.extra ?? null;
     const dot = { neutral: "bg-[#c6c0b0]", amber: "bg-amber", brass: "bg-brass", green: "bg-green", red: "bg-red" }[status.variant as string] ?? "bg-[#c6c0b0]";
     // The row's ONE primary button: in the row while it's closed, in "What to do" once it's open — never both.
     // A Fix plan step that would only open this row again goes to Google instead.
@@ -669,19 +682,33 @@ export function TaskCard({
           <span aria-hidden className="flex h-6 w-6 items-center justify-center rounded-full font-serif text-[12.5px] font-semibold text-ink ps-icon-tile">{step}</span>
           {/* The priority sits in its own column, so it lines up on every row whatever the title's length. */}
           <span className="hidden nav:block">{task.urgent ? <span data-testid="task-urgent" className="inline-flex whitespace-nowrap rounded-full bg-red px-2 py-0.5 text-[11px] font-semibold text-white">{t(locale, "dashboard.overview.recs.urgent")}</span> : waiting ? <WaitingForGoogleTag /> : !stale && <FixPriorityTag priority={fixPlan.priority} />}</span>
-          <button type="button" onClick={() => setRowOpen((o) => !o)} aria-expanded={rowOpen} className="col-start-2 min-w-0 text-left nav:col-start-3">
+          <div className="col-start-2 min-w-0 nav:col-start-3">
+          <button type="button" onClick={() => setRowOpen((o) => !o)} aria-expanded={rowOpen} className="block w-full min-w-0 text-left">
             <span className="mb-1 flex nav:hidden">{task.urgent ? <span className="inline-flex whitespace-nowrap rounded-full bg-red px-2 py-0.5 text-[11px] font-semibold text-white">{t(locale, "dashboard.overview.recs.urgent")}</span> : waiting ? <WaitingForGoogleTag /> : !stale && <FixPriorityTag priority={fixPlan.priority} />}</span>
             <span className="flex items-center gap-2 text-[14.5px] font-semibold text-ink">
-              <span>{title}</span>
+              <span>{extra?.title ?? title}</span>
               <span className={cn("h-2.5 w-2.5 shrink-0 rounded-full", dot)} title={status.label} aria-label={status.label} data-testid="fix-row-status" data-variant={status.variant} />
             </span>
-            <span className="mt-0.5 block text-[12.5px] leading-snug text-ink-mute" data-testid="fix-row-why">{stale ? t(locale, "dashboard.hoursCheck.staleTitle") : waiting ? t(locale, "dashboard.hoursCheck.profileMatches") : fixPlanWhy(task, locale)}</span>
+            <span className="mt-0.5 block text-[12.5px] leading-snug text-ink-mute" data-testid="fix-row-why">{stale ? t(locale, "dashboard.hoursCheck.staleTitle") : waiting ? t(locale, "dashboard.hoursCheck.profileMatches") : (extra?.why ?? fixPlanWhy(task, locale))}</span>
           </button>
+          {(extra?.badge || extra?.habit) && (
+            <div className="mt-1.5 flex flex-col items-start gap-1.5" data-testid="fix-row-extra">
+              {extra.badge}
+              {extra.habit}
+            </div>
+          )}
+          </div>
           <div className="col-start-2 flex items-center justify-between gap-3 nav:col-start-4 nav:justify-end" data-testid="fix-plan-points">
             <span className="whitespace-nowrap text-[13px] font-semibold text-ink-soft">
               {fixPlanPoints(task, locale)} → <b className="font-serif text-[16px] text-ink">{fixPlan.running}</b>
             </span>
             <span className="flex items-center gap-2">
+              {/* The secondary way in (a text link): read what PostScore drafted, right here. */}
+              {extra?.label && (
+                <button type="button" onClick={() => setExtraOpen((o) => !o)} aria-expanded={extraOpen} className="whitespace-nowrap text-[13px] font-semibold text-ink underline decoration-brass underline-offset-[3px] hover:text-ink-soft" data-testid="fix-row-secondary">
+                  {extraOpen ? t(locale, "dashboard.fixPlan.hideDrafts") : extra.label}
+                </button>
+              )}
               {/* Waiting on Google Maps: nothing for the owner to fix, so no button. */}
               {!rowOpen && !waiting && mainButton}
               <button type="button" onClick={() => setRowOpen((o) => !o)} aria-label={t(locale, rowOpen ? "dashboard.overview.actionPlan.hideHowToFix" : "dashboard.overview.actionPlan.howToFixIt")} className="text-ink-mute hover:text-ink">
@@ -690,6 +717,11 @@ export function TaskCard({
             </span>
           </div>
         </div>
+        {extraOpen && extra?.panel && (
+          <div className="border-t border-dashed border-paper-deep px-4 py-3.5 sm:px-5 nav:pl-[57px]" data-testid="fix-row-panel">
+            {extra.panel}
+          </div>
+        )}
         {rowOpen && (
           <div className="flex flex-col gap-3.5 px-4 pb-4 sm:px-5 nav:pl-[57px]" data-testid="fix-row-body">
             {/* 1. What we found: one line, the checked date small. */}

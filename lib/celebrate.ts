@@ -16,7 +16,7 @@ export function prefersReducedMotion(): boolean {
   }
 }
 
-export function celebrationKey(kind: "routine" | "goal" | "plan", businessId: string, weekStart: string): string {
+export function celebrationKey(kind: "routine" | "goal" | "plan" | "habits", businessId: string, weekStart: string): string {
   return `postscore.celebrated.${kind}.${businessId}.${weekStart}`;
 }
 
