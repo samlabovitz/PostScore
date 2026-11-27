@@ -55,10 +55,14 @@ interface InboxContext {
 }
 
 // Server-only modules load on demand, so client components can import these actions.
-async function inboxTarget(businessId: string): Promise<InboxContext | { ok: false; result: GateFailure }> {
+// `read`: listing and re-checking the reviews, which Grow can do too (its pre-drafted replies, posted by the owner
+// on Google). Posting, editing and deleting a reply stay Premium.
+async function inboxTarget(businessId: string, opts: { read?: boolean } = {}): Promise<InboxContext | { ok: false; result: GateFailure }> {
   if (reviewRepliesPracticeOn()) return practiceTarget(businessId);
-  const { gbpEditGate } = await import("@/lib/gbpEditGate.server");
-  const gate = await gbpEditGate(businessId, { requirePremium: true });
+  const [{ gbpEditGate }, { getPlan }, { isPremiumPlan }] = await Promise.all([import("@/lib/gbpEditGate.server"), import("@/lib/premium"), import("@/lib/plan")]);
+  const plan = await getPlan();
+  if (opts.read && plan === "free") return { ok: false as const, result: { status: "blocked" as const, reason: "not_premium" as const } };
+  const gate = await gbpEditGate(businessId, { requirePremium: !opts.read });
   if (!gate.ok) return { ok: false as const, result: gate.result };
   const [{ data: conn }, { data: business }] = await Promise.all([
     gate.admin.from("gbp_connections").select("google_account_id").eq("business_id", businessId).maybeSingle(),
@@ -71,7 +75,7 @@ async function inboxTarget(businessId: string): Promise<InboxContext | { ok: fal
     admin: gate.admin,
     target: { businessId, userId: gate.target.userId, accountName, locationName: gate.target.locationName, accessToken: gate.target.accessToken },
     practice: false,
-    canPost: googleWritesAllowed((business as { place_id: string | null } | null)?.place_id),
+    canPost: isPremiumPlan(plan) && googleWritesAllowed((business as { place_id: string | null } | null)?.place_id),
     fetchImpl: fetch,
   };
 }
@@ -98,7 +102,7 @@ function gateFailure(result: GateFailure) {
 
 /** One page (50) of the owner's Google reviews, newest first. */
 export async function listGoogleReviews(businessId: string, pageToken: string | null = null): Promise<ListGoogleReviewsResult> {
-  const t = await inboxTarget(businessId);
+  const t = await inboxTarget(businessId, { read: true });
   if (!t.ok) return gateFailure(t.result);
   const { fetchInboxPage } = await import("@/lib/gbpReviewInbox.server");
   const page = await fetchInboxPage(t.target, typeof pageToken === "string" && pageToken.length < 500 ? pageToken : null, t.fetchImpl);
@@ -123,7 +127,7 @@ export type CheckGoogleReviewResult = { status: "ok"; review: InboxReview } | { 
 /** The waiting page's re-check: one review as Google shows it now (read only). */
 export async function checkGoogleReview(businessId: string, reviewId: string): Promise<CheckGoogleReviewResult> {
   if (!isReviewId(reviewId)) return { status: "error", error: "not_found" };
-  const t = await inboxTarget(businessId);
+  const t = await inboxTarget(businessId, { read: true });
   if (!t.ok) return gateFailure(t.result);
   const { fetchReview } = await import("@/lib/gbpReviewInbox.server");
   const res = await fetchReview(t.target, reviewId, t.fetchImpl);

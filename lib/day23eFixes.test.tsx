@@ -173,15 +173,18 @@ describe("7–8. the same post flow in the Growth routine, the Growth page's car
     // One shared component, not a second copy.
     expect(readFileSync("app/business/[id]/growth/WeeklyChecklist.tsx", "utf8")).toContain("<WeekPost businessId={businessId} premium={postFlow.premium} />");
   });
-  test("the Growth page's cards: the post and the answers (with the website FAQ); no copy-it-yourself versions left", () => {
-    const premium = wrap(<MoreWaysCards businessId="b1" premium connected />);
+  test("the Growth page's card: the post; the answers moved to Presence → Google listing (§2d, one home per task)", async () => {
+    const premium = wrap(<MoreWaysCards businessId="b1" premium connected newDesign />);
     expect(premium).toContain('data-testid="more-ways-post"');
-    expect(premium).toContain('data-testid="more-ways-answers"');
+    expect(premium).not.toContain('data-testid="more-ways-answers"');
+    // Today's Growth page (new design off) keeps its answers card until the new pages go live.
+    expect(wrap(<MoreWaysCards businessId="b1" premium connected newDesign={false} />)).toContain('data-testid="more-ways-answers"');
     expect(premium).toContain("PostScore can do this for you");
     const grow = wrap(<MoreWaysCards businessId="b1" premium={false} connected />, "es");
-    expect(grow).toContain("Responda las preguntas frecuentes de sus clientes");
     expect(grow).toContain("Ver el borrador de esta semana");
-    expect(wrap(<MoreWaysCards businessId="b1" premium connected={false} />)).not.toContain("more-ways-answers");
+    const { AnswersCard } = await import("@/components/gbp/MoreWaysCards");
+    expect(wrap(<AnswersCard businessId="b1" premium={false} />, "es")).toContain("Responda las preguntas frecuentes de sus clientes");
+    expect(readFileSync("components/gbp/GoogleListingPage.tsx", "utf8")).toContain("<AnswersCard businessId={props.businessId} premium={premium} />");
     expect(readFileSync("app/business/[id]/growth/GrowthView.tsx", "utf8")).toContain("<MoreWaysCards");
     const campaigns = readFileSync("app/business/[id]/campaigns/CouponsSection.tsx", "utf8");
     expect(campaigns).not.toContain("MoreWaysToBringPeopleIn");

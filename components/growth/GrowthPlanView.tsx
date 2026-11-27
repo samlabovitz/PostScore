@@ -28,11 +28,12 @@ import type { ResultId, TierNumber } from "@/lib/growthTier";
 import type { Rec } from "@/lib/googleRecommendations";
 import type { IdeaType } from "@/lib/listingIdeas";
 import type { WeeklyChecklistItemId } from "@/lib/weeklyChecklist";
+import type { GrowthExtra } from "@/lib/growthWeek";
 import { TIER_NAME_KEYS } from "@/lib/navTabs";
 import { gbpConnectHref } from "@/lib/gbpLanding";
 import { isPremiumPlan, type Plan } from "@/lib/plan";
-import { getReviewsHref, googleListingHref, googleResultsHref } from "@/lib/routes";
-import { t, tPlural, useLocale, type Locale, type MessageKey } from "@/lib/i18n";
+import { fixPlanHref, getReviewsHref, googleResultsHref, offersHref } from "@/lib/routes";
+import { formatShortDate, t, tPlural, useLocale, type Locale, type MessageKey } from "@/lib/i18n";
 import type { PluralKeyBase } from "@/lib/i18n/messages";
 import { cn } from "@/lib/utils";
 
@@ -95,25 +96,34 @@ function Track({ tier }: { tier: TierNumber }) {
   );
 }
 
+/** A requirement row's mark: a green ✓ only when it's met, an empty circle when it isn't. */
+function MetMark({ met }: { met: boolean }) {
+  return met ? (
+    <IconCheck size={13} aria-hidden className="mr-1 inline text-green" data-mark="met" />
+  ) : (
+    <span aria-hidden data-mark="open" className="mr-1 inline-block h-[13px] w-[13px] translate-y-[2px] rounded-full border-[1.5px] border-ink-mute" />
+  );
+}
+
 function Needs({ title, needs, have, active, results, nextResult }: { title: string; needs: NonNullable<GrowthState["next"]>; have: string; active: string; results: string | null; nextResult: string | null }) {
   const locale = useLocale();
   const parts = needs.results > 0 ? 2 : 1;
-  const done = (needs.activeNow >= needs.activeWeeks ? 1 : 0) + (needs.results > 0 && needs.resultsNow >= needs.results ? 1 : 0);
+  const done = (needs.activeMet ? 1 : 0) + (needs.results > 0 && needs.resultsMet ? 1 : 0);
   return (
-    <Card className="flex flex-col gap-2 p-4" data-testid="tier-needs">
+    <Card className="flex flex-col gap-2 p-4" data-testid="tier-needs" data-tier={needs.tier}>
       <div className="flex items-baseline justify-between gap-2">
         <h3 className="text-[14px] font-semibold text-ink">{title}</h3>
-        <span className="text-[12px] font-semibold text-ink-mute">{t(locale, G("needs.progress"), { done, of: parts })}</span>
+        <span className="text-[12px] font-semibold text-ink-mute" data-testid="needs-progress">{t(locale, G("needs.progress"), { done, of: parts })}</span>
       </div>
-      <p className="text-[13px] text-ink">
-        <IconCheck size={13} aria-hidden className={cn("mr-1 inline", needs.activeNow >= needs.activeWeeks ? "text-green" : "text-ink-mute")} />
+      <p className="text-[13px] text-ink" data-testid="needs-active" data-met={needs.activeMet || undefined}>
+        <MetMark met={needs.activeMet} />
         {active}
       </p>
       <p className="-mt-1 pl-[18px] text-[12.5px] text-ink-soft">{have}</p>
       {results && (
         <>
-          <p className="text-[13px] text-ink">
-            <IconCheck size={13} aria-hidden className={cn("mr-1 inline", needs.resultsNow >= needs.results ? "text-green" : "text-ink-mute")} />
+          <p className="text-[13px] text-ink" data-testid="needs-results" data-met={needs.resultsMet || undefined}>
+            <MetMark met={needs.resultsMet} />
             {results}
           </p>
           {nextResult && <p className="-mt-1 pl-[18px] text-[12.5px] text-ink-soft">{nextResult}</p>}
@@ -219,7 +229,7 @@ function TopCard({ stay }: { stay: NonNullable<GrowthState["stay"]> }) {
   const row = (ok: boolean, text: string, sub: string, id: string) => (
     <li className="flex flex-col" data-testid={`top-${id}`} data-met={ok || undefined}>
       <span className="text-[13px] text-ink">
-        <IconCheck size={13} aria-hidden className={cn("mr-1 inline", ok ? "text-green" : "text-ink-mute")} />
+        <MetMark met={ok} />
         {text}
       </span>
       <span className="pl-[18px] text-[12.5px] text-ink-soft">{sub}</span>
@@ -231,7 +241,7 @@ function TopCard({ stay }: { stay: NonNullable<GrowthState["stay"]> }) {
       <p className="text-[13.5px] text-ink-soft">{t(locale, G("top.body"))}</p>
       <ul className="flex flex-col gap-1.5">
         {row(stay.activeOk, t(locale, G("top.active")), t(locale, G("top.activeHave"), { n: stay.activeNow, of: stay.of }), "active")}
-        {row(stay.resultsNow >= stay.results, t(locale, G("top.results")), t(locale, G("top.resultsHave"), { n: stay.resultsNow }), "results")}
+        {row(stay.resultsOk, t(locale, G("top.results")), t(locale, G("top.resultsHave"), { n: stay.resultsNow }), "results")}
       </ul>
     </Card>
   );
@@ -254,14 +264,23 @@ function ChangeLine({ change, tier, metResults }: { change: NonNullable<GrowthSt
 
 // ------------------------------------------------------------------ this week's plan
 
-/** "Share your review link" and "Check your hours": the routine items that aren't Google tasks, in the same list. */
-const ROUTINE_EXTRAS: WeeklyChecklistItemId[] = ["share_review_link", "check_hours"];
-
-/** Each extra's own way in: the review link & QR, or the Hours row of the Google listing. */
+/** Each Growth task's own way in (§2d): the review link & QR, Customer offers, or a holiday offer. */
 function routineLink(businessId: string, id: WeeklyChecklistItemId, locale: Locale): { href: string; label: string; howTo?: string } | null {
   if (id === "share_review_link") return { href: getReviewsHref(businessId, { hash: "review-link" }), label: t(locale, G("routine.reviewLink")), howTo: t(locale, G("routine.reviewLinkHowTo")) };
-  if (id === "check_hours") return { href: googleListingHref(businessId, { hash: "listing-hours" }), label: t(locale, G("routine.hours")) };
+  if (id === "start_offer") return { href: offersHref(businessId), label: t(locale, "dashboard.growth.week.offerLink") };
+  if (id === "seasonal_idea") return { href: offersHref(businessId), label: t(locale, "dashboard.growth.week.seasonalLink") };
   return null;
+}
+
+/** A Growth task's title and how-to (lib/growthWeek.ts): the seasonal idea names the holiday and its date. */
+function extraText(extra: GrowthExtra, locale: Locale): { title: string; howTo: string } {
+  const key = extra.id === "share_review_link" ? "shareReviewLink" : extra.id === "start_offer" ? "startOffer" : "seasonalIdea";
+  const holiday = extra.holiday ? t(locale, `dashboard.googleTab.fields.holiday.${extra.holiday.id}` as MessageKey) : "";
+  const date = extra.holiday ? formatShortDate(`${extra.holiday.date}T12:00:00Z`, locale, "UTC") : "";
+  return {
+    title: t(locale, `dashboard.growth.checklist.items.${key}.title` as MessageKey, { holiday, date }),
+    howTo: t(locale, `dashboard.growth.checklist.items.${key}.howTo` as MessageKey),
+  };
 }
 
 function RoutineExtra({ businessId, id, title, howTo, checked: initial }: { businessId: string; id: WeeklyChecklistItemId; title: string; howTo: string; checked: boolean }) {
@@ -331,10 +350,16 @@ export function WeekPlanCard({
       ? t(locale, G("top.onTrack"), { tier: tierName(locale, state.onTrack.tier), date: dayLabel(state.onTrack.monday, locale) })
       : t(locale, G(target === "next" ? "top.nextWeek" : "top.thisWeek"));
   const sub = state?.thisWeekCounts ? t(locale, G("top.alreadyCounts")) : null;
+  // §2d: the quickest way to make this week count can be a Presence fix — the drafted replies, approved on Fix plan
+  // (they count toward the tier as "Replied to reviews").
+  const ready = props.readyReplies ?? 0;
+  const presenceFirst = oneTap && state && !state.thisWeekCounts && ready > 0;
   // The next result is for the first tier above whose results aren't in hand yet.
-  const resultTier = state?.next ? (state.next.results > 0 && state.next.resultsNow < state.next.results ? state.next.tier : state.after?.tier ?? null) : null;
+  const resultTier = state?.next ? (state.next.results > 0 && !state.next.resultsMet ? state.next.tier : state.after?.tier ?? null) : null;
   const nextResult = state?.nextResult && resultTier ? t(locale, G("top.nextResult"), { tier: tierName(locale, resultTier), result: t(locale, G(`${RESULT_KEY[state.nextResult]}.goal`)) }) : null;
-  const extras = routine.filter((r) => ROUTINE_EXTRAS.includes(r.id));
+  // §2d: the Growth-only tasks after the Google ones — one list, 3–5 tasks, all of them Growth.
+  const extras = (week.extras ?? []).map((e) => ({ id: e.id as WeeklyChecklistItemId, ...extraText(e, locale) }));
+  void routine;
   return (
     <section id="this-week" className="scroll-mt-20" data-testid="week-plan">
       <div className="mb-3 flex flex-col gap-1">
@@ -345,7 +370,17 @@ export function WeekPlanCard({
       </div>
       <Card className="flex flex-col gap-3 p-5 sm:p-6">
         <div className="rounded-lg bg-[color:color-mix(in_srgb,var(--color-green)_8%,white)] px-3.5 py-2.5" data-testid="week-top-line">
-          <p className="text-[14px] font-semibold text-ink">{top}</p>
+          {presenceFirst ? (
+            <p className="text-[14px] font-semibold text-ink" data-testid="week-top-presence">
+              <Link href={fixPlanHref(props.businessId)} className="underline decoration-brass underline-offset-2 hover:text-ink-soft">
+                {state.onTrack
+                  ? tPlural(locale, "dashboard.growthPlan.top.approveRepliesOnTrack", ready, { count: ready, tier: tierName(locale, state.onTrack.tier) })
+                  : tPlural(locale, "dashboard.growthPlan.top.approveReplies", ready, { count: ready })}
+              </Link>
+            </p>
+          ) : (
+            <p className="text-[14px] font-semibold text-ink">{top}</p>
+          )}
           {(sub || nextResult) && <p className="mt-0.5 text-[12.5px] text-ink-soft">{[sub, nextResult].filter(Boolean).join(" ")}</p>}
         </div>
         <TierPlanProvider businessId={props.businessId} plan={week} week didThis={!oneTap}>
@@ -353,15 +388,11 @@ export function WeekPlanCard({
         </TierPlanProvider>
         {!connected && <p className="text-[12.5px] text-ink-soft" data-testid="week-connect-line">{t(locale, G("week.connectOneTap"))}</p>}
         {extras.length > 0 && (
-          <>
-          {/* Not ranked for the tier, so not in the count above: "Also this week". */}
-          <p className="border-t border-paper-line pt-3 text-[12px] font-bold uppercase tracking-[0.08em] text-ink-soft" data-testid="week-routine-title">{t(locale, G("routine.also"))}</p>
-          <ul data-testid="week-routine" className="[&>li:first-child]:border-t-0 [&>li:first-child]:pt-1">
+          <ul data-testid="week-routine" className="-mt-1">
             {extras.map((r) => (
               <RoutineExtra key={r.id} businessId={props.businessId} id={r.id} title={r.title} howTo={r.howTo} checked={week.checked.includes(r.id)} />
             ))}
           </ul>
-          </>
         )}
       </Card>
     </section>

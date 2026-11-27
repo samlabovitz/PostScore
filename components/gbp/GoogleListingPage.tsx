@@ -5,6 +5,7 @@
 // "Protection & changes". The sections are also the old Google Profile
 // tab's 4–6.
 
+import { AnswersCard } from "@/components/gbp/MoreWaysCards";
 import { fixPlanHref, googleResultsHref, growthPlanHref } from "@/lib/routes";
 import { checkHowTo } from "@/lib/actionPlan";
 import { isPremiumPlan, type Plan } from "@/lib/plan";
@@ -140,7 +141,7 @@ export function NextSection(props: GoogleProfileTabProps & { sample: boolean; pa
   const done = doneSinceScan(props.saved?.made ?? [], props.lastScanAt);
   // Already in section 1's "This week" (photos, the post): not repeated here.
   const thisWeek = new Set(thisWeekRecs(recs).map((r) => r.kind));
-  // The answers item covers the description, customer details and services.
+  // §2d: the answers card on this page covers the description, customer details and services (never the Growth plan).
   const answered = (id: Idea["id"]) => thisWeek.has("answers") && (id === "description" || id === "details" || id === "services");
   const open = ideas.filter((i) => !done.includes(i.id) && !(IDEA_REC[i.id] && thisWeek.has(IDEA_REC[i.id]!)) && !answered(i.id));
   const shown = more ? open : open.slice(0, MAX_IDEAS);
@@ -1363,6 +1364,13 @@ export function GoogleListingPage(props: GoogleListingPageProps) {
       {live && <JumpMenu sample={sample} sections={LISTING_SECTIONS} labels={LISTING_LABELS} />}
       <ListingSection {...props} page={{ mode, readOnly: !live, hoursMismatchPoints: props.hoursMismatchPoints ?? null }} />
       {live && <NextSection {...props} sample={sample} page howTo={mode === "edit" ? null : mode} />}
+      {/* §2d: answering customers' common questions (description, services, customer details) is a Presence fix —
+          here, not on the Growth plan. */}
+      {live && props.connected && props.plan !== "free" && (
+        <div id="listing-answers" className="scroll-mt-20">
+          <AnswersCard businessId={props.businessId} premium={premium} />
+        </div>
+      )}
       {(live || mode === "locked") && <ProtectionSection {...props} page mode={mode} />}
     </div>
   );

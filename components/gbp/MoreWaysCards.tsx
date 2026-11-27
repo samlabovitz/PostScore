@@ -1,11 +1,12 @@
 "use client";
 
 // Day 23E: the Growth page's "More ways to bring people in" (moved from
-// Campaigns): this week's Google post (components/gbp/WeekPost.tsx) and
-// "Answer your customers' common questions" — on Premium applied to the
-// Google listing in one click, on Grow the drafts to copy — each with the
-// copy-paste website FAQ (FAQPage markup). The same flows as the Google
-// Profile tab's This week; nothing is a second copy.
+// Campaigns): this week's Google post (components/gbp/WeekPost.tsx).
+// §2d (one home per task): "Answer your customers' common questions" — the
+// description, services and customer details, a Presence fix — lives on
+// Presence → Google listing (AnswersCard), never on the Growth plan too.
+// On Premium it's applied to the Google listing in one click, on Grow the
+// drafts to copy, with the copy-paste website FAQ (FAQPage markup).
 
 import Link from "next/link";
 import { useState } from "react";
@@ -15,6 +16,7 @@ import { AnswersCopy, AnswersPreview, useAnswers } from "@/components/gbp/Answer
 import { WeekPost } from "@/components/gbp/WeekPost";
 import { W_BUTTON } from "@/components/gbp/PostPreview";
 import { t, type MessageKey, useLocale } from "@/lib/i18n";
+import { NEW_PAGES_LIVE } from "@/lib/routes";
 
 const W = (key: string) => `dashboard.googleTab.w.${key}` as MessageKey;
 
@@ -32,7 +34,28 @@ function Answers({ businessId, premium }: { businessId: string; premium: boolean
   );
 }
 
-export function MoreWaysCards({ businessId, premium, connected }: { businessId: string; premium: boolean; connected: boolean }) {
+/** Presence → Google listing: "Answer your customers' common questions", the card and its panel. */
+export function AnswersCard({ businessId, premium }: { businessId: string; premium: boolean }) {
+  const locale = useLocale();
+  const [open, setOpen] = useState(false);
+  return (
+    <Card className="flex flex-col gap-3 p-4" data-testid="listing-answers">
+      <div className="flex items-center gap-2.5">
+        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ps-icon-tile">
+          <IconMessageQuestion size={16} />
+        </span>
+        <div className="text-sm font-semibold text-ink">{t(locale, W("more.answers.title"))}</div>
+      </div>
+      <p className="text-[13px] text-ink-soft">{t(locale, W(premium ? "more.answers.body.premium" : "more.answers.body.grow"))}</p>
+      <button type="button" onClick={() => setOpen(!open)} aria-expanded={open} className={`${W_BUTTON} w-fit`} data-testid="listing-answers-open">
+        {open ? t(locale, W("hide")) : premium ? t(locale, "dashboard.breakdown.action.doItForYou") : t(locale, W("more.getDraft"))}
+      </button>
+      {open && <Answers businessId={businessId} premium={premium} />}
+    </Card>
+  );
+}
+
+export function MoreWaysCards({ businessId, premium, connected, newDesign = NEW_PAGES_LIVE }: { businessId: string; premium: boolean; connected: boolean; newDesign?: boolean }) {
   const locale = useLocale();
   const [open, setOpen] = useState<"post" | "answers" | null>(null);
   const card = (id: "post" | "answers", Icon: typeof IconBrandGoogle, title: string, body: string) => (
@@ -54,7 +77,8 @@ export function MoreWaysCards({ businessId, premium, connected }: { businessId: 
       <div className="mb-2 text-[11px] font-medium uppercase tracking-[0.06em] text-ink-mute">{t(locale, "dashboard.growth.moreWays.heading")}</div>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         {card("post", IconBrandGoogle, t(locale, W("more.post.title")), t(locale, W(premium ? "more.post.body.premium" : "more.post.body.grow")))}
-        {connected && card("answers", IconMessageQuestion, t(locale, W("more.answers.title")), t(locale, W(premium ? "more.answers.body.premium" : "more.answers.body.grow")))}
+        {/* Today's Growth page keeps the answers card here; the new design has it on the Google listing (§2d). */}
+        {!newDesign && connected && card("answers", IconMessageQuestion, t(locale, W("more.answers.title")), t(locale, W(premium ? "more.answers.body.premium" : "more.answers.body.grow")))}
       </div>
       {open && (
         <Card className="mt-3 p-4" data-testid={`more-ways-panel-${open}`}>

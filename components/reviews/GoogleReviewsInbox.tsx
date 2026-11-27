@@ -16,14 +16,16 @@
 // Practice mode shows a banner (nothing is sent to Google); a business not
 // on the live posting allow list loads read-only (lib/gbpReviewPractice.ts).
 
-import { useCallback, useEffect, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useState } from "react";
+import Link from "next/link";
 import { IconBrandGoogle, IconCheck, IconClock, IconFlask, IconLock, IconPencil, IconSparkles, IconStarFilled, IconTrash } from "@tabler/icons-react";
 import { changeGoogleReviewReply, checkGoogleReview, listGoogleReviews, type ChangeGoogleReplyResult } from "@/app/actions/googleReviews";
 import { mergePending, pendingFor, pendingPhase, pendingResolved, readPending, watchPending, writePending, type PendingReply } from "@/lib/gbpReviewPending";
 import { draftReviewReply } from "@/app/actions/reviewReplies";
 import { getSavedReplies, redraftWeekReply, saveReplyDraft, type SavedRepliesResult } from "@/app/actions/approveAll";
 import { ReplyTweaks, ReplyVoicePicker } from "@/components/reviews/ReplyTweaks";
-import type { ReplyLength } from "@/lib/reviewReplies";
+import { googleReviewsHref, type ReplyLength } from "@/lib/reviewReplies";
+import { GOOGLE_WRITES_FOR_EVERYONE } from "@/lib/googleWritesLaunch";
 import {
   filterReviews,
   inboxSummary,
@@ -142,7 +144,8 @@ function Stars({ count }: { count: number | null }) {
  * a wrapper (some browsers show none on a disabled button). */
 function LockedAction({ testId, label, size = "sm" }: { testId: string; label: string; size?: "sm" | "md" }) {
   const locale = useLocale();
-  const tip = t(locale, K("postingOffTip"));
+  const { grow } = useContext(InboxPlanContext);
+  const tip = t(locale, K(grow ? "postingPremiumTip" : "postingOffTip"));
   return (
     <span title={tip} className="inline-flex">
       <button
@@ -183,6 +186,20 @@ function ReviewText({ text }: { text: string | null }) {
   );
 }
 
+/** Grow: the same inbox and pre-drafted replies, posted by the owner on Google (copy, then reply there); posting
+ * from here is Premium. `googleHref`: where the owner replies on Google. */
+export const InboxPlanContext = createContext<{ grow: boolean; googleHref: string | null }>({ grow: false, googleHref: null });
+
+/** The small "Premium …" line next to what Grow does by hand. */
+function PremiumLine({ businessId, label, testId }: { businessId: string; label: MessageKey; testId: string }) {
+  const locale = useLocale();
+  return (
+    <Link href={`/business/${businessId}/settings#compare-plans`} data-testid={testId} className="w-fit text-[12px] font-medium text-ink-mute underline decoration-brass/60 underline-offset-2 hover:text-ink">
+      {t(locale, label)}
+    </Link>
+  );
+}
+
 function ReviewRow({
   businessId,
   review,
@@ -191,11 +208,17 @@ function ReviewRow({
   waiting,
   onChanged,
   onPending,
+  onDraftChange = () => undefined,
+  posted = false,
 }: {
   businessId: string;
   review: InboxReview;
   /** This review's saved draft (current for this version of the review), if any. */
   saved?: SavedDraft | null;
+  /** The owner changed the draft's text or "Include in Approve all": "Approve all replies" counts and sends what's here. */
+  onDraftChange?: (reviewId: string, patch: Partial<SavedDraft>) => void;
+  /** Sent by "Approve all replies" just now: "Posted ✓". */
+  posted?: boolean;
   canPost: boolean;
   /** Google accepted a change it isn't showing yet: "waiting" (re-checking), or "timed_out" after 2 minutes. */
   waiting: { phase: "waiting" | "timed_out"; action: "post" | "edit" | "delete" } | null;
@@ -204,6 +227,8 @@ function ReviewRow({
 }) {
   const locale = useLocale();
   const timeZone = useTimeZone();
+  const { grow, googleHref } = useContext(InboxPlanContext);
+  const [copied, setCopied] = useState(false);
   // A saved draft that fits this version of the review opens ready to read, edit and post.
   const fits = !review.reply && !!saved?.reply && saved.reviewUpdated === (review.updateTime ?? null);
   const [state, setState] = useState<RowState>(fits ? { kind: "editing", text: saved!.reply!, action: "post" } : { kind: "idle" });
@@ -238,8 +263,10 @@ function ReviewRow({
     const current = state.text;
     setRedrafting(true);
     setMessage(null);
-    // The one reply tool: the same rules as the saved drafts, saved as this review's draft.
-    const result = await redraftWeekReply(businessId, review.reviewId, { length: opts.length, mode: opts.mode, current }).catch(() => ({ status: "error" }) as const);
+    // The one reply tool: the same rules as the saved drafts, saved as this review's draft. Grow: one of the week's drafts.
+    const result = grow
+      ? await draftReviewReply(businessId, draftInput(review), review.stars, { reviewer: review.reviewer, length: opts.length, current, mode: opts.mode }).catch(() => ({ status: "error" }) as const)
+      : await redraftWeekReply(businessId, review.reviewId, { length: opts.length, mode: opts.mode, current }).catch(() => ({ status: "error" }) as const);
     setRedrafting(false);
     if (result.status === "ok") {
       setLength(opts.length);
@@ -282,6 +309,11 @@ function ReviewRow({
         <span className="text-[14px] font-semibold text-ink">{review.reviewer ?? t(locale, K("anonymous"))}</span>
         <Stars count={review.stars} />
         {review.createTime && <span className="text-[12px] text-ink-mute">{formatShortDate(review.createTime, locale, timeZone)}</span>}
+        {posted && (
+          <span data-testid="reply-posted" className="rounded-full bg-[color:color-mix(in_srgb,var(--color-green)_12%,white)] px-2 py-0.5 text-[11.5px] font-semibold text-green">
+            {t(locale, K("all.posted"))}
+          </span>
+        )}
       </div>
       <ReviewText text={review.comment} />
 
@@ -353,12 +385,46 @@ function ReviewRow({
         </div>
       )}
 
-      {!review.reply && !editing && !locked && (
-        <div className="flex flex-wrap gap-2">
-          <button type="button" data-testid="draft-google-reply" disabled={busy} onClick={draft} className="inline-flex items-center gap-1.5 rounded-lg border border-brass bg-brass px-3 py-1.5 text-[13px] font-semibold text-ink hover:bg-[#a5772a] disabled:opacity-60">
-            <IconSparkles size={14} aria-hidden />
-            {state.kind === "drafting" ? t(locale, K("drafting")) : t(locale, K("draft"))}
-          </button>
+      {/* Premium's pre-drafted inbox never falls back to the old buttons: the same reply box, with what happened. */}
+      {!review.reply && !editing && !locked && !grow && !fits && (
+        <div data-testid="no-draft-box" data-failed={saved?.failed || undefined} className="flex flex-col gap-2 rounded-xl border border-paper-deep bg-paper p-3">
+          <span className="text-[12.5px] font-semibold text-ink">{t(locale, K("replyLabel"))}</span>
+          <p className="text-[13px] text-ink-soft">{t(locale, K(saved?.failed ? "draftFailed" : "noDraftYet"))}</p>
+          <div className="flex flex-wrap items-center gap-2">
+            <button type="button" data-testid="draft-try-again" disabled={busy} onClick={draft} className="inline-flex items-center gap-1.5 rounded-lg border border-brass bg-brass px-3 py-1.5 text-[13px] font-semibold text-ink hover:bg-[#a5772a] disabled:opacity-60">
+              <IconSparkles size={14} aria-hidden />
+              {state.kind === "drafting" ? t(locale, K("drafting")) : t(locale, K(saved?.failed ? "tryAgain" : "draftNow"))}
+            </button>
+            <button
+              type="button"
+              disabled={busy}
+              data-testid="reply-write-own"
+              onClick={() => {
+                setMessage(null);
+                setState({ kind: "editing", text: "", action: "post" });
+              }}
+              className="text-[13px] font-semibold text-ink underline underline-offset-2"
+            >
+              {t(locale, K("write"))}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {!review.reply && !editing && !locked && (grow || fits) && (
+        <div className="flex flex-wrap items-center gap-2">
+          {fits ? (
+            // Skipped for now: the saved draft is still there.
+            <button type="button" data-testid="show-draft" onClick={() => setState({ kind: "editing", text: saved!.reply!, action: "post" })} className="inline-flex items-center gap-1.5 rounded-lg border border-brass bg-brass px-3 py-1.5 text-[13px] font-semibold text-ink hover:bg-[#a5772a]">
+              <IconSparkles size={14} aria-hidden />
+              {t(locale, K("showDraft"))}
+            </button>
+          ) : (
+            <button type="button" data-testid="draft-google-reply" disabled={busy} onClick={draft} className="inline-flex items-center gap-1.5 rounded-lg border border-brass bg-brass px-3 py-1.5 text-[13px] font-semibold text-ink hover:bg-[#a5772a] disabled:opacity-60">
+              <IconSparkles size={14} aria-hidden />
+              {state.kind === "drafting" ? t(locale, K("drafting")) : t(locale, K("draft"))}
+            </button>
+          )}
           <button
             type="button"
             disabled={busy}
@@ -370,6 +436,7 @@ function ReviewRow({
           >
             {t(locale, K("write"))}
           </button>
+          {grow && !fits && <PremiumLine businessId={businessId} label={K("premiumDraftsAll")} testId="premium-drafts-all" />}
         </div>
       )}
 
@@ -382,7 +449,10 @@ function ReviewRow({
               onChange={(e) => state.kind === "editing" && setState({ ...state, text: e.target.value })}
               onBlur={() => {
                 // The owner's own words are kept for this review (never replaced by a background run).
-                if (state.kind === "editing" && state.action === "post" && state.text.trim() && state.text !== saved?.reply) void saveReplyDraft(businessId, review.reviewId, { text: state.text }).catch(() => undefined);
+                if (state.kind === "editing" && state.action === "post" && state.text.trim() && state.text !== saved?.reply) {
+                  void saveReplyDraft(businessId, review.reviewId, { text: state.text }).catch(() => undefined);
+                  onDraftChange(review.reviewId, { reply: state.text });
+                }
               }}
               maxLength={MAX_POSTED_REPLY_CHARS}
               rows={5}
@@ -393,25 +463,56 @@ function ReviewRow({
           {state.action === "post" && state.text.trim() && <ReplyTweaks length={length} busy={redrafting} disabled={state.kind === "sending"} onRedraft={redraft} />}
           {state.action === "post" && (
             <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[12.5px]">
-              <label className="flex items-center gap-1.5 text-ink-soft">
+              {/* Approve all is Premium: Grow posts each reply on Google itself. */}
+              {!grow && (
+                <label className="flex items-center gap-1.5 text-ink-soft">
                 <input
                   type="checkbox"
                   checked={include}
                   onChange={(e) => {
                     setInclude(e.target.checked);
                     void saveReplyDraft(businessId, review.reviewId, { include: e.target.checked }).catch(() => undefined);
+                    onDraftChange(review.reviewId, { include: e.target.checked });
                   }}
                   data-testid="reply-include"
                 />
                 {t(locale, "dashboard.googleTab.w.include")}
-              </label>
+                </label>
+              )}
               <button type="button" onClick={() => setState((s) => (s.kind === "editing" ? { ...s, text: "" } : s))} className="font-semibold text-ink underline underline-offset-2" data-testid="reply-write-own">
                 {t(locale, K("write"))}
               </button>
             </div>
           )}
+          {grow && state.action === "post" && (
+            <p className="text-[12.5px] text-ink-soft" data-testid="grow-reply-steps">
+              {t(locale, K("growSteps"))}
+            </p>
+          )}
           <div className="flex flex-wrap items-center gap-2">
-            {!canPost ? (
+            {grow && state.action === "post" ? (
+              <>
+                <button
+                  type="button"
+                  data-testid="copy-reply"
+                  disabled={state.text.trim().length === 0}
+                  onClick={() => {
+                    void navigator.clipboard?.writeText(state.text.trim()).then(
+                      () => setCopied(true),
+                      () => undefined
+                    );
+                  }}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-ink bg-ink px-3.5 py-2 text-[13px] font-semibold text-paper disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {copied ? t(locale, K("copied")) : t(locale, K("copyReply"))}
+                </button>
+                {googleHref && (
+                  <a href={googleHref} target="_blank" rel="noopener noreferrer" data-testid="reply-on-google" className="text-[13px] font-semibold text-ink underline underline-offset-2">
+                    {t(locale, K("replyOnGoogle"))}
+                  </a>
+                )}
+              </>
+            ) : !canPost ? (
               <LockedAction testId="approve-reply" label={t(locale, K(state.action === "post" ? "approve" : "save"))} size="md" />
             ) : (
               <button
@@ -423,15 +524,20 @@ function ReviewRow({
               >
                 <IconBrandGoogle size={14} aria-hidden />
                 {state.kind === "sending" ? t(locale, K(state.action === "post" ? "posting" : "saving")) : t(locale, K(state.action === "post" ? "approve" : "save"))}
-                <span data-testid="beta-label" className="rounded bg-[color:color-mix(in_srgb,var(--color-paper)_20%,transparent)] px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-[0.06em]">
-                  {t(locale, K("beta"))}
-                </span>
+                {/* Beta until writes are on for everyone (lib/googleWritesLaunch.ts). */}
+                {!GOOGLE_WRITES_FOR_EVERYONE && (
+                  <span data-testid="beta-label" className="rounded bg-[color:color-mix(in_srgb,var(--color-paper)_20%,transparent)] px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-[0.06em]">
+                    {t(locale, K("beta"))}
+                  </span>
+                )}
               </button>
             )}
-            <button type="button" disabled={state.kind === "sending"} onClick={() => setState({ kind: "idle" })} className="rounded-lg border border-paper-deep bg-white px-3 py-1.5 text-[13px] font-medium text-ink">
-              {t(locale, K("cancel"))}
+            {/* A pre-drafted reply isn't thrown away: "Skip for now" folds it, "Show draft" brings it back. */}
+            <button type="button" data-testid="reply-cancel" disabled={state.kind === "sending"} onClick={() => setState({ kind: "idle" })} className="rounded-lg border border-paper-deep bg-white px-3 py-1.5 text-[13px] font-medium text-ink">
+              {t(locale, K(fits && state.action === "post" ? "skip" : "cancel"))}
             </button>
           </div>
+          {grow && state.action === "post" && <PremiumLine businessId={businessId} label="dashboard.googleReviews.premiumPosts" testId="premium-one-click" />}
         </div>
       )}
 
@@ -445,6 +551,136 @@ function ReviewRow({
 }
 
 /** The list itself — filters, sort, summary, the first 3 and "Show more". */
+/** The reviews "Approve all replies" sends: unanswered, not waiting on Google, with a draft that fits this version of
+ * the review and is left in "Include in Approve all" — the same set and count as Fix plan's "Approve fixes". Pure. */
+export function approveAllReplyIds(reviews: InboxReview[], drafts: Map<string, SavedDraft>, waitingIds: string[] = []): string[] {
+  const waiting = new Set(waitingIds);
+  return reviews
+    .filter((r) => !r.reply && !waiting.has(r.reviewId))
+    .filter((r) => {
+      const d = drafts.get(r.reviewId);
+      return !!d?.reply?.trim() && d.include !== false && !d.failed && d.reviewUpdated === (r.updateTime ?? null);
+    })
+    .map((r) => r.reviewId);
+}
+
+/** A pause between replies, so a long run stays inside Google's write limits. */
+const APPROVE_ALL_GAP_MS = 1200;
+
+/** "{n} replies ready · Approve all replies ({n})": sticky at the top of the list, a confirm step, then one by one
+ * (the same server action and the same Google-writes rules as a single reply — practice mode, the live list). Grow:
+ * the Premium line instead of the button. */
+function ApproveAllReplies({
+  businessId,
+  reviews,
+  drafts,
+  canPost,
+  grow,
+  waitingIds,
+  onPosted,
+  onPending,
+}: {
+  businessId: string;
+  reviews: InboxReview[];
+  drafts: Map<string, SavedDraft>;
+  canPost: boolean;
+  grow: boolean;
+  waitingIds: string[];
+  onPosted: (review: InboxReview) => void;
+  onPending: (p: PendingReply) => void;
+}) {
+  const locale = useLocale();
+  const [step, setStep] = useState<"idle" | "confirm" | "posting" | "done">("idle");
+  const [progress, setProgress] = useState({ done: 0, of: 0 });
+  const [result, setResult] = useState<{ sent: number; failed: Array<{ name: string; why: string }> } | null>(null);
+  const ids = approveAllReplyIds(reviews, drafts, waitingIds);
+  const n = ids.length;
+  if (n === 0 && step !== "posting" && step !== "done") return null;
+
+  const run = async () => {
+    const list = [...ids];
+    setStep("posting");
+    setProgress({ done: 0, of: list.length });
+    let sent = 0;
+    const failed: Array<{ name: string; why: string }> = [];
+    for (let i = 0; i < list.length; i++) {
+      const id = list[i];
+      const review = reviews.find((r) => r.reviewId === id);
+      const text = drafts.get(id)?.reply?.trim() ?? "";
+      const r = await changeGoogleReviewReply(businessId, id, "post", text).catch(() => ({ status: "error", error: "failed" }) as const);
+      if (r.status === "ok") {
+        sent++;
+        onPosted(r.review);
+      } else if (r.status === "unconfirmed") {
+        // Accepted; Google shows it shortly (the row waits and re-checks, like a single reply).
+        sent++;
+        onPending(pendingFor("post", id, text, Date.now()));
+      } else if (r.status === "already_replied") onPosted(r.review);
+      else failed.push({ name: review?.reviewer ?? t(locale, K("anonymous")), why: changeMessage(r, locale, "post") ?? "" });
+      setProgress({ done: i + 1, of: list.length });
+      if (i < list.length - 1) await new Promise((res) => setTimeout(res, APPROVE_ALL_GAP_MS));
+    }
+    setResult({ sent, failed });
+    setStep("done");
+  };
+
+  return (
+    <div data-testid="approve-all-replies" className="sticky top-14 z-20 -mx-1 rounded-xl border border-paper-deep bg-white/95 px-3 py-2.5 shadow-card backdrop-blur nav:top-2">
+      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
+        {/* After a run that sent them all, the result says it: no "0 replies ready". */}
+        {(n > 0 || step === "posting") && (
+          <p className="text-[13.5px] font-semibold text-ink" data-testid="approve-all-replies-count">
+            {step === "posting" ? t(locale, K("all.posting"), { done: progress.done, count: progress.of }) : tPlural(locale, "dashboard.googleReviews.all.ready", n, { count: n })}
+          </p>
+        )}
+        {grow ? (
+          <Link href={`/business/${businessId}/settings#compare-plans`} data-testid="approve-all-replies-premium" className="text-[12.5px] font-medium text-ink-mute underline decoration-brass/60 underline-offset-2 hover:text-ink">
+            {t(locale, K("all.premium"))}
+          </Link>
+        ) : step === "idle" || step === "done" ? (
+          n > 0 &&
+          (canPost ? (
+            <button type="button" data-testid="approve-all-replies-button" onClick={() => setStep("confirm")} className="inline-flex items-center gap-1.5 rounded-lg border border-ink bg-ink px-3.5 py-2 text-[13px] font-semibold text-paper">
+              <IconBrandGoogle size={14} aria-hidden />
+              {t(locale, K("all.button"), { count: n })}
+            </button>
+          ) : (
+            <LockedAction testId="approve-all-replies-button" label={t(locale, K("all.button"), { count: n })} size="md" />
+          ))
+        ) : null}
+      </div>
+      {step === "confirm" && (
+        <div role="alertdialog" aria-label={t(locale, K("all.button"), { count: n })} data-testid="approve-all-replies-confirm" className="mt-2 flex flex-col gap-2 border-t border-paper-line pt-2">
+          <p className="text-[13px] text-ink">{tPlural(locale, "dashboard.googleReviews.all.confirm", n, { count: n })}</p>
+          <div className="flex flex-wrap gap-2">
+            <button type="button" data-testid="approve-all-replies-post" onClick={() => void run()} className="rounded-lg border border-ink bg-ink px-3.5 py-1.5 text-[13px] font-semibold text-paper">
+              {t(locale, K("all.post"))}
+            </button>
+            <button type="button" data-testid="approve-all-replies-cancel" onClick={() => setStep("idle")} className="rounded-lg border border-paper-deep bg-white px-3 py-1.5 text-[13px] font-medium text-ink">
+              {t(locale, K("cancel"))}
+            </button>
+          </div>
+        </div>
+      )}
+      {step === "posting" && (
+        <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-paper" aria-hidden>
+          <div className="h-full rounded-full bg-green transition-[width]" style={{ width: `${progress.of ? (progress.done / progress.of) * 100 : 0}%` }} />
+        </div>
+      )}
+      {step === "done" && result && (
+        <div className="mt-2 flex flex-col gap-1 border-t border-paper-line pt-2 text-[13px]" data-testid="approve-all-replies-result" role="status">
+          <span className="font-semibold text-green">{tPlural(locale, "dashboard.googleReviews.all.sent", result.sent, { count: result.sent })}</span>
+          {result.failed.length > 0 && (
+            <span className="text-red" data-testid="approve-all-replies-failed">
+              {t(locale, K("all.failed"), { names: result.failed.map((f) => f.name).join(", ") })}
+            </span>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function InboxBody({
   businessId,
   reviews,
@@ -478,6 +714,7 @@ export function InboxBody({
   onChanged: (review: InboxReview) => void;
 }) {
   const locale = useLocale();
+  const { grow } = useContext(InboxPlanContext);
   const timeZone = useTimeZone();
   const [filter, setFilter] = useState<InboxFilter>(initialFilter);
   const [sort, setSort] = useState<InboxSort>("newest");
@@ -486,6 +723,10 @@ export function InboxBody({
   const [pending, setPending] = useState<PendingReply[]>(initialPending);
   const [timedOut, setTimedOut] = useState<Set<string>>(new Set());
   const [now, setNow] = useState(() => Date.now());
+  // The drafts as the owner has them now (their edits and "Include in Approve all"): what "Approve all replies" sends.
+  const [drafts, setDrafts] = useState<Map<string, SavedDraft>>(saved);
+  useEffect(() => setDrafts(saved), [saved]);
+  const [posted, setPosted] = useState<Set<string>>(new Set());
 
   useEffect(() => setSort(readSort()), []);
 
@@ -575,7 +816,8 @@ export function InboxBody({
           </div>
         </div>
       )}
-      {!practice && !canPost && (
+      {/* Grow can't post from here because posting is Premium, not because writes are off: its own steps say so. */}
+      {!practice && !canPost && !grow && (
         <p data-testid="read-only-note" className="flex items-start gap-2 rounded-lg border border-paper-deep bg-paper px-3 py-2 text-[13px] leading-snug text-ink">
           <IconLock size={15} aria-hidden className="mt-0.5 shrink-0 text-ink-soft" />
           {t(locale, K("readOnly"))}
@@ -651,6 +893,20 @@ export function InboxBody({
         )}
       </div>
 
+      <ApproveAllReplies
+        businessId={businessId}
+        reviews={reviews}
+        drafts={drafts}
+        canPost={canPost}
+        grow={grow}
+        waitingIds={pending.map((p) => p.reviewId)}
+        onPosted={(review) => {
+          setPosted((s) => new Set(s).add(review.reviewId));
+          onChanged(review);
+        }}
+        onPending={(p) => savePending(mergePending(pending.filter((x) => x.reviewId !== p.reviewId), [p]))}
+      />
+
       {shown.length === 0 ? (
         <p data-testid="google-reviews-empty" className="text-[13px] text-ink-soft">
           {t(locale, K(`empty.${filter}`))}
@@ -662,8 +918,10 @@ export function InboxBody({
               key={r.reviewId}
               businessId={businessId}
               review={r}
-              saved={saved.get(r.reviewId) ?? null}
+              saved={drafts.get(r.reviewId) ?? null}
               canPost={canPost}
+              posted={posted.has(r.reviewId)}
+              onDraftChange={(id, patch) => setDrafts((m) => (m.has(id) ? new Map(m).set(id, { ...m.get(id)!, ...patch }) : m))}
               waiting={waitingFor(r.reviewId)}
               onChanged={(updated, d) => {
                 if (d) setDone(d);
@@ -725,7 +983,7 @@ export function InboxBody({
   );
 }
 
-export function GoogleReviewsInbox({ businessId }: { businessId: string }) {
+export function GoogleReviewsInbox({ businessId, grow = false, placeId = null }: { businessId: string; grow?: boolean; placeId?: string | null }) {
   const locale = useLocale();
   const [reviews, setReviews] = useState<InboxReview[] | null>(null);
   const [next, setNext] = useState<string | null>(null);
@@ -783,12 +1041,13 @@ export function GoogleReviewsInbox({ businessId }: { businessId: string }) {
   }
 
   return (
-    <section id="google-reviews" data-testid="google-reviews-inbox" className="flex scroll-mt-20 flex-col gap-3 rounded-2xl border border-paper-deep bg-white p-4 shadow-card sm:p-5">
+    <InboxPlanContext.Provider value={{ grow, googleHref: googleReviewsHref(placeId) }}>
+    <section id="google-reviews" data-testid="google-reviews-inbox" data-plan={grow ? "grow" : "premium"} className="flex scroll-mt-20 flex-col gap-3 rounded-2xl border border-paper-deep bg-white p-4 shadow-card sm:p-5">
       <div className="flex items-center gap-2">
         <IconBrandGoogle size={18} aria-hidden className="shrink-0 text-brass" />
         <h3 className="text-base font-semibold text-ink">{t(locale, K("heading"))}</h3>
       </div>
-      <p className="text-[13px] leading-snug text-ink-soft">{t(locale, K("intro"))}</p>
+      <p className="text-[13px] leading-snug text-ink-soft">{t(locale, K(grow ? "introGrow" : "intro"))}</p>
       <ReplyVoicePicker businessId={businessId} />
 
       {reviews === null ? (
@@ -814,7 +1073,8 @@ export function GoogleReviewsInbox({ businessId }: { businessId: string }) {
           {t(locale, error)}
         </p>
       )}
-      <p className="text-[12px] leading-snug text-ink-mute">{t(locale, K("footer"))}</p>
+      {!grow && <p className="text-[12px] leading-snug text-ink-mute">{t(locale, K("footer"))}</p>}
     </section>
+    </InboxPlanContext.Provider>
   );
 }

@@ -282,6 +282,69 @@ The rows add up to the old +13.2, so the 100 · A projection is unchanged. A sma
 - **Same order on Google results** (one list). Mockups 03, 03b, 04 and 04b all use: post → replies → answers → photos.
 - **Not connected:** the same ranking. Check-offs need 2 for a week to count, so the top line reads "Check off 2 tasks → next week counts". Mockup 03b shows the steps without the top line.
 
+### 2d. One home per task (Nov 25)
+
+**Rule.** Presence = one-time fixes to what's wrong or missing; they raise the PostScore score. Growth = repeat actions that bring customers in, every week, whatever the score. **No task appears as a task on both sides.** A link to the other side is fine ("Get more reviews (in Growth) →"); a second copy of the task isn't.
+
+**Task by task**
+
+| Task | Home | Where it shows | Removed from | Counts toward the Growth tier? |
+|---|---|---|---|---|
+| Reply to reviews (backlog and new) | Presence | Fix plan row "Reply to your recent reviews" → Reviews (pre-drafted replies) | Growth plan "This week" reply item, Growth plan replies line, Google results replies line, weekly routine | Yes: "Replied to reviews" (tag on the Fix plan row) |
+| Business description | Presence | Fix plan row (from the description check) → Google listing | Growth plan "Answer your customers' common questions", "More ways" answers card | Yes: "Listing fix applied" |
+| Services & prices | Presence | Fix plan row → Google listing | Same answers task and card | Yes: "Listing fix applied" |
+| Customer details (parking, accessibility, payments) | Presence | Fix plan row "Add your customer details" | Answers task ("Missing: … parking, accessibility") | Yes: "Listing fix applied" |
+| Hours | Presence | Fix plan row (hours check), Google listing | Growth plan "Also this week: Check your hours…", weekly routine | Yes: "Listing fix applied" |
+| Holiday hours | Presence | Google listing (holiday hours) + Fix plan row when a holiday is coming with none set | Weekly routine (if listed) | Yes: "Listing fix applied" |
+| Phone, website link, categories | Presence | Fix plan rows | (Growth never had them) | Yes: "Listing fix applied" |
+| Weekly Google post (incl. a Q&A-style post) | Growth | Growth plan "This week", "More ways" post card, Google results | — | Yes: "Google post published" |
+| Ask for reviews (link, QR, signs) | Growth | Growth plan "Also this week: Share your review link", Get more reviews | — (Fix plan review-count rows keep "Get more reviews (in Growth) →" as a link) | Yes: "Review link / QR shared" |
+| Fresh photos | Growth | Growth plan "Add 3 photos this week" | — (the photos check, when it loses points, links to Growth) | Yes: "New photo on Google" |
+| Offers | Growth | Customer offers | — | Yes |
+| Campaigns | Growth | Campaigns | — | Yes (Day 37) |
+| Local events | Growth | Local events | — | Yes (25D) |
+
+**What changes on each page**
+- **Growth plan:**
+  - "This week" keeps only Growth items: the post, photos, and the asks (review link). The reply item, the answers item and "Check your hours" are removed.
+  - The "More ways" answers card moves to the Google listing page (its answers editor) and the description/services become Fix plan rows; the post card stays.
+  - "Approve this week" approves Growth items only (this week's post); its count is that page's own.
+- **Google results:** the replies line goes; results only (calls, directions, clicks, reviews), with "Reply in Reviews →" left as a plain link if wanted.
+- **Weekly routine** (Growth): drop the reply and hours items.
+- **Fix plan:**
+  - Rows that are also Growth-tier actions get a small gray **"Counts toward your Growth tier"** tag (replies, listing fixes: description, services, customer details, hours, holiday hours, phone, website link, categories).
+  - New **"Approve fixes ({n})"** at the top for Premium + connected + writes on: the one-click fixes that have a saved draft or value ready (the pre-drafted replies the "Include in Approve all" boxes allow, plus listing updates). {n} counts what it will send; the count matches that page only.
+  - Review-count rows keep "Get more reviews (in Growth) →".
+- **Tier ranking and the "Do 1 task → on track for …" line** (Growth plan): when the quickest way to make this week count is a Presence fix (e.g. 10 replies are drafted and ready), the line points there: "Approve your 10 drafted replies in Fix plan → on track for Growing". The ranking scores Presence one-click fixes alongside Growth items for "makes the week count"; Growth items still lead when equal.
+
+**Drafts written in the background, never on page load**
+- The weekly Google post and the answers (description, services) drafts are written like the replies: by the daily job and after a scan or a voice change, saved, and read by pages.
+- A page with a saved draft shows it at once. "Getting drafts ready…" and "Approve all (getting ready…)" appear only when no saved draft exists yet.
+- Same plan rule as the replies (`PLAN_BASED_DRAFTING`): until checkout exists, every connected business in production.
+- Needs one SQL file (a table for saved post/answers drafts, like `review_reply_batch`) for you to run first.
+
+**EN + ES wording (new)**
+- "Counts toward your Growth tier" / "Cuenta para su nivel de Growth"
+- "Approve fixes ({n})" / "Aprobar correcciones ({n})"
+- "Approve this week ({n})" / "Aprobar esta semana ({n})"
+- "Approve your {n} drafted replies in Fix plan → on track for {tier}" / "Apruebe sus {n} respuestas redactadas en el Plan de correcciones → en camino a {tier}"
+
+**Decided (Nov 25, approved with these)**
+1. Holiday hours: a Fix plan row when a holiday in the next 30 days has no hours set.
+2. Reviews: "Reply in Reviews →" stays as a link (no reply task outside Presence).
+3. The answers card moves to Presence → Google listing.
+
+**Growth plan keeps 3–5 tasks every week, all Growth-type** (ranked for the tier as before, none duplicating a Fix plan row):
+- this week's Google post (or a Q&A-style post);
+- ask for reviews (share the link / QR with recent customers);
+- fresh photos;
+- start or refresh an offer (coupon, referral, first-time);
+- a seasonal idea tied to the next holiday or local event.
+
+**Speed (decided Nov 25, scoring version bump):** "Loads in a reasonable time" (3 pts, weights unchanged) uses real-visitor data when Google has it; otherwise Speed Index from the same PageSpeed run, with the same 6-second line and two-test rule. Page weight is advice only ("Your 2 photos are 1.2 MB; smaller photos load faster"). The failure reason is saved, so a page Google can't measure never says "one more test on your next scan".
+
+**SQL:** `supabase/day25b-background-drafts.sql` (one new `post_drafts` kind for the background description draft).
+
 ### Bottom
 
 | Page | Route | Change |

@@ -5,6 +5,7 @@
 // of the Overview's top 3, still on Fix plan and in "View all".
 import { describe, expect, test, vi } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
+import { readFileSync } from "node:fs";
 import type { ReactNode } from "react";
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn() }), useParams: () => ({ id: "b1" }), useSearchParams: () => new URLSearchParams(), usePathname: () => "/business/b1" }));
@@ -14,7 +15,8 @@ vi.mock("@/lib/ownerListing.server", () => ({ publicPlacesListing: (...args: unk
 
 import { LocaleProvider, type Locale } from "@/lib/i18n";
 import { GbpEditProvider } from "@/components/gbp/CustomerDetailsGoogleEdit";
-import { hoursCheckState, hoursWaitingOnGoogle, withHoursWhen } from "@/lib/hoursCheck";
+import { hoursCheckState, hoursWaitingOnGoogle, LONG_WAIT_DAYS, waitingLong, waitingSince, withHoursWhen } from "@/lib/hoursCheck";
+import { StillWaitingLine } from "@/components/scoring/HoursCheck";
 import { loadHoursCheck } from "@/lib/hoursCheck.server";
 import { weekFromPlacesPeriods } from "@/lib/hoursEditor";
 import { TopRecommendations } from "@/components/overview/TopRecommendations";
@@ -53,9 +55,11 @@ const OTHERS = [
 ] as never[];
 
 describe("Google Maps can't be read", () => {
-  test("never 'matches now' from the Business Profile: unknown, so the scan's own result stays", async () => {
+  test("Maps can't be read: never 'matches now' — the Business Profile matching the website is 'waiting on Google' (Nov 25 spec)", async () => {
     publicListing.mockResolvedValueOnce({ status: "unavailable" });
-    expect(await loadHoursCheck("b1", CONNECTED, [HOURS_TASK])).toBeNull();
+    const state = await loadHoursCheck("b1", CONNECTED, [HOURS_TASK]);
+    expect(state).toEqual({ kind: "differs", days: [], profileAhead: true });
+    expect(hoursWaitingOnGoogle(state)).toBe(true);
   });
   test("Maps read: Business Profile ahead of Maps → the days that differ and 'waiting on Google'", async () => {
     publicListing.mockResolvedValueOnce({ status: "ok", values: { openingHoursPeriods: MAPS_PERIODS } });
@@ -118,5 +122,33 @@ describe("waiting on Google", () => {
     const hoursItem = all[all.length - 1];
     expect(text(hoursItem)).toContain("Waiting for Google");
     expect(hoursItem).not.toContain("data-priority");
+  });
+});
+
+describe("waiting more than a week: what the owner can check", () => {
+  const now = new Date("2026-11-25T12:00:00Z");
+  const ago = (d: number) => new Date(now.getTime() - d * 86_400_000).toISOString();
+  test("the wait starts at the hours change sent to the Business Profile, else the first scan of the latest run that saw the mismatch", () => {
+    expect(waitingSince(ago(9), [{ at: ago(1), mismatch: true }])).toBe(ago(9));
+    expect(waitingSince(null, [{ at: ago(1), mismatch: true }, { at: ago(5), mismatch: true }, { at: ago(12), mismatch: false }, { at: ago(20), mismatch: true }])).toBe(ago(5));
+    expect(waitingSince(null, [{ at: ago(1), mismatch: false }])).toBeNull();
+  });
+  test("after 7 days: 'Still not on Google Maps after a week?' + 'Open your Business Profile ↗' (EN + ES); not before, never when it isn't waiting", () => {
+    const state = (since: string | null, profileAhead = true) => ({ kind: "differs" as const, days: [], profileAhead, waitingSince: since });
+    expect(LONG_WAIT_DAYS).toBe(7);
+    expect(waitingLong(state(ago(8)), now)).toBe(true);
+    expect(waitingLong(state(ago(6)), now)).toBe(false);
+    expect(waitingLong(state(null), now)).toBe(false);
+    expect(waitingLong(state(ago(30), false), now)).toBe(false);
+    const en = text(wrap(<StillWaitingLine state={state(ago(30))} />));
+    expect(en).toContain("Still not on Google Maps after a week? Check your Business Profile for an 'Under review' note, or re-save the hours. Open your Business Profile ↗");
+    expect(wrap(<StillWaitingLine state={state(ago(30))} />)).toContain('href="https://business.google.com/"');
+    expect(text(wrap(<StillWaitingLine state={state(ago(30))} />, "es"))).toContain("¿Todavía no aparece en Google Maps después de una semana?");
+    expect(wrap(<StillWaitingLine state={state(ago(2))} />)).toBe("");
+  });
+  test("loaded from our own change log and saved scans (never Google's values); any failed read: no line", () => {
+    const src = readFileSync("lib/hoursCheck.server.ts", "utf8");
+    expect(src).toContain('.eq("field", "hours").in("status", ["sent", "pending_review"]).is("undone_at", null)');
+    expect(src).toContain("} catch {\n    return state;");
   });
 });

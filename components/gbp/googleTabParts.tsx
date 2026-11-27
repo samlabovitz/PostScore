@@ -46,6 +46,11 @@ export interface GoogleTabListing {
 
 export interface GoogleProfileTabProps {
   businessId: string;
+  /** §2d: this week's saved post draft (lib/postDrafts.server.ts, written in the background) — shown at once, never
+   * "Getting drafts ready…" when there is one. */
+  savedPostDraft?: string | null;
+  /** §2d: pre-drafted replies ready on Fix plan's "Approve fixes" (0 when none or unknown). */
+  readyReplies?: number;
   connected: boolean;
   practice: boolean;
   needsReconnect: boolean;

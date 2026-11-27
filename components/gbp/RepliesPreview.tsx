@@ -42,7 +42,7 @@ export interface WeekRepliesState {
   reload: () => void;
 }
 
-export function useWeekReplies(businessId: string, opts: { auto: boolean }): WeekRepliesState {
+export function useWeekReplies(businessId: string, opts: { auto: boolean; all?: boolean }): WeekRepliesState {
   const [status, setStatus] = useState<WeekRepliesState["status"]>("idle");
   const [items, setItems] = useState<WeekRepliesState["items"]>([]);
   const [meta, setMeta] = useState({ canPost: false, practice: false, more: 0, savedReady: true });
@@ -52,7 +52,7 @@ export function useWeekReplies(businessId: string, opts: { auto: boolean }): Wee
     if (started.current) return;
     started.current = true;
     setStatus("loading");
-    draftWeekReplies(businessId)
+    draftWeekReplies(businessId, { all: opts.all === true })
       .then((r) => {
         if (r.status !== "ok") return setStatus("failed");
         setItems(r.items.map((i) => ({ ...i, text: i.reply ?? "", include: !!i.reply && i.include !== false, sent: "draft" as const, length: i.length ?? "medium", redrafting: false })));
@@ -60,6 +60,7 @@ export function useWeekReplies(businessId: string, opts: { auto: boolean }): Wee
         setStatus("ok");
       })
       .catch(() => setStatus("failed"));
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- `all` is fixed per caller
   }, [businessId]);
 
   useEffect(() => {

@@ -9,6 +9,8 @@ import { LocaleProvider } from "@/lib/i18n";
 import { RescanCompetitorsNote, RESCAN_BUTTON_ID, RescanButton, rescanHeadline, SnapshotNotice } from "./ScanStatusStrip";
 import { ScoreBreakdownPanel } from "@/components/overview/ScoreBreakdownPanel";
 import { getScoreWithSuggestions, scoreBasisPoints } from "@/lib/scoring";
+import { checkOutcome } from "@/lib/checkOutcome";
+import { checkAnchorId } from "@/lib/postaiLinks";
 import { scoringInput } from "@/emails/sampleMonthlyReportContent";
 
 // Re-scanning, made obvious: the snapshot message under "Last scanned",
@@ -98,7 +100,10 @@ describe("Score breakdown: “As of your last scan”, and on Free a collapsed c
       const html = panel(audit, "en", null);
       expect(html).toMatch(/<button[^>]*aria-expanded="true"[^>]*data-testid="breakdown-toggle"/);
       expect(text(html)).toContain("Hide checks ↑");
-      expect(html).toContain('id="check-photos"');
+      // Open: the checks that need work in full; the passed ones fold into "✓ N checks passed · Show all".
+      const needsWork = breakdown.checks.find((c) => checkOutcome(c) === "needs_work")!;
+      expect(html).toContain(`id="${checkAnchorId(needsWork.id)}"`);
+      expect(html).toContain('data-testid="passed-toggle"');
     }
     expect(text(panel(false, "es", null))).toContain("Ocultar revisiones ↑");
   });

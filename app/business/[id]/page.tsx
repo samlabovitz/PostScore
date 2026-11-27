@@ -1,4 +1,5 @@
 import { notFound, redirect } from "next/navigation";
+import { growthExtras } from "@/lib/growthWeek";
 import { loadHoursCheck } from "@/lib/hoursCheck.server";
 import { withHoursWhen } from "@/lib/hoursCheck";
 import { loadDetailsMismatches } from "@/lib/detailsMismatch.server";
@@ -334,5 +335,6 @@ export default async function BusinessPage({ params, searchParams = {} }: { para
 async function growthPlanCount(businessId: string, timeZone: string): Promise<number | null> {
   const [{ loadGoogleResults }, { tabIdeasFor, weekKinds }] = await Promise.all([import("@/lib/googlePages.server"), import("@/lib/tabIdeas")]);
   const data = await loadGoogleResults(businessId);
-  return data.status === "ok" ? weekKinds(tabIdeasFor(data.props, timeZone, Date.now()).recs).length : null;
+  // The Google tasks plus the Growth-only ones (§2d), the same count as the Growth plan.
+  return data.status === "ok" ? weekKinds(tabIdeasFor(data.props, timeZone, Date.now()).recs).length + growthExtras(new Date()).length : null;
 }

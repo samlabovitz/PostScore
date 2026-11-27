@@ -16,6 +16,13 @@
 // the one-click action.
 
 import Link from "next/link";
+import type { HolidayId } from "@/lib/gbpListingFields";
+import { googleListingHref } from "@/lib/routes";
+import { useState } from "react";
+import { ApproveAll, approveItems, type ItemFailures } from "@/components/gbp/ApproveAll";
+import { useWeekReplies } from "@/components/gbp/RepliesPreview";
+import { useAnswers } from "@/components/gbp/AnswersPreview";
+import { useGbpEdit } from "@/components/gbp/CustomerDetailsGoogleEdit";
 import { IconWorld } from "@tabler/icons-react";
 import { TaskCard, CompletedTasksCard, FixPriorityTag, ReviewGoalLinesContext, type WebsiteRecheckProps } from "@/app/business/[id]/ActionPlanSection";
 import { WeeklyPlanCelebration } from "@/app/business/[id]/growth/WeeklyPlanCelebration";
@@ -39,57 +46,156 @@ function rowTitle(row: FixPlanRow, locale: ReturnType<typeof useLocale>): string
   return row.kind === "website" ? t(locale, "dashboard.fixPlan.websiteRow") : (row.task.title ?? row.task.label);
 }
 
-/** "This week: 78 → 87" and "When every fix is done: 100 · A". */
-function TopCard({ plan, every, lastScanAt }: { plan: FixPlan; every: { score: number; grade: string }; lastScanAt: string | null }) {
+// One color per group, the same in the score card's track and on the group headings below.
+const GROUP_COLOR: Record<(typeof ORDER)[number], string> = {
+  this_week: "#d9a443",
+  weeks: "#8fa6c4",
+  months: "repeating-linear-gradient(135deg,#5d6f8c 0 5px,#4a5a75 5px 9px)",
+};
+
+/**
+ * Option A (docs/mockups/day25b/fix-plan-scorecard.html, Sam's pick, zoomed): "78 → 87" big on top, then one
+ * track from today's score to "100 · A", so the This week / few weeks / months segments fill the width.
+ */
+export function TopCard({ plan, every, lastScanAt }: { plan: FixPlan; every: { score: number; grade: string }; lastScanAt: string | null }) {
   const locale = useLocale();
   const timeZone = useTimeZone();
-  // On the 0–100 scale.
-  const pct = (n: number) => `${Math.max(0, Math.min(100, n))}%`;
+  const from = plan.today;
+  const span = Math.max(1, every.score - from);
+  const at = (n: number) => `${(Math.max(0, Math.min(span, n - from)) / span) * 100}%`;
+  let prev = from;
+  const segments = groupFixPlan(plan).map((g, i, all) => {
+    const to = i === all.length - 1 ? every.score : g.to;
+    const seg = { when: g.when, left: at(prev), width: `calc(${at(to)} - ${at(prev)})` };
+    prev = to;
+    return seg;
+  });
+  const weekStop = !plan.thisWeekDone && plan.thisWeek > from && plan.thisWeek < every.score;
+  const soft = "text-[color:color-mix(in_srgb,var(--color-paper)_72%,transparent)]";
   return (
-    <section data-testid="fix-plan-top" className="rounded-2xl bg-ink px-5 py-4 text-paper shadow-card sm:px-6 sm:py-5">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <div className="min-w-0">
-          {plan.thisWeekDone ? (
-            <>
-              <p className="font-serif text-[24px] font-semibold leading-tight sm:text-[28px]" data-testid="fix-plan-done">
-                {plan.thisWeekCount > 0 ? t(locale, "dashboard.fixPlan.doneTitle") : t(locale, "dashboard.fixPlan.noneThisWeek")}
-              </p>
-              {plan.next && (
-                <p className="mt-1.5 text-[14px] text-[color:color-mix(in_srgb,var(--color-paper)_80%,transparent)]" data-testid="fix-plan-next">
-                  {t(locale, "dashboard.fixPlan.next", { fix: rowTitle(plan.next, locale), points: round1(plan.next.points) })}
-                </p>
-              )}
-            </>
-          ) : (
-            <>
-              <p className="text-[13.5px] text-[color:color-mix(in_srgb,var(--color-paper)_75%,transparent)]">{tPlural(locale, "dashboard.fixPlan.thisWeekLabel", plan.thisWeekCount, { count: plan.thisWeekCount })}</p>
-              <p className="mt-1 flex items-baseline gap-3 font-serif font-semibold leading-none" data-testid="fix-plan-this-week">
-                <span className="text-[38px] tabular-nums sm:text-[44px]">{plan.today}</span>
-                <span aria-hidden className="text-[28px] text-brass sm:text-[32px]">→</span>
-                <span className="text-[38px] tabular-nums text-brass sm:text-[44px]">{plan.thisWeek}</span>
-              </p>
-            </>
+    <section data-testid="fix-plan-top" className="rounded-2xl bg-ink px-4 pb-4 pt-4 text-paper shadow-card sm:px-6 sm:pt-5">
+      {plan.thisWeekDone ? (
+        <>
+          <p className="font-serif text-[24px] font-semibold leading-tight sm:text-[28px]" data-testid="fix-plan-done">
+            {plan.thisWeekCount > 0 ? t(locale, "dashboard.fixPlan.doneTitle") : t(locale, "dashboard.fixPlan.noneThisWeek")}
+          </p>
+          {plan.next && (
+            <p className="mt-1.5 text-[14px] text-[color:color-mix(in_srgb,var(--color-paper)_80%,transparent)]" data-testid="fix-plan-next">
+              {t(locale, "dashboard.fixPlan.next", { fix: rowTitle(plan.next, locale), points: round1(plan.next.points) })}
+            </p>
+          )}
+        </>
+      ) : (
+        <>
+          <p className={cn("text-[13.5px]", soft)}>{tPlural(locale, "dashboard.fixPlan.thisWeekLabel", plan.thisWeekCount, { count: plan.thisWeekCount })}</p>
+          <p className="mt-1 flex items-baseline gap-3 font-serif font-semibold leading-none" data-testid="fix-plan-this-week">
+            <span className="text-[38px] tabular-nums sm:text-[44px]">{plan.today}</span>
+            <span aria-hidden className="text-[28px] text-brass sm:text-[32px]">→</span>
+            <span className="text-[38px] tabular-nums text-brass sm:text-[44px]">{plan.thisWeek}</span>
+          </p>
+        </>
+      )}
+      <div className="mt-5 flex items-center gap-3 sm:gap-4" data-testid="fix-plan-track-row">
+        <div className="relative min-w-0 flex-1 pb-7">
+          <div
+            className="relative h-2.5 rounded-full bg-[color:color-mix(in_srgb,var(--color-paper)_12%,transparent)]"
+            role="img"
+            aria-label={t(locale, "dashboard.fixPlan.trackLabel", { now: from, week: plan.thisWeek, every: every.score })}
+            data-testid="fix-plan-track"
+          >
+            {segments.map((seg, i) => (
+              <div
+                key={seg.when}
+                data-segment={seg.when}
+                className={cn("absolute inset-y-0", i === 0 && "rounded-l-full", i === segments.length - 1 && "rounded-r-full")}
+                style={{ left: seg.left, width: seg.width, background: GROUP_COLOR[seg.when] }}
+              />
+            ))}
+            <span aria-hidden className="absolute -top-[5px] left-0 h-5 w-0.5 rounded bg-paper" />
+            {weekStop && <span aria-hidden className="absolute -top-[5px] h-5 w-0.5 -translate-x-px rounded bg-paper" style={{ left: at(plan.thisWeek) }} />}
+          </div>
+          <span className="absolute left-0 top-[18px] whitespace-nowrap text-[12px]" data-testid="fix-plan-now">
+            <b className="font-serif text-[15px] text-white">{from}</b> <span className={soft}>{t(locale, "dashboard.fixPlan.trackNow")}</span>
+          </span>
+          {weekStop && (
+            <span className="absolute top-[18px] translate-x-1.5 whitespace-nowrap text-[12px]" style={{ left: at(plan.thisWeek) }} data-testid="fix-plan-week">
+              <b className="font-serif text-[15px] text-white">{plan.thisWeek}</b> <span className={cn("hidden sm:inline", soft)}>{t(locale, "dashboard.fixPlan.trackWeek")}</span>
+            </span>
           )}
         </div>
-        <div className="rounded-xl border border-[color:color-mix(in_srgb,var(--color-paper)_15%,transparent)] px-4 py-3 sm:max-w-[300px]" data-testid="fix-plan-every">
-          <p className="text-[13px] text-[color:color-mix(in_srgb,var(--color-paper)_75%,transparent)]">{t(locale, "dashboard.fixPlan.everyFix")}</p>
-          <p className="mt-0.5 font-serif text-[26px] font-semibold leading-none">
-            {every.score} <span className="text-[15px] text-[color:color-mix(in_srgb,var(--color-paper)_70%,transparent)]">· {every.grade}</span>
-          </p>
-          {plan.rows.some((r) => r.when === "months") && <p className="mt-1.5 text-[12px] text-[color:color-mix(in_srgb,var(--color-paper)_70%,transparent)]">{t(locale, "dashboard.overview.someFixesTakeMonths")}</p>}
-        </div>
+        <p className="-mt-7 whitespace-nowrap font-serif text-[18px] font-semibold leading-none sm:text-[22px]" data-testid="fix-plan-every">
+          {every.score} <span className="text-[15px] text-[color:color-mix(in_srgb,var(--color-paper)_80%,transparent)]">· {every.grade}</span>
+          <span className={cn("mt-1 hidden font-sans text-[12px] font-medium sm:block", soft)}>{t(locale, "dashboard.fixPlan.trackEvery")}</span>
+        </p>
       </div>
-      {/* Today (solid), this week (brass), the rest of the way to "every fix" (lighter). */}
-      <div className="relative mt-4 h-2 overflow-hidden rounded-full bg-[color:color-mix(in_srgb,var(--color-paper)_15%,transparent)]" role="img" aria-label={`${plan.today} → ${plan.thisWeek} → ${every.score}`}>
-        <div className="absolute inset-y-0 left-0 rounded-full bg-[color:color-mix(in_srgb,var(--color-paper)_35%,transparent)]" style={{ width: pct(every.score) }} />
-        <div className="absolute inset-y-0 left-0 rounded-full bg-brass" style={{ width: pct(plan.thisWeek) }} />
-        <div className="absolute inset-y-0 left-0 rounded-full bg-[color:color-mix(in_srgb,var(--color-brass)_60%,black)]" style={{ width: pct(plan.today) }} />
-      </div>
-      <div className="mt-2 flex flex-wrap justify-between gap-x-4 gap-y-1 text-[12.5px] text-[color:color-mix(in_srgb,var(--color-paper)_75%,transparent)]">
-        <span>{t(locale, "dashboard.fixPlan.nowThisWeek", { now: plan.today, week: plan.thisWeek })}</span>
+      <div className={cn("flex flex-wrap justify-between gap-x-4 gap-y-1 text-[12px]", soft)}>
+        {plan.rows.some((r) => r.when === "months") && <span>{t(locale, "dashboard.overview.someFixesTakeMonths")}</span>}
         <span>{lastScanAt ? t(locale, "dashboard.fixPlan.fromLastScan", { date: formatShortDate(lastScanAt, locale, timeZone) }) : t(locale, "dashboard.fixPlan.fromLastScanNoDate")}</span>
       </div>
     </section>
+  );
+}
+
+/** §2d: "Approve fixes ({n})" — Premium, Google connected, writes on: the one-click fixes that are ready (the
+ * pre-drafted review replies the owner left in, and the listing's answers). Its count is this page's own; the Growth
+ * plan's "Approve this week" sends Growth items only. */
+function ApproveFixes({ businessId }: { businessId: string }) {
+  const locale = useLocale();
+  const gbp = useGbpEdit();
+  const on = gbp.enabled && gbp.premium && (gbp.connected || !!gbp.practice);
+  // Every drafted reply left in "Include in Approve all" — the same set and count as Reviews' "Approve all replies".
+  const replies = useWeekReplies(businessId, { auto: on, all: true });
+  const answers = useAnswers(businessId, { auto: on, suggest: [] });
+  const [failures, setFailures] = useState<ItemFailures>({});
+  if (!on) return null;
+  const items = approveItems({ replies, answers, failures });
+  const what = [
+    items.replies ? tPlural(locale, "dashboard.fixPlan.approveFixesWhat.replies", items.replies, { count: items.replies }) : null,
+    items.answers ? t(locale, "dashboard.fixPlan.approveFixesWhat.listing") : null,
+  ].filter(Boolean);
+  return (
+    <section className="rounded-2xl border border-paper-deep bg-white p-4 shadow-card sm:p-5" data-testid="approve-fixes">
+      <ApproveAll
+        businessId={businessId}
+        replies={replies}
+        answers={answers}
+        canEdit={gbp.canEdit === true}
+        practice={!!gbp.practice}
+        failures={failures}
+        onFailure={(kind, reason) => setFailures((f) => ({ ...f, [kind]: reason }))}
+        fixes
+        title={what.length > 0 ? <p className="text-[14px] font-semibold text-ink">{t(locale, "dashboard.fixPlan.approveFixesTitle")}</p> : null}
+      />
+    </section>
+  );
+}
+
+/** §2d: a holiday within 30 days with no hours on the listing — set them (not scored; a Growth-tier action). */
+function HolidayRow({ businessId, holiday }: { businessId: string; holiday: { holiday: HolidayId; date: string } }) {
+  const locale = useLocale();
+  const name = t(locale, `dashboard.googleTab.fields.holiday.${holiday.holiday}` as Parameters<typeof t>[1]);
+  const date = formatShortDate(`${holiday.date}T12:00:00Z`, locale, "UTC");
+  return (
+    <li className="border-t border-paper-line first:border-t-0" data-testid="fix-plan-holiday">
+      <div className="grid grid-cols-[26px_minmax(0,1fr)] items-center gap-x-3 gap-y-2 px-4 py-3.5 sm:px-5 nav:grid-cols-[26px_112px_minmax(0,1fr)_auto]">
+        <span aria-hidden className="flex h-6 w-6 items-center justify-center rounded-full border border-dashed border-paper-deep text-[12px] text-ink-mute">–</span>
+        <span className="hidden nav:block" />
+        <div className="col-start-2 min-w-0 nav:col-start-3">
+          <p className="text-[14.5px] font-semibold text-ink">{t(locale, "dashboard.fixPlan.holiday.title", { holiday: name, date })}</p>
+          <p className="mt-0.5 text-[12.5px] leading-snug text-ink-mute">{t(locale, "dashboard.fixPlan.holiday.why")}</p>
+          <span className="mt-1 inline-flex w-fit rounded-full border border-paper-deep bg-paper px-2 py-0.5 text-[11px] font-medium text-ink-soft" data-testid="counts-toward-tier">
+            {t(locale, "dashboard.fixPlan.countsTowardTier")}
+          </span>
+        </div>
+        <div className="col-start-2 flex items-center justify-between gap-3 nav:col-start-4 nav:justify-end">
+          <span className="whitespace-nowrap text-[13px] font-semibold text-ink-mute">{t(locale, "dashboard.fixPlan.holiday.notScored")}</span>
+          <Link href={googleListingHref(businessId, { hash: "edit-holiday" })} data-testid="fix-button" data-kind="holiday" className={FIX_BUTTON_CLASS}>
+            {t(locale, "dashboard.fixPlan.holiday.button")} →
+          </Link>
+          <span className="w-4" aria-hidden />
+        </div>
+      </div>
+    </li>
   );
 }
 
@@ -134,7 +240,10 @@ export function FixPlanView({
   detailsMismatch = null,
   hoursCheck = null,
   reviewGoalLines = [],
+  holiday = null,
 }: {
+  /** §2d: a holiday within 30 days with no hours set (Business Profile read; null when unknown or none). */
+  holiday?: { holiday: HolidayId; date: string } | null;
   businessId: string;
   plan: FixPlan;
   /** The Overview's projection: every fix done. */
@@ -166,6 +275,7 @@ export function FixPlanView({
 
         {!free && <WeeklyPlanCelebration businessId={businessId} weekStart={weekStart} today={plan.today} weeklyTasks={weekTasks} completed={completed} gbpConnected={gbpConnected} lastScanAt={lastScanAt} />}
         <TopCard plan={plan} every={every} lastScanAt={lastScanAt} />
+        {!free && <ApproveFixes businessId={businessId} />}
 
         {standalone.length > 0 && <DetailsMismatchTasks businessId={businessId} mismatches={standalone} owner={detailsMismatch?.owner ?? null} />}
 
@@ -181,6 +291,7 @@ export function FixPlanView({
               return withSpeed.map((g) => (
                 <section key={g.when} className="flex flex-col gap-2.5" data-testid={`fix-group-${g.when}`}>
                   <div className="flex items-baseline gap-3 px-0.5">
+                    <span aria-hidden data-dot={g.when} className="h-2.5 w-2.5 shrink-0 self-center rounded-full" style={{ background: GROUP_COLOR[g.when] }} />
                     <h2 className="font-serif text-[18px] font-semibold text-ink">{t(locale, `dashboard.fixPlan.when.${g.when}` as Parameters<typeof t>[1])}</h2>
                     {g.rows.length > 0 && (
                       <span className="ml-auto whitespace-nowrap text-[13px] font-semibold text-ink-soft" data-testid="fix-group-subtotal">
@@ -210,6 +321,7 @@ export function FixPlanView({
                         />
                       );
                     })}
+                    {g.when === "this_week" && holiday && <HolidayRow businessId={businessId} holiday={holiday} />}
                     {g.when === "weeks" && plan.speed && (
                       <li className="grid grid-cols-[26px_minmax(0,1fr)] items-center gap-x-3 gap-y-1 border-t border-dashed border-paper-deep bg-paper/60 px-4 py-3.5 first:border-t-0 sm:px-5 nav:grid-cols-[26px_112px_minmax(0,1fr)_auto]" data-testid="fix-plan-speed">
                         <span aria-hidden className="flex h-6 w-6 items-center justify-center rounded-full border border-dashed border-paper-deep text-[12px] text-ink-mute">–</span>

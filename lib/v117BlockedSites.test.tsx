@@ -151,7 +151,7 @@ const website = (checks: CheckResult[], version = SCORING_VERSION) => breakdownF
 
 describe("the 1.17.0 cap: more than half of the website checks couldn't run", () => {
   test("SCORING_VERSION is 1.17.0", () => {
-    expect(SCORING_VERSION).toBe("1.17.0");
+    expect(SCORING_VERSION).toBe("1.18.0");
   });
 
   test("Partly checked: at most 80% of the points it could check", () => {

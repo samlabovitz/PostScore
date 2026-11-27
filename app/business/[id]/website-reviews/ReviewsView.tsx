@@ -216,8 +216,10 @@ export function ReviewsView({
   gbpReplyCheck?: GbpReplyCheckState | null;
 }) {
   const locale = useLocale();
-  // The Google reviews inbox (Premium + Google connected, or practice mode).
-  const inboxShowing = isPremiumPlan(plan) && (reviews.gbpConnected || reviewRepliesPractice);
+  // The Google reviews inbox (Premium + Google connected, or practice mode). Grow + connected sees it too: its
+  // pre-drafted replies (up to the week's allowance), copied and posted on Google by the owner.
+  const growInbox = plan === "grow" && reviews.gbpConnected && !reviewRepliesPractice;
+  const inboxShowing = (isPremiumPlan(plan) && (reviews.gbpConnected || reviewRepliesPractice)) || growInbox;
   // A link straight to #get-more-reviews (e.g. the Overview page's
   // growth strip) needs this — see useScrollToHash's own doc comment.
   useScrollToHash();
@@ -305,7 +307,7 @@ export function ReviewsView({
             from here (posted only on their click). */}
         {inboxShowing && (
           <div className="mb-3">
-            <GoogleReviewsInbox businessId={businessId} />
+            <GoogleReviewsInbox businessId={businessId} grow={growInbox} placeId={reviews.placeId} />
           </div>
         )}
         {/* Paste a review, PostAI drafts the reply (3 free; Premium unlimited). */}
@@ -328,7 +330,7 @@ export function ReviewsView({
             </div>
           ))}
         {/* Free and Grow: a preview of replying from here. */}
-        {!isPremiumPlan(plan) ? (
+        {growInbox ? null : !isPremiumPlan(plan) ? (
           <LockedPreview
             id="google-reviews"
             feature="replies"

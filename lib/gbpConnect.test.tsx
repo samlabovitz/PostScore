@@ -773,9 +773,10 @@ describe("Free and Grow see the connect box but never the Premium pages", () => 
   test("Grow: the box is on the Reviews page; replying from PostScore is Premium-only (Google's reviews when connected, a preview for Free and Grow)", () => {
     const view = fs.readFileSync("app/business/[id]/website-reviews/ReviewsView.tsx", "utf8");
     expect(view).toContain("<GbpReplyCheckConnect businessId={businessId} state={gbpReplyCheck} />");
-    expect(view).toContain("const inboxShowing = isPremiumPlan(plan) && (reviews.gbpConnected || reviewRepliesPractice);");
+    // Grow + connected reads its reviews too (pre-drafted, posted by hand on Google); posting stays Premium.
+    expect(view).toContain("const growInbox = plan === \"grow\" && reviews.gbpConnected && !reviewRepliesPractice;");
     expect(view).toContain("{inboxShowing && (");
-    expect(view).toContain("{!isPremiumPlan(plan) ? (\n          <LockedPreview");
+    expect(view).toContain("{growInbox ? null : !isPremiumPlan(plan) ? (\n          <LockedPreview");
   });
 
   test("the Google Profile tab stays locked for Free and Grow; its connection card sends them to their reviews area", async () => {

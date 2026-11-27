@@ -1,6 +1,7 @@
 "use server";
 
 import { viewLocale } from "@/lib/viewLocale.server";
+import { isFullScanKind } from "@/lib/websiteRecheckPolicy";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { withLiveListingFor } from "@/lib/ownerListing.server";
 import { createClient } from "@/lib/supabase/server";
@@ -102,17 +103,19 @@ export async function getActionPlan(
     return { status: "unauthenticated" };
   }
 
-  const { data, error } = await supabase
-    .from("tasks")
-    .select("id, check_id, status, promised_points, marked_done_at, verified_at, marked_metric_value")
-    .eq("business_id", businessId);
+  const [{ data, error }, { data: scans }] = await Promise.all([
+    supabase.from("tasks").select("id, check_id, status, promised_points, marked_done_at, verified_at, marked_metric_value").eq("business_id", businessId),
+    // The last full scan: an "I did this" it found no change for, 14+ days on, reads as open again (markExpired).
+    supabase.from("scores").select("created_at, scan_kind:breakdown_json->>scanKind").eq("business_id", businessId).order("created_at", { ascending: false }).limit(10),
+  ]);
 
   if (error) {
     return { status: "error", message: error.message };
   }
 
+  const lastScanAt = ((scans ?? []) as Array<{ created_at: string; scan_kind: string | null }>).find((r) => isFullScanKind(r.scan_kind))?.created_at ?? null;
   const rows = await withReviewsGained(supabase, businessId, (data ?? []) as TaskRow[]);
-  const rawTasks = buildActionPlan(breakdown, suggestions, rows, input, locale);
+  const rawTasks = buildActionPlan(breakdown, suggestions, rows, input, locale, { lastScanAt });
   // Merge the review checks (rating/review_count/review_recency) into
   // one card whenever more than one is an open gap, and the
   // deterministically-coupled website checks (has_website/website_link)

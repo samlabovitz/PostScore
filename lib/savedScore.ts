@@ -94,13 +94,18 @@ export function withSavedScore(now: ScoreBreakdown, saved: SavedScoreRow | null,
  * real scan — unless the rule applies to it (those were re-scored as
  * "PostScore updated how it scores", Day 23). v1.17.0 only adds the
  * partly-checked Website cap: 1.16.0 and 1.15.0 scans stand unless the cap
- * applies (or, for a 1.15.0 scan, the speed rule).
+ * applies (or, for a 1.15.0 scan, the speed rule). v1.18.0 only adds the
+ * Speed Index stand-in: earlier scans stand unless it's in use.
  */
 const oneTestSoFar = (now: ScoreBreakdown) => now.checks.some((c) => c.meta?.noScoreCause === "one_test");
+const usesSpeedIndex = (now: ScoreBreakdown) => now.checks.some((c) => c.meta?.speedMetric === "speed_index");
 const websitePartlyChecked = (now: ScoreBreakdown) => now.categories.some((c) => c.id === "website" && c.partlyChecked === true);
 const STANDS_IN_FOR: Record<string, { versions: string[]; unless: (now: ScoreBreakdown, savedVersion: string) => boolean }> = {
   "1.16.0": { versions: ["1.15.0"], unless: (now) => oneTestSoFar(now) },
   "1.17.0": { versions: ["1.16.0", "1.15.0"], unless: (now, saved) => websitePartlyChecked(now) || (saved === "1.15.0" && oneTestSoFar(now)) },
+  // v1.18.0 only adds Speed Index when the main content can't be measured — a value saved by scans from this
+  // version on, so older scans stand until the next real scan (no re-score needed).
+  "1.18.0": { versions: ["1.17.0", "1.16.0", "1.15.0"], unless: (now, saved) => usesSpeedIndex(now) || (saved !== "1.17.0" && (websitePartlyChecked(now) || (saved === "1.15.0" && oneTestSoFar(now)))) },
 };
 
 /** Whether a saved scan of `savedVersion` can stand in for `now`'s version. */

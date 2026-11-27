@@ -116,12 +116,12 @@ describe("one honest label per fix, and the summary line", () => {
 describe("results, not confidence: no more '0 / 1 · Verified'", () => {
   test("Done / Needs work / Couldn't check (EN + ES)", () => {
     const category = { id: "website" as const, label: "Website", earnedPoints: 1, possiblePoints: 2, relativeScore: 50, weight: 30, checks: [check("website.social_links", 1, 1), check("website.about_presence", 0, 1), check("website.https", null, 6)] };
-    const en = renderToStaticMarkup(<LocaleProvider locale="en"><CategoryCard category={category as never} /></LocaleProvider>).replace(/&#x27;/g, "'");
+    const en = renderToStaticMarkup(<LocaleProvider locale="en"><CategoryCard category={category as never} openPassed /></LocaleProvider>).replace(/&#x27;/g, "'");
     expect(en).toContain("Done");
     expect(en).toContain("Needs work");
     expect(en).toContain("Couldn't check");
     expect(en).not.toContain("Verified");
-    const es = renderToStaticMarkup(<LocaleProvider locale="es"><CategoryCard category={category as never} /></LocaleProvider>);
+    const es = renderToStaticMarkup(<LocaleProvider locale="es"><CategoryCard category={category as never} openPassed /></LocaleProvider>);
     expect(es).toContain("Por mejorar");
   });
 });

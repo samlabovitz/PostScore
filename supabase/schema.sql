@@ -1163,11 +1163,8 @@ create policy "Owners can write their business's website screenshot"
   on storage.objects for insert
   with check (
     bucket_id = 'website-screenshots'
-    and exists (
-      select 1 from public.businesses b
-      where b.owner_id = auth.uid ()
-        and name = b.id::text || '.png'
-    )
+    -- "name" is the file's (storage.objects.name), outside the subquery on purpose.
+    and name in (select b.id::text || '.png' from public.businesses b where b.owner_id = auth.uid ())
   );
 
 drop policy if exists "Owners can update their business's website screenshot" on storage.objects;
@@ -1175,11 +1172,8 @@ create policy "Owners can update their business's website screenshot"
   on storage.objects for update
   using (
     bucket_id = 'website-screenshots'
-    and exists (
-      select 1 from public.businesses b
-      where b.owner_id = auth.uid ()
-        and name = b.id::text || '.png'
-    )
+    -- "name" is the file's (storage.objects.name), outside the subquery on purpose.
+    and name in (select b.id::text || '.png' from public.businesses b where b.owner_id = auth.uid ())
   );
 
 -- ---------------------------------------------------------------------------

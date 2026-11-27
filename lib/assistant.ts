@@ -635,6 +635,10 @@ function weeklyRoutineDoneOn(id: WeeklyChecklistItemId): string {
       return "Done directly on the owner's real Google Business Profile (Google itself) — not inside PostScore.";
     case "answer_questions":
       return "Done directly on the owner's real Google Business Profile (description, services and prices, customer details) — not inside PostScore.";
+    case "start_offer":
+      return "Done in PostScore's own Customer offers (a coupon, referral or first-time offer).";
+    case "seasonal_idea":
+      return "A plan for the next holiday: a themed Google post or a PostScore offer, owner-marked.";
   }
 }
 

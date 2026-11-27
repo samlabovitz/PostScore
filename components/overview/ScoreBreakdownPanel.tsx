@@ -9,11 +9,12 @@
 // Opens by itself when the page is opened at one of its check rows
 // (#check-photos from PostAI, or #score-breakdown from a tile).
 
-import { useEffect, useRef, useState, type CSSProperties } from "react";
+import { useContext, useEffect, useRef, useState, type CSSProperties } from "react";
 import { useRememberedOpen } from "@/components/ui/useRememberedOpen";
 import Link from "next/link";
 import { IconArrowRight, IconChevronDown } from "@tabler/icons-react";
-import { CategoryCard, checkOutcome, formatPoints } from "@/components/scoring/CategoryCard";
+import { CategoryCard, HoursStateContext, hoursRowState, checkOutcome, formatPoints } from "@/components/scoring/CategoryCard";
+import type { HoursCheckState } from "@/lib/hoursCheck";
 import { LockedFixRow } from "@/components/overview/FixPlanUpsell";
 import { WebsiteCoverageNote } from "@/components/scoring/WebsiteCoverageNote";
 import { ANCHOR_HIGHLIGHT_EVENT, anchorScrollBehavior } from "@/components/layout/AnchorHighlight";
@@ -95,10 +96,19 @@ function CategorySummary({
   const locale = useLocale();
   const counts = categoryOutcomeCounts(category);
   // The check that needs work costing the most points (never an
-  // "Excellent"/"Good" rating, never a tiny speed gap).
-  const topIssue = category.checks
-    .filter((c) => checkOutcome(c) === "needs_work" && !isMinorSpeedGap(c))
-    .sort((a, b) => b.maxPoints - (b.earnedPoints ?? 0) - (a.maxPoints - (a.earnedPoints ?? 0)))[0];
+  // "Excellent"/"Good" rating, never a tiny speed gap…
+  const needs = category.checks.filter((c) => checkOutcome(c) === "needs_work");
+  // …nor an hours row that's a re-scan away, or waiting on Google Maps (nothing for the owner to fix).
+  const hours = useContext(HoursStateContext);
+  const fixes = needs.filter((c) => !hoursRowState(c, hours) || hoursRowState(c, hours) === "differs");
+  const waitingRow = needs.find((c) => hoursRowState(c, hours) === "waiting");
+  const byGap = (a: (typeof needs)[number], b: (typeof needs)[number]) => b.maxPoints - (b.earnedPoints ?? 0) - (a.maxPoints - (a.earnedPoints ?? 0));
+  // A small speed gap is still the top issue when it's the only one: never "Nothing left" beside "1 needs work".
+  const topIssue = fixes.filter((c) => !isMinorSpeedGap(c)).sort(byGap)[0] ?? fixes.sort(byGap)[0];
+  const onlyRescan = !topIssue && needs.length > 0;
+  // The Website page's count includes the hours row; when that row only needs a re-scan or waits on Google, it
+  // isn't a fix here.
+  const fixCount = websiteFixCount === null ? null : Math.max(0, websiteFixCount - (needs.length - fixes.length));
   return (
     <div className="flex flex-col gap-2">
       <div className="flex items-baseline justify-between gap-3">
@@ -122,7 +132,11 @@ function CategorySummary({
           ? t(locale, "dashboard.overview.categoryNotDeterminable")
           : topIssue
             ? t(locale, "dashboard.overview.topIssue", { label: topIssue.label })
-            : t(locale, "dashboard.overview.nothingLeftHere")}
+            : onlyRescan && waitingRow
+              ? t(locale, "dashboard.breakdown.headerWaiting", { label: waitingRow.label })
+              : onlyRescan
+              ? t(locale, "dashboard.breakdown.headerRescan")
+              : t(locale, "dashboard.overview.nothingLeftHere")}
       </p>
       {audit && category.relativeScore !== null && topIssue && <LockedFixRow />}
       {category.id === "completeness" && serviceOptions && (
@@ -132,22 +146,22 @@ function CategorySummary({
         </p>
       )}
       <WebsiteCoverageNote category={category} hasWebsite={hasWebsite} scoreBasis={scoreBasis} className="text-[12px] text-ink-soft" />
-      {category.id === "website" && websiteFixCount !== null && (
+      {category.id === "website" && fixCount !== null && !(onlyRescan && fixCount === 0 && websiteLookAtCount === 0) && (
         // The Website page's own fix count (same plan, same builder rule).
         <p className="text-[12px] font-medium text-ink">
           {!hasWebsite ? (
             t(locale, "dashboard.overview.tiles.noWebsite")
-          ) : websiteFixCount === 0 && websiteLookAtCount > 0 ? (
+          ) : fixCount === 0 && websiteLookAtCount > 0 ? (
             // A guide on a check we couldn't score: never counted as a fix.
             <Link href={`/business/${businessId}/website`} className="inline-flex items-center gap-1 underline decoration-paper-line underline-offset-2 hover:text-brass">
               {tPlural(locale, "dashboard.overview.tiles.lookAt", websiteLookAtCount, { count: websiteLookAtCount })}
               <IconArrowRight size={13} aria-hidden />
             </Link>
-          ) : websiteFixCount === 0 ? (
+          ) : fixCount === 0 ? (
             t(locale, "dashboard.overview.tiles.nothingToFix")
           ) : (
             <Link href={`/business/${businessId}/website`} className="inline-flex items-center gap-1 underline decoration-paper-line underline-offset-2 hover:text-brass">
-              {tPlural(locale, "dashboard.overview.tiles.fixes", websiteFixCount, { count: websiteFixCount })}
+              {tPlural(locale, "dashboard.overview.tiles.fixes", fixCount, { count: fixCount })}
               <IconArrowRight size={13} aria-hidden />
             </Link>
           )}
@@ -169,9 +183,12 @@ export function ScoreBreakdownPanel({
   lastScanAt = null,
   accountCollapsed = null,
   serviceOptions = null,
+  hoursCheck = null,
 }: {
   businessId: string;
   categories: CategoryResult[];
+  /** The hours check as it is now (lib/hoursCheck.server.ts): the "Matches your Google listing" row's state. */
+  hoursCheck?: HoursCheckState | null;
   /** Food businesses only: Google's service options (information, no points). */
   serviceOptions?: ServiceOptions | null;
   hasWebsite: boolean;
@@ -238,6 +255,7 @@ export function ScoreBreakdownPanel({
   }, [anchorKey, reveal]);
 
   return (
+    <HoursStateContext.Provider value={hoursCheck}>
     <section id={BREAKDOWN_ANCHOR} className="scroll-mt-20 rounded-2xl border border-paper-deep bg-white p-4 shadow-card sm:p-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
@@ -263,9 +281,9 @@ export function ScoreBreakdownPanel({
         </button>
       </div>
 
-      <div id={`${BREAKDOWN_ANCHOR}-checks`} className="mt-4 grid grid-cols-1 gap-x-6 gap-y-5 nav:grid-cols-3">
+      <div id={`${BREAKDOWN_ANCHOR}-checks`} className="mt-4 grid grid-cols-1 items-stretch gap-x-6 gap-y-5 nav:grid-cols-3">
         {categories.map((category, i) => (
-          <div key={category.id} className="flex min-w-0 flex-col">
+          <div key={category.id} className="flex h-full min-w-0 flex-col justify-start">
             <CategorySummary businessId={businessId} category={category} hasWebsite={hasWebsite} scoreBasis={scoreBasis} websiteFixCount={websiteFixCount} websiteLookAtCount={websiteLookAtCount} points={wholePoints[i]} audit={audit} serviceOptions={serviceOptions} />
             <div
               className={cn(
@@ -302,6 +320,7 @@ export function ScoreBreakdownPanel({
         </span>
       </button>
     </section>
+    </HoursStateContext.Provider>
   );
 }
 

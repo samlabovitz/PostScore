@@ -27,6 +27,7 @@ import { formatShortDate, t, useLocale, useTimeZone, type Locale, type MessageKe
 import type { OrderLinkUndo } from "@/lib/gbpOrderLink.server";
 import { LockedButton, TONE } from "@/components/gbp/googleEditBits";
 import { cn } from "@/lib/utils";
+import { GOOGLE_WRITES_FOR_EVERYONE } from "@/lib/googleWritesLaunch";
 
 const k = (key: string) => `dashboard.platformLink.${key}` as MessageKey;
 const PILL = "inline-flex w-fit items-center gap-1.5 rounded-full border border-[color:color-mix(in_srgb,var(--color-brass)_40%,white)] bg-[color:color-mix(in_srgb,var(--color-brass)_10%,white)] px-3 py-1 text-[12.5px] font-semibold text-ink hover:border-brass disabled:opacity-60";
@@ -221,9 +222,11 @@ function AddToGoogle({ businessId, platform, section, initialUndo, canEdit }: { 
             {canEdit ? (
               <button type="button" className={PRIMARY} disabled={step === "sending"} onClick={approve}>
                 {step === "sending" ? t(locale, k("sending")) : t(locale, k("approve"))}
-                <span data-testid="beta-label" className="ml-1.5 rounded bg-white/20 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-[0.06em]">
-                  {t(locale, "dashboard.gbpProfileEdits.beta")}
-                </span>
+                {!GOOGLE_WRITES_FOR_EVERYONE && (
+                  <span data-testid="beta-label" className="ml-1.5 rounded bg-white/20 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-[0.06em]">
+                    {t(locale, "dashboard.gbpProfileEdits.beta")}
+                  </span>
+                )}
               </button>
             ) : (
               <LockedButton label={t(locale, k("approve"))} testId="platform-approve" />

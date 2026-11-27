@@ -240,12 +240,16 @@ describe("Growth step on Premium + connected", () => {
       open({ enabled: true, premium: true, connected: true, canEdit: false }),
     ];
     for (const html of all) expect(html).not.toMatch(/can't edit your listing|make yourself, on Google/);
-    // Premium, connected, writable: PostScore drafts it, the one-click button first.
-    expect(all[0]).toContain("PostScore drafts it. You read it, change anything, and approve; it goes to Google. (Beta)");
-    expect(all[0].indexOf('data-testid="how-to-done-for-you"')).toBeLessThan(all[0].indexOf("Do this:"));
+    // Premium, connected, writable: one sentence + ONE button; the steps behind "Do it yourself instead".
+    expect(all[0]).toContain('data-mode="one_click"');
+    expect(all[0]).toContain("PostScore makes the change on Google: you check it and approve, and you can undo it. (Beta)");
+    expect(all[0].match(/data-testid="fix-button"/g)).toHaveLength(1);
+    expect(all[0]).toContain("Do it yourself instead");
+    expect(all[0]).not.toContain('data-testid="fix-steps"');
     expect(all[0]).not.toContain('data-testid="how-to-who"');
     // Grow: the do-it-yourself steps and "Premium does this for you in one click →".
     expect(all[1]).toContain('data-who="self"');
+    expect(all[1]).toContain('data-mode="steps"');
     expect(all[1]).toContain("Premium does this for you in one click");
     // Premium, not connected: connect.
     expect(all[2]).toContain("Connect Google and PostScore can do this for you.");
@@ -255,6 +259,6 @@ describe("Growth step on Premium + connected", () => {
     // Truly manual (no editor anywhere, e.g. your own photos): "This one you do yourself, on Google."
     const photos = { ...(task as object), checkId: "completeness.photos", title: "Add photos" } as never;
     const manual = wrap(<GbpEditProvider value={{ enabled: true, premium: true, connected: true, canEdit: true, undo: null } as never}><ul><TaskCard task={photos} businessId="b1" context="weekly" premium fixPlan={{ priority: "high", running: 80, locked: false, compact: { open: true, outline: false } }} /></ul></GbpEditProvider>);
-    expect(manual).toMatch(/This one you do yourself, on Google\.|PostScore drafts it/);
+    expect(manual).toMatch(/This one you do yourself, on Google\.|PostScore makes the change on Google/);
   });
 });

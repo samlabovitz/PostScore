@@ -305,11 +305,17 @@ describe("the page (EN + ES)", () => {
     expect(html).not.toContain("Reply to your Google reviews");
   });
 
-  test("Grow: a Premium preview, no inbox; Premium not connected: the connect card", () => {
+  test("Grow connected: the inbox in Grow mode (copy and post on Google), no preview; not connected: the Premium preview; Premium not connected: the connect card", () => {
     const grow = view("grow", true);
-    expect(grow).not.toContain("google-reviews-inbox");
-    expect(grow).toContain("Reply to your Google reviews");
-    expect(grow).toContain("post it to Google once you approve it");
+    expect(grow).toContain('data-plan="grow"');
+    expect(grow).toContain("you copy each one and post it on Google yourself");
+    expect(grow).not.toContain("Nothing is posted to Google until you click Approve.");
+    expect(grow).not.toContain("Reply to your Google reviews");
+    const growOff = view("grow", false);
+    expect(growOff).not.toContain("google-reviews-inbox");
+    expect(growOff).toContain("Reply to your Google reviews");
+    expect(growOff).toContain("post it to Google once you approve it");
+    expect(view("grow", true, "es")).toContain("usted copia cada una y la publica en Google");
     expect(view("premium", false)).not.toContain("google-reviews-inbox");
     expect(view("grow", false, "es")).toContain("Responda a sus reseñas de Google");
   });

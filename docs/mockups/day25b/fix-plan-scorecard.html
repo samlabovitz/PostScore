@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Fix plan score card</title><style>
+@font-face{font-family:Fraunces;src:url(../../../app/fonts/Fraunces-latin-wght.woff2) format("woff2");font-weight:400 700}
+@font-face{font-family:Inter;src:url(../../../app/fonts/Inter-latin-wght.woff2) format("woff2");font-weight:400 600}
+/* Real values: Hair Express, Nov 23 scan — 78 now, This week +8.5 → 87, Takes a few weeks +4.7 → 91, Takes months up to +8.5 → 100 · A. */
+:root{--ink:#14243f;--ink-soft:#3a4a66;--ink-mute:#6b7890;--brass:#b8862f;--green:#2e6b45;--paper:#f5f1e8;--paper-deep:#eae4d5;--paper-line:#e0dac8;
+  /* One color per group, the same in the track and on the group headings below. */
+  --g-week:#d9a443;--g-weeks:#8fa6c4;--g-months:#5d6f8c;--now:rgba(245,241,232,.62)}
+*{box-sizing:border-box}html,body{margin:0}
+body{background:var(--paper);color:var(--ink);font-family:Inter,Arial,sans-serif;font-size:14px;line-height:1.45;-webkit-font-smoothing:antialiased}
+.serif{font-family:Fraunces,Georgia,serif}
+.page{max-width:1000px;margin:0 auto;padding:32px 24px 64px}
+.opt{margin-top:34px}
+.tag{display:inline-block;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-mute);margin-bottom:6px}
+.note{font-size:12.5px;color:var(--ink-soft);margin:6px 0 12px;max-width:720px}
+h1{font-family:Fraunces,serif;font-size:27px;font-weight:600;margin:0}
+.sub{color:var(--ink-soft);margin:4px 0 0}
+.card{background:var(--ink);color:#f5f1e8;border-radius:16px;box-shadow:0 14px 34px -26px rgba(20,36,63,.6)}
+.mute{color:rgba(245,241,232,.72)}
+.big{font-family:Fraunces,serif;font-weight:600;line-height:1;font-variant-numeric:tabular-nums}
+.big .to{color:var(--g-week)}
+/* the track */
+.track{position:relative;height:10px;border-radius:99px;background:rgba(245,241,232,.12);overflow:visible}
+.seg{position:absolute;top:0;bottom:0}
+.seg.now{left:0;background:var(--now);border-radius:99px 0 0 99px}
+.seg.week{background:var(--g-week)}
+.seg.weeks{background:var(--g-weeks)}
+.seg.months{background:repeating-linear-gradient(135deg,var(--g-months) 0 5px,#4a5a75 5px 9px);border-radius:0 99px 99px 0}
+.stop{position:absolute;top:-5px;width:2px;height:20px;background:#f5f1e8;border-radius:2px;transform:translateX(-1px)}
+.lbl{position:absolute;font-size:12px;white-space:nowrap;transform:translateX(-50%)}
+.lbl b{font-family:Fraunces,serif;font-size:15px;color:#fff}
+.lbl.r{transform:translateX(calc(-100% - 6px))}
+.lbl.l{transform:translateX(6px)}
+.trackrow{display:flex;align-items:center;gap:14px}
+.trackrow .tw{flex:1;min-width:0}
+.endlbl{font-family:Fraunces,serif;font-size:22px;font-weight:600;white-space:nowrap;line-height:1}
+.endlbl small{font-family:Inter,sans-serif;font-size:12px;font-weight:500;color:rgba(245,241,232,.7)}
+.endlbl .g{font-size:15px;color:rgba(245,241,232,.8)}
+/* Option A */
+.a{padding:18px 22px 16px}
+.a .row{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.a .big{font-size:44px}
+.a .tw{margin-top:22px;margin-bottom:26px}
+.a .lbl{top:18px}
+.a .foot{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;font-size:12px}
+/* Option B */
+.b{padding:16px 22px;display:grid;grid-template-columns:auto 1fr auto;align-items:center;column-gap:26px;row-gap:12px}
+.b .big{font-size:38px}
+.b .end{font-family:Fraunces,serif;font-size:22px;font-weight:600;white-space:nowrap}
+.b .end small{font-size:13px;color:rgba(245,241,232,.7)}
+.b .lbl{top:-24px}
+.b .tw{margin-top:20px}
+.b .foot{grid-column:1/-1;display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;font-size:12px;margin-top:-6px}
+/* group headings preview */
+.groups{display:flex;flex-direction:column;gap:8px;margin-top:14px}
+.gh{display:flex;align-items:baseline;gap:10px;background:#fff;border:1px solid #ebe5d6;border-radius:12px;padding:10px 16px}
+.gh .dot{width:10px;height:10px;border-radius:50%;align-self:center}
+.gh h3{font-family:Fraunces,serif;font-size:16px;margin:0}
+.gh .sum{margin-left:auto;font-size:13px;font-weight:600;color:var(--ink-soft);white-space:nowrap}
+.gh .sum b{font-family:Fraunces,serif;font-size:15px;color:var(--ink)}
+.dot.week{background:var(--g-week)}.dot.weeks{background:var(--g-weeks)}.dot.months{background:repeating-linear-gradient(135deg,var(--g-months) 0 3px,#4a5a75 3px 5px)}
+@media (max-width:600px){
+  .page{padding:20px 16px 48px}
+  .a{padding:16px}
+  .a .big{font-size:38px}
+  .b{grid-template-columns:1fr;gap:14px;padding:16px}
+  .b .trackrow{grid-column:1 !important}
+  .lbl.hide-sm{display:none}
+  /* Phones: the short labels ("87", no "this week"), "100 · A" on one line. */
+  .lbl.l .mute{display:none}
+  .b .lbl.l{display:none}
+  .endlbl{font-size:18px}
+  .endlbl br,.endlbl small{display:none}
+  .trackrow{gap:10px}
+}
+</style></head><body><div class="page">
+<h1>Fix plan · score card</h1>
+<p class="sub">Two options. Same numbers (Hair Express, last scan Nov 23): 78 now → 87 this week → 91 → 100 · A when every fix is done.</p>
+
+<!-- ============================== Option A ============================== -->
+<section class="opt" id="option-a">
+  <span class="tag">Option A · numbers on top, one wide track under them</span>
+  <p class="note">The big "78 → 87" stays on top. One track runs the full width: cream for where you are now, then one color per group (gold this week, blue a few weeks, striped months), the same colors as the group headings below. "100 · A" sits at the end of the track. No separate box. Height drops from about 270 px to about 170 px.</p>
+  <div class="card a">
+    <div class="row">
+      <div>
+        <div class="mute" style="font-size:13px">This week · 3 fixes you can finish yourself, today</div>
+        <div class="big" style="margin-top:4px">78 <span class="to">→ 87</span></div>
+      </div>
+    </div>
+    <div class="trackrow" style="margin-top:20px;margin-bottom:28px">
+      <div class="tw">
+        <div class="track" role="img" aria-label="78 now, 87 this week, 100 when every fix is done">
+          <div class="seg now" style="width:78%"></div>
+          <div class="seg week" style="left:78%;width:9%"></div>
+          <div class="seg weeks" style="left:87%;width:4%"></div>
+          <div class="seg months" style="left:91%;width:9%"></div>
+          <span class="stop" style="left:78%"></span><span class="stop" style="left:87%"></span>
+          <span class="lbl r" style="left:78%;top:18px"><b>78</b> <span class="mute">now</span></span>
+          <span class="lbl l" style="left:87%;top:18px"><b>87</b> <span class="mute">this week</span></span>
+        </div>
+      </div>
+      <span class="endlbl">100 <span class="g">· A</span><br><small>every fix</small></span>
+    </div>
+    <div class="foot mute"><span>Some fixes take months (reviews grow over time).</span><span>From your last scan · Nov 23, 2026 · points confirmed on your next scan</span></div>
+  </div>
+  <div class="groups">
+    <div class="gh"><span class="dot week"></span><h3>This week</h3><span class="sum">+8.5 pts → <b>87</b></span></div>
+    <div class="gh"><span class="dot weeks"></span><h3>Takes a few weeks</h3><span class="sum">+4.7 pts → <b>91</b></span></div>
+    <div class="gh"><span class="dot months"></span><h3>Takes months</h3><span class="sum">up to +8.5 pts → <b>100</b></span></div>
+  </div>
+</section>
+
+<!-- ============================== Option B ============================== -->
+<section class="opt" id="option-b">
+  <span class="tag">Option B · one row: the number, the track, the end</span>
+  <p class="note">Everything on one line on a computer: "78 → 87" on the left, the track in the middle with the stops above it, and "100 · A" where the track ends. The shortest card, about 120 px. On a phone it stacks: number, track, then "100 · A" at the track's end.</p>
+  <div class="card b">
+    <div>
+      <div class="mute" style="font-size:12.5px">This week · 3 fixes</div>
+      <div class="big" style="margin-top:4px">78 <span class="to">→ 87</span></div>
+    </div>
+    <div class="trackrow" style="grid-column:2/4">
+      <div class="tw" style="margin-top:22px">
+        <div class="track" role="img" aria-label="78 now, 87 this week, 100 when every fix is done">
+          <div class="seg now" style="width:78%"></div>
+          <div class="seg week" style="left:78%;width:9%"></div>
+          <div class="seg weeks" style="left:87%;width:4%"></div>
+          <div class="seg months" style="left:91%;width:9%"></div>
+          <span class="stop" style="left:78%"></span><span class="stop" style="left:87%"></span>
+          <span class="lbl r" style="left:78%;top:-24px"><span class="mute">now</span></span>
+          <span class="lbl l" style="left:87%;top:-24px"><span class="mute">this week</span></span>
+        </div>
+      </div>
+      <span class="endlbl">100 <span class="g">· A</span><br><small>every fix</small></span>
+    </div>
+    <div class="foot mute"><span>Some fixes take months (reviews grow over time).</span><span>From your last scan · Nov 23, 2026 · points confirmed on your next scan</span></div>
+  </div>
+  <div class="groups">
+    <div class="gh"><span class="dot week"></span><h3>This week</h3><span class="sum">+8.5 pts → <b>87</b></span></div>
+    <div class="gh"><span class="dot weeks"></span><h3>Takes a few weeks</h3><span class="sum">+4.7 pts → <b>91</b></span></div>
+    <div class="gh"><span class="dot months"></span><h3>Takes months</h3><span class="sum">up to +8.5 pts → <b>100</b></span></div>
+  </div>
+</section>
+</div></body></html>

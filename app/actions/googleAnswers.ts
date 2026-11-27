@@ -41,34 +41,13 @@ export type OpenAnswersResult =
     }
   | Blocked;
 
-const descriptionCache = new Map<string, { at: number; text: string }>();
-const DAY_MS = 86_400_000;
-
-/** The answers' description draft (PostAI, Google's description rules,
- * 250+ characters), from what PostScore knows plus the listing's own
- * services; one a day per business. */
-async function answersDescription(db: import("@supabase/supabase-js").SupabaseClient, admin: import("@supabase/supabase-js").SupabaseClient, businessId: string, listed: string[]): Promise<string | null> {
-  const [{ loadDraftInputs }, { descriptionProblems, descriptionSystemPrompt }, { callAnthropicMessage }] = await Promise.all([import("@/lib/gbpPostsContext.server"), import("@/lib/gbpProfileEdits"), import("@/lib/anthropicClient")]);
+/** The answers' description draft, written in the background (lib/postDrafts.server.ts) — read here, never written
+ * on page load. Null until the background run has written one. */
+async function answersDescription(db: import("@supabase/supabase-js").SupabaseClient, admin: import("@supabase/supabase-js").SupabaseClient, businessId: string): Promise<string | null> {
+  const [{ loadDraftInputs }, { savedAnswersDescription }] = await Promise.all([import("@/lib/gbpPostsContext.server"), import("@/lib/postDrafts.server")]);
   const inputs = await loadDraftInputs(db, admin, businessId);
   if (!inputs) return null;
-  // One a day per business and language.
-  const key = `${businessId}|${inputs.locale}`;
-  const hit = descriptionCache.get(key);
-  if (hit && Date.now() - hit.at < DAY_MS) return hit.text;
-  const f = inputs.facts;
-  const facts = [`Name: ${f.name}`, f.category ? `Category: ${f.category}` : null, f.city ? `City: ${f.city}` : null, [...f.services, ...listed].length ? `Services: ${Array.from(new Set([...f.services, ...listed])).slice(0, 15).join(", ")}` : null, f.differentiator ? `What sets it apart (the owner's words): ${f.differentiator.slice(0, 300)}` : null].filter(Boolean);
-  for (let attempt = 0; attempt < 2; attempt++) {
-    try {
-      const text = (await callAnthropicMessage({ system: descriptionSystemPrompt(inputs.locale), userMessage: `<facts>\n${facts.join("\n")}\n</facts>\n\nWrite at least 300 characters.`, maxTokens: 400 })).trim().replace(/^["“]|["”]$/g, "");
-      if (text && descriptionProblems(text).length === 0 && (text.length >= 250 || attempt === 1)) {
-        descriptionCache.set(key, { at: Date.now(), text });
-        return text;
-      }
-    } catch {
-      return null;
-    }
-  }
-  return null;
+  return savedAnswersDescription(admin, businessId, inputs.locale);
 }
 
 export async function openAnswers(businessId: string): Promise<OpenAnswersResult> {
@@ -107,7 +86,7 @@ export async function openAnswers(businessId: string): Promise<OpenAnswersResult
 
   let descriptionDraft: string | null = null;
   if (plan23e?.missing.includes("description")) {
-    descriptionDraft = await answersDescription(db, admin, businessId, listing.services.map((x) => x.name)).catch(() => null);
+    descriptionDraft = await answersDescription(db, admin, businessId).catch(() => null);
   }
 
   const { data: prices } = await db.from("prices").select("service, price").eq("business_id", businessId).limit(50);

@@ -15,7 +15,7 @@
 
 import { googlePagePaths } from "@/lib/routes";
 import { revalidatePath } from "next/cache";
-import { GROW_POST_REDRAFTS, savedDraftUsable, cleanPostText, ctaChoices, isPostType, offerTemplate, postProblems, postSystemPrompt, postTemplate, postUserMessage, qaPostText, requestGivesStory, weekStartOf, type PostCta, type PostOffer, type PostPhoto, type PostProblem, type PostTopic, type PostType } from "@/lib/gbpPosts";
+import { GROW_POST_REDRAFTS, cleanPostText, ctaChoices, isPostType, postProblems, postSystemPrompt, postTemplate, postUserMessage, qaPostText, requestGivesStory, weekStartOf, type PostCta, type PostOffer, type PostPhoto, type PostProblem, type PostTopic, type PostType } from "@/lib/gbpPosts";
 import type { SpellingFlag } from "@/lib/serviceSpelling";
 import type { GbpEditBlock } from "@/lib/gbpEditGate.server";
 import type { LatestPost } from "@/lib/gbpPostsPublish.server";
@@ -33,6 +33,8 @@ export type OpenPostDraftResult =
       drafts: { update: string; qa: string | null; offer: string | null };
       /** The type shown first: the offer when a coupon is running, else the update. */
       defaultType: PostType;
+      /** This week's PostAI draft isn't written yet (the background run does it): the plain draft for now. */
+      pending?: boolean;
       /** PostAI couldn't write one that keeps Google's rules: the plain draft. */
       fallback: boolean;
       /** Grow: custom drafts ("Write another", "Tell PostScore what you want") left this week; null: unlimited (Premium). */
@@ -51,8 +53,6 @@ export type OpenPostDraftResult =
   | Blocked;
 
 const WEEK_MS = 7 * 86_400_000;
-const memDrafts = new Map<string, string>();
-const memAnother = new Map<string, number>();
 
 const cleanZone = async (timeZone: unknown) => (await import("@/lib/gbpPostsPublish.server")).cleanZone(timeZone);
 
@@ -73,27 +73,14 @@ async function owner(businessId: string) {
 }
 
 type Inputs = import("@/lib/gbpPostsContext.server").DraftInputs;
-
-/** PostAI's draft, checked like the owner's own text — plus, for a draft, no invented story unless the
- * owner's request gives the facts of one; the plain draft otherwise. */
-async function draft(inputs: Inputs, day: string | null, extra: { offer?: PostOffer | null; request?: string | null } = {}): Promise<{ text: string; fallback: boolean }> {
-  const { callAnthropicMessage } = await import("@/lib/anthropicClient");
-  const story = requestGivesStory(extra.request);
-  for (let attempt = 0; attempt < 2; attempt++) {
-    try {
-      const raw = await callAnthropicMessage({
-        system: postSystemPrompt(inputs.locale, "week", story, !!extra.offer, !!extra.request),
-        userMessage: postUserMessage(inputs.facts, inputs.topic, { day, offer: extra.offer, request: extra.request, ownerFacts: story ? extra.request : null }),
-        maxTokens: 400,
-      });
-      const text = cleanPostText(raw.trim().replace(/^["“]|["”]$/g, "")) ?? "";
-      if (text && text.length <= 700 && postProblems(text, { aiDraft: true, ownerFacts: story ? extra.request : extra.offer ? extra.offer.offer : null }).length === 0) return { text, fallback: false };
-    } catch {
-      break;
-    }
-  }
-  return { text: extra.offer ? offerTemplate(extra.offer, inputs.facts.name, inputs.locale) : postTemplate(inputs.topic, inputs.locale, inputs.facts), fallback: true };
-}
+// The week's drafts (kept in post_drafts): shared with the background writer (lib/postDrafts.server.ts), loaded on
+// demand like every server module here.
+type PD = typeof import("@/lib/postDrafts.server");
+const pd = () => import("@/lib/postDrafts.server");
+const draft = async (...a: Parameters<PD["draft"]>) => (await pd()).draft(...a);
+const savedDraft = async (...a: Parameters<PD["savedDraft"]>) => (await pd()).savedDraft(...a);
+const saveDraft = async (...a: Parameters<PD["saveDraft"]>) => (await pd()).saveDraft(...a);
+const customDraftsUsed = async (...a: Parameters<PD["customDraftsUsed"]>) => (await pd()).customDraftsUsed(...a);
 
 /** "Your questions, answered" by PostAI from the confirmed pairs (and the owner's request); the plain pairs otherwise. */
 async function qaDraft(inputs: Inputs, entries: Array<{ q: string; a: string }>, request: string | null): Promise<{ text: string; fallback: boolean } | null> {
@@ -112,26 +99,6 @@ async function qaDraft(inputs: Inputs, entries: Array<{ q: string; a: string }>,
     // the plain pairs below
   }
   return { text: plain, fallback: true };
-}
-
-async function savedDraft(admin: import("@supabase/supabase-js").SupabaseClient, businessId: string, week: string, language: string): Promise<string | null | "missing"> {
-  const { data, error } = await admin.from("post_drafts").select("text, kind, created_at").eq("business_id", businessId).eq("week_start", week).eq("language", language).in("kind", ["week", "another"]).order("created_at", { ascending: false }).limit(5);
-  if (error) return "missing";
-  // The newest usable one; an older-rules or rule-breaking draft is skipped (and a new one written).
-  const rows = (data ?? []) as Array<{ text: string; kind: string; created_at: string }>;
-  return rows.find(savedDraftUsable)?.text ?? null;
-}
-
-/** Custom drafts this week (Grow: 3) — "Write another" and "Tell PostScore what you want", for any post type or the description. */
-async function customDraftsUsed(admin: import("@supabase/supabase-js").SupabaseClient, businessId: string, week: string): Promise<number> {
-  const { count, error } = await admin.from("post_drafts").select("id", { count: "exact", head: true }).eq("business_id", businessId).eq("week_start", week).in("kind", ["another", "qa", "offer", "description"]);
-  return Math.max(error ? 0 : (count ?? 0), memAnother.get(`${businessId}|${week}`) ?? 0);
-}
-
-async function saveDraft(admin: import("@supabase/supabase-js").SupabaseClient, businessId: string, week: string, kind: "week" | "another" | "qa" | "offer" | "description", text: string, language: string) {
-  if (kind === "week" || kind === "another") memDrafts.set(`${businessId}|${week}|${language}`, text);
-  if (kind !== "week") memAnother.set(`${businessId}|${week}`, (memAnother.get(`${businessId}|${week}`) ?? 0) + 1);
-  await admin.from("post_drafts").insert({ business_id: businessId, week_start: week, kind, text: text.slice(0, 1500), language });
 }
 
 type Ctx = Extract<Awaited<ReturnType<typeof import("@/lib/gbpPostsContext.server").postContext>>, { ok: true }>;
@@ -175,26 +142,27 @@ export async function openPostDraft(businessId: string, timeZone: unknown, day: 
   const zone = await cleanZone(timeZone);
   const week = weekStartOf(Date.now(), zone);
   const offer = await loadActiveOffer(o.db, businessId, cleanPromo(promoId)).catch(() => null);
-  let fallback = false;
+  const fallback = false;
   // The update: this week's saved draft (in this language), else a new one.
   const saved = await savedDraft(o.admin, businessId, week, inputs.locale);
-  let update = saved === "missing" ? (memDrafts.get(`${businessId}|${week}|${inputs.locale}`) ?? null) : saved;
+  let update = saved === "missing" ? ((await pd()).memDrafts.get(`${businessId}|${week}|${inputs.locale}`) ?? null) : saved;
   if (update && postProblems(update, { aiDraft: true }).length) update = null;
+  // Never written on page load (lib/postDrafts.server.ts writes it in the background): until it's saved, the plain
+  // draft, said plainly.
+  let pending = false;
   if (!update) {
-    const d = await draft(inputs, cleanDay(day));
-    update = d.text;
-    fallback = d.fallback;
-    await saveDraft(o.admin, businessId, week, "week", update, inputs.locale).catch(() => null);
+    update = postTemplate(inputs.topic, inputs.locale, inputs.facts);
+    pending = true;
   }
   // The offer: kept in memory by coupon and language (it changes when the coupon does).
   let offerText: string | null = null;
   if (offer) {
     const key = `offer|${offer.promoId}|${offer.offer}|${offer.code}|${offer.expiry}|${inputs.locale}`;
-    offerText = memDrafts.get(key) ?? null;
+    offerText = (await pd()).memDrafts.get(key) ?? null;
     if (offerText && postProblems(offerText, { aiDraft: true, ownerFacts: offer.offer }).length) offerText = null;
     if (!offerText) {
       offerText = (await draft(inputs, cleanDay(day), { offer })).text;
-      memDrafts.set(key, offerText);
+      (await pd()).memDrafts.set(key, offerText);
     }
   }
   // The Q&A: the confirmed pairs as they are (no AI until "Write another").
@@ -216,6 +184,7 @@ export async function openPostDraft(businessId: string, timeZone: unknown, day: 
     drafts: { update, qa, offer: offerText },
     defaultType: offer ? "offer" : "update",
     fallback,
+    pending,
     left,
     ctas,
     topic: inputs.topic,

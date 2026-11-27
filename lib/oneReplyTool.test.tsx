@@ -47,7 +47,7 @@ describe("drafts: written in the background, read by pages", () => {
     expect(t.more).toBe(2);
   });
   test("triggers: the daily job, after a scan, after a voice change — never a page load", () => {
-    expect(readFileSync("app/api/cron/reply-drafts/route.ts", "utf8")).toContain("writeReplyDrafts(admin, id)");
+    expect(readFileSync("app/api/cron/reply-drafts/route.ts", "utf8")).toContain("writeReplyDrafts(admin, id, plan)");
     expect(readFileSync("netlify/functions/reply-drafts-scheduler.mts", "utf8")).toContain('schedule: "0 10 * * *"');
     expect(readFileSync("app/actions/scoring.ts", "utf8")).toContain('(await import("@/lib/replyBatch.server")).writeReplyDraftsSoon(businessId);');
     expect(readFileSync("app/actions/reviewReplies.ts", "utf8")).toContain("writeReplyDraftsSoon(businessId)");

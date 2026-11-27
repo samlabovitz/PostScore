@@ -15,7 +15,10 @@ export type WeeklyChecklistItemId =
   | "add_photo"
   | "check_hours"
   // Day 25B step 6: the Growth plan's "I did this" on the answers task (never one of the five routine items).
-  | "answer_questions";
+  | "answer_questions"
+  // §2d: the Growth plan's own weekly tasks (lib/growthWeek.ts).
+  | "start_offer"
+  | "seasonal_idea";
 
 export const WEEKLY_CHECKLIST_ITEM_IDS: readonly WeeklyChecklistItemId[] = [
   "post_update",
@@ -24,6 +27,11 @@ export const WEEKLY_CHECKLIST_ITEM_IDS: readonly WeeklyChecklistItemId[] = [
   "add_photo",
   "check_hours",
 ];
+
+/** Any id the app checks off (the routine five plus the Growth plan's own tasks): never free text from the page. */
+export function isWeeklyChecklistItemId(v: unknown): v is WeeklyChecklistItemId {
+  return typeof v === "string" && Object.prototype.hasOwnProperty.call(ITEM_MESSAGE_KEYS, v);
+}
 
 export interface WeeklyChecklistItem {
   id: WeeklyChecklistItemId;
@@ -55,6 +63,14 @@ const ITEM_MESSAGE_KEYS: Record<WeeklyChecklistItemId, { title: MessageKey; howT
   answer_questions: {
     title: "dashboard.growth.checklist.items.answerQuestions.title",
     howTo: "dashboard.growth.checklist.items.answerQuestions.howTo",
+  },
+  start_offer: {
+    title: "dashboard.growth.checklist.items.startOffer.title",
+    howTo: "dashboard.growth.checklist.items.startOffer.howTo",
+  },
+  seasonal_idea: {
+    title: "dashboard.growth.checklist.items.seasonalIdea.title",
+    howTo: "dashboard.growth.checklist.items.seasonalIdea.howTo",
   },
 };
 

@@ -5,7 +5,7 @@
 // only: never PostScore points. Pure.
 
 import type { KeepState } from "@/lib/devTier";
-import { TIER_RULES, addDays, computeTiers, localDate, mondayOf, nextTierNeeds, resultsAt, weekRecord, type GrowthFacts, type ResultId, type TierNumber } from "@/lib/growthTier";
+import { TIER_RULES, addDays, computeTiers, localDate, mondayOf, nextTierNeeds, resultsAt, resultsRuleMet, weekRecord, type GrowthFacts, type ResultId, type TierNumber } from "@/lib/growthTier";
 
 export type WeekKind = "posts" | "replies" | "answers" | "photos";
 
@@ -100,7 +100,7 @@ export interface GrowthState {
   /** When the tier is next worked out: the coming Monday. */
   nextUpdate: string;
   /** Local favorite: what it takes to stay (§6.4) — no two quiet weeks in a row, and the results held. */
-  stay: { activeNow: number; of: number; activeOk: boolean; results: number; resultsNow: number } | null;
+  stay: { activeNow: number; of: number; activeOk: boolean; results: number; resultsNow: number; resultsOk: boolean } | null;
 }
 
 /** Everything the Growth pages show about the tier, as of `now`. */
@@ -152,12 +152,13 @@ function stayAtTop(facts: GrowthFacts, monday: string, weeks: GrowthState["weeks
   const last12 = Array.from({ length: rule.of }, (_, i) => weekRecord(facts, addDays(monday, -7 * (rule.of - i))));
   const quiet = (w: { active: boolean; neutral: boolean }) => !w.active && !w.neutral;
   const [a, b] = weeks.slice(-2);
-  const results = resultsAt(facts, monday);
+  const r = resultsRuleMet(resultsAt(facts, monday), rule);
   return {
     activeNow: last12.filter((w) => w.active).length,
     of: rule.of,
     activeOk: !(a && b && quiet(a) && quiet(b)),
     results: rule.results,
-    resultsNow: (Object.keys(results) as ResultId[]).filter((id) => results[id] === "met").length,
+    resultsNow: r.now,
+    resultsOk: r.met,
   };
 }

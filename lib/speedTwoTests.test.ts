@@ -122,7 +122,7 @@ describe("the check under the rule", () => {
 
   test("on since v1.16.0 shipped (a dry run turns it on with POSTSCORE_SCORING_PREVIEW)", () => {
     expect(SPEED_TWO_TESTS_FROM).toBe("1.16.0");
-    expect(SCORING_VERSION).toBe("1.17.0");
+    expect(SCORING_VERSION).toBe("1.18.0");
     expect(speed(input(lab(), [sample("2026-11-18T01:44:45Z")], false))).toMatchObject({ earnedPoints: 0, confidence: "VERIFIED" });
   });
 });

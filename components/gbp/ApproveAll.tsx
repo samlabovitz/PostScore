@@ -12,6 +12,7 @@
 // says so, with "Try again"). Nothing goes to Google without this click (or
 // an item's own button).
 
+import { NEW_PAGES_LIVE } from "@/lib/routes";
 import { useState } from "react";
 import { approveListingAll } from "@/app/actions/approveAll";
 import { t, tPlural, type MessageKey, useLocale, useTimeZone } from "@/lib/i18n";
@@ -63,7 +64,13 @@ export function ApproveAll({
   failures = {},
   onFailure = () => undefined,
   title = null,
+  fixes = false,
+  newDesign = NEW_PAGES_LIVE,
 }: {
+  /** The new design's "Approve this week ({n})"; today's "Approve {n} tasks". */
+  newDesign?: boolean;
+  /** §2d Fix plan: "Approve fixes ({n})" — the one-click fixes (replies, the listing's answers); {n} = what it sends. */
+  fixes?: boolean;
   /** The card's title, on the left of the button (the button sits at the top right). */
   title?: React.ReactNode;
   businessId: string;
@@ -88,7 +95,8 @@ export function ApproveAll({
     items.post ? t(locale, W("approveAll.what.post")) : null,
     items.answers ? t(locale, W("approveAll.what.answers")) : null,
   ].filter(Boolean);
-  const loading = [replies, post, answers].some((s) => s && (s.status === "idle" || s.status === "loading"));
+  // A saved post draft isn't "getting ready": only a part with nothing to show yet is.
+  const loading = [replies, post, answers].some((s) => s && (s.status === "idle" || s.status === "loading") && !(s === post && post?.text));
 
   const run = async () => {
     const replyIds = replies?.canPost ? Array.from(new Set(replies.ready)) : [];
@@ -174,9 +182,17 @@ export function ApproveAll({
       <div className="flex flex-col items-start gap-1 sm:items-end">
         {/* While drafts load: disabled, "Approve all (getting ready…)" — the final count once ready, never a misleading "(0)". */}
         <button type="button" onClick={run} disabled={!canEdit || loading || count === 0 || progress !== null} className={W_BUTTON} data-testid="approve-all-button" data-count={count} data-tasks={tasks} data-loading={loading ? "1" : "0"}>
-          {progress ? t(locale, W("approveAll.sending"), { done: progress.done, count: progress.of }) : loading ? t(locale, W("approveAll.gettingReady")) : tPlural(locale, "dashboard.googleTab.w.approveTasks", tasks, { count: tasks })}
+          {progress
+            ? t(locale, W("approveAll.sending"), { done: progress.done, count: progress.of })
+            : loading
+              ? t(locale, W("approveAll.gettingReady"))
+              : fixes
+                ? tPlural(locale, "dashboard.fixPlan.approveFixes", count, { count })
+                : newDesign
+                  ? t(locale, "dashboard.growthPlan.approveWeek", { count })
+                  : tPlural(locale, "dashboard.googleTab.w.approveTasks", tasks, { count: tasks })}
         </button>
-        {!loading && !progress && count > 0 && (
+        {!loading && !progress && count > 0 && !fixes && (
           <p className="text-[12px] text-ink-mute" data-testid="approve-all-items">
             {tPlural(locale, "dashboard.googleTab.w.approveItems", count, { count })}
           </p>

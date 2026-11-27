@@ -154,9 +154,9 @@ describe("6. 'Tell PostScore what you want'", () => {
     expect(html).toContain("2 of 3 drafts left this week");
     expect(wrap(<DraftSteer label="l" placeholder="p" onDraft={vi.fn()} busy={false} left={null} limited={false} testId="t" />)).not.toContain("drafts left");
     expect(wrap(<DraftSteer label="l" placeholder="p" onDraft={vi.fn()} busy={false} left={0} limited={false} testId="t" />)).toContain("No more new drafts this week");
-    const src = readFileSync("app/actions/gbpPosts.ts", "utf8");
-    expect(src).toContain('in("kind", ["another", "qa", "offer", "description"])');
-    expect(src).toContain("export async function redraftDescription(");
+    // The week's drafts moved to lib/postDrafts.server.ts (§2d: written in the background); the counter is the same.
+    expect(readFileSync("lib/postDrafts.server.ts", "utf8")).toContain('in("kind", ["another", "qa", "offer", "description"])');
+    expect(readFileSync("app/actions/gbpPosts.ts", "utf8")).toContain("export async function redraftDescription(");
   });
 });
 
@@ -198,15 +198,19 @@ describe("last tweaks: 'Since' layout, the replies' detail line, Approve all whi
     expect(recText({ kind: "replies", plan }, "es", null).sub).toBe("0 de sus últimas 20 reseñas tienen respuesta");
     expect(recText({ kind: "replies", plan: replyPlan({ replied: 5, inWindow: 8 })! }, "en", null).sub).toBe("5 of your last 8 reviews have a reply");
   });
-  test("while drafts load: disabled, 'Approve all (getting ready…)'; the final count once ready", async () => {
+  test("while drafts load: disabled, 'Approve all (getting ready…)' — only with no saved draft; the final count once ready", async () => {
     const { ApproveAll } = await import("@/components/gbp/ApproveAll");
-    const loadingPost = post({ status: "loading" });
+    const loadingPost = post({ status: "loading", text: "" });
+    // A saved draft is never "getting ready" (§2d: written in the background, shown at once).
+    expect(wrap(<ApproveAll businessId="b1" post={post({ status: "loading", text: "Saved draft" })} canEdit practice={false} />)).toContain('data-loading="0"');
     const html = wrap(<ApproveAll businessId="b1" post={loadingPost} canEdit practice={false} />);
     expect(html).toMatch(/<button[^>]*disabled=""[^>]*data-loading="1"[^>]*>Approve all \(getting ready…\)<\/button>/);
     expect(wrap(<ApproveAll businessId="b1" post={loadingPost} canEdit practice={false} />, "es")).toContain(">Aprobar todo (preparando…)<");
     const ready = wrap(<ApproveAll businessId="b1" post={post({})} canEdit practice={false} />);
     // Day 25B step 3: "Approve {n} tasks", with "{m} items go to Google" under it.
     expect(ready).toMatch(/data-loading="0"[^>]*>Approve 1 task<\/button>/);
+    // §2d, the new design: the Growth plan's button is "Approve this week ({n})".
+    expect(wrap(<ApproveAll businessId="b1" post={post({})} canEdit practice={false} newDesign />)).toMatch(/>Approve this week \(1\)<\/button>/);
     expect(ready).toContain(">1 item goes to Google<");
   });
 });

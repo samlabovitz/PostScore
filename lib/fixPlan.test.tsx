@@ -196,6 +196,10 @@ describe("Part A: Approve {n} tasks · {m} items go to Google", () => {
     expect(en).toContain(">10 items go to Google<");
     const es = wrap(<ApproveAll businessId="b1" replies={replies(10)} canEdit practice={false} />, "es");
     expect(es).toContain(">Aprobar 1 tarea<");
+    expect(wrap(<ApproveAll businessId="b1" replies={replies(10)} canEdit practice={false} newDesign />, "es")).toContain(">Aprobar esta semana (10)<");
+    // §2d Fix plan: "Approve fixes ({n})", {n} = what it sends.
+    expect(wrap(<ApproveAll businessId="b1" replies={replies(10)} canEdit practice={false} fixes />)).toMatch(/>Approve fixes \(10\)<\/button>/);
+    expect(wrap(<ApproveAll businessId="b1" replies={replies(10)} canEdit practice={false} fixes />, "es")).toContain(">Aprobar correcciones (10)<");
     expect(es).toContain(">10 elementos se enviarán a Google<");
   });
 

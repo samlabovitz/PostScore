@@ -113,14 +113,14 @@ describe("rating wording — no scoring change", () => {
   });
 
   test("v1.12.0+: the rating check is out of 14", () => {
-    expect(SCORING_VERSION).toBe("1.17.0");
+    expect(SCORING_VERSION).toBe("1.18.0");
     expect(ratingCheck(4.5, 40).earnedPoints).toBe(11.2);
   });
 
   test("the Reviews page / Overview row reads 'Excellent' in EN and 'Excelente' in ES", () => {
     for (const [locale, word] of [["en", "Excellent"], ["es", "Excelente"]] as const) {
       const visibility = scoreBusiness(rated(5.0, 30), locale).categories.find((c) => c.id === "visibility")!;
-      const html = renderToStaticMarkup(<LocaleProvider locale={locale}><CategoryCard category={visibility} /></LocaleProvider>);
+      const html = renderToStaticMarkup(<LocaleProvider locale={locale}><CategoryCard category={visibility} openPassed /></LocaleProvider>);
       expect(html).toContain(word);
     }
   });

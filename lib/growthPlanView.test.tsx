@@ -15,7 +15,7 @@ vi.mock("@/components/gbp/GoogleResults", () => ({ ThisWeek: () => <div data-tes
 vi.mock("@/components/gbp/MoreWaysCards", () => ({ MoreWaysCards: () => <div data-testid="more-ways-cards" /> }));
 
 import { LocaleProvider, type Locale } from "@/lib/i18n";
-import type { GrowthFacts } from "@/lib/growthTier";
+import { TIER_RULES, resultsRuleMet, type GrowthFacts } from "@/lib/growthTier";
 import { growthState, rankWeek, tierLines } from "@/lib/growthPlan";
 import { GrowthFreePreview, TierCard, WeekPlanCard, tierLineText } from "@/components/growth/GrowthPlanView";
 
@@ -103,12 +103,57 @@ describe("the tier card (mockup 03)", () => {
   });
 });
 
+describe("the tier card's requirement rows: ✓ only when met", () => {
+  const state = growthState(HE, new Date("2026-11-21T17:00:00Z"));
+  const card = (html: string, tier: number) => html.slice(html.indexOf(`data-testid="tier-needs" data-tier="${tier}"`)).split('data-testid="tier-needs"')[1];
+  const row = (html: string, id: string) => html.slice(html.indexOf(`data-testid="${id}"`)).split("</p>")[0];
+  test("Hair Express: To reach Growing has one result (met ✓) but 3 of 5 active weeks (open circle) → 1 of 2", () => {
+    expect(state.next).toMatchObject({ tier: 3, activeNow: 3, activeWeeks: 5, activeMet: false, resultsNow: 1, resultsMet: true });
+    const html = card(wrap(<TierCard state={state} testAccount={false} />), 3);
+    expect(row(html, "needs-active")).toContain('data-mark="open"');
+    expect(row(html, "needs-active")).not.toContain('data-mark="met"');
+    expect(row(html, "needs-active")).not.toContain("data-met");
+    expect(row(html, "needs-results")).toContain('data-mark="met"');
+    expect(row(html, "needs-results")).toContain('data-met="true"');
+    expect(text(row(html, "needs-progress"))).toContain("1 of 2");
+  });
+  test("Hair Express: Thriving needs two results (one measured); one isn't enough → both rows open, 0 of 2", () => {
+    expect(state.after).toMatchObject({ tier: 4, results: 2, measured: 1, resultsNow: 1, resultsMet: false, activeMet: false });
+    const html = card(wrap(<TierCard state={state} testAccount={false} />), 4);
+    expect(row(html, "needs-active")).toContain('data-mark="open"');
+    expect(row(html, "needs-results")).toContain('data-mark="open"');
+    expect(row(html, "needs-results")).not.toContain('data-mark="met"');
+    expect(text(row(html, "needs-progress"))).toContain("0 of 2");
+  });
+  test("every row met: green ✓ on both and 2 of 2 (EN + ES)", () => {
+    const next = { ...state.next!, activeNow: 5, activeMet: true, resultsMet: true };
+    const html = wrap(<TierCard state={{ ...state, next, after: null }} testAccount={false} />);
+    expect(row(html, "needs-active")).toContain('data-mark="met"');
+    expect(row(html, "needs-results")).toContain('data-mark="met"');
+    expect(html).not.toContain('data-mark="open"');
+    expect(text(row(html, "needs-progress"))).toContain("2 of 2");
+    expect(text(row(wrap(<TierCard state={{ ...state, next, after: null }} testAccount={false} />, "es"), "needs-progress"))).toMatch(/2 de 2/);
+  });
+  test("results count alone isn't enough: the measured part must hold too", () => {
+    expect(resultsRuleMet({ R1: "not_met", R2: "not_met", R3: "unavailable", R4: "met", R5: "unavailable" }, { results: 1, measured: 1 })).toEqual({ now: 1, measuredNow: 0, met: false });
+    expect(resultsRuleMet({ R1: "met", R2: "not_met", R3: "unavailable", R4: "met", R5: "unavailable" }, TIER_RULES[4])).toEqual({ now: 2, measuredNow: 1, met: true });
+    expect(resultsRuleMet({ R1: "met", R2: "not_checked", R3: "unavailable", R4: "not_met", R5: "unavailable" }, TIER_RULES[4]).met).toBe(false);
+  });
+  test("Local favorite's stay card: open circle for what isn't met", () => {
+    const html = wrap(<TierCard state={{ ...state, tier: 5, next: null, after: null, stay: { activeNow: 11, of: 12, activeOk: true, results: 3, resultsNow: 2, resultsOk: false } }} testAccount={false} />);
+    expect(html.slice(html.indexOf('data-testid="top-active"')).split("</li>")[0]).toContain('data-mark="met"');
+    const results = html.slice(html.indexOf('data-testid="top-results"')).split("</li>")[0];
+    expect(results).toContain('data-mark="open"');
+    expect(results).not.toContain("data-met");
+  });
+});
+
 describe("this week's plan (03, 03b)", () => {
   const state = growthState(HE, new Date("2026-11-21T17:00:00Z"));
   const props = { businessId: "b1", connected: true, practice: false } as never;
   const week = (connected: boolean) => ({ order: ["posts", "replies"] as never, lines: {}, checked: [], count: 4, connected });
   const routine = [{ id: "share_review_link" as const, title: "Share your review link", howTo: "Text it." }, { id: "check_hours" as const, title: "Check your hours", howTo: "On Google." }, { id: "post_update" as const, title: "Post", howTo: "x" }];
-  test("Premium, connected: one tap (Approve), the top line from the real rules; the routine folds in (EN + ES)", () => {
+  test("Premium, connected: one tap (Approve), the top line from the real rules; the Growth-only tasks fold in (EN + ES)", () => {
     const html = wrap(<WeekPlanCard props={props} plan="premium" state={state} week={week(true)} routine={routine} />);
     expect(html).toContain('data-testid="list-premium"');
     expect(text(html)).toContain("Do 1 task → on track for Growing on Mon, Nov 30.");
@@ -116,10 +161,13 @@ describe("this week's plan (03, 03b)", () => {
     // Growing's result is already in hand (R1): the next result is for Thriving.
     expect(text(html)).toContain("Your next result, for Thriving: 3 new reviews in 30 days.");
     expect(text(html)).toContain("4 tasks · ranked by what they do for your tier");
-    // Only the routine items that aren't Google tasks: never a second list of the same things.
-    expect(html).toContain('data-testid="routine-share_review_link"');
-    expect(html).toContain('data-testid="routine-check_hours"');
-    expect(html).not.toContain('data-testid="routine-post_update"');
+    // §2d: the Growth-only tasks come from the week's own extras (review link, offer, holiday) — never the routine's
+    // Google tasks, and never "Check your hours" (a Presence fix).
+    const withExtras = wrap(<WeekPlanCard props={props} plan="premium" state={state} week={{ ...week(true), extras: [{ id: "share_review_link" }, { id: "start_offer" }] }} routine={routine} />);
+    expect(withExtras).toContain('data-testid="routine-share_review_link"');
+    expect(withExtras).toContain('data-testid="routine-start_offer"');
+    expect(withExtras).not.toContain('data-testid="routine-check_hours"');
+    expect(withExtras).not.toContain('data-testid="routine-post_update"');
     expect(text(wrap(<WeekPlanCard props={props} plan="premium" state={state} week={week(true)} routine={routine} />, "es"))).toContain("Haga 1 tarea → va camino de Creciendo el");
   });
   test("Grow: the steps (each with 'Premium does this for you in one click →' and 'I did this'); no Approve; check-offs count, so the top line says so", () => {

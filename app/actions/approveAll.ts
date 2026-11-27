@@ -40,7 +40,7 @@ export type WeekRepliesResult = { status: "ok"; canPost: boolean; practice: bool
 
 /** The week's replies — READ ONLY: the newest unanswered reviews as Google shows them now, each with its saved
  * draft (lib/replyBatch.server.ts writes them in the background, never here). `missing`: no draft yet. */
-export async function draftWeekReplies(businessId: string): Promise<WeekRepliesResult> {
+export async function draftWeekReplies(businessId: string, opts: { all?: boolean } = {}): Promise<WeekRepliesResult> {
   const [{ getPlan }, { isPremiumPlan }] = await Promise.all([import("@/lib/premium"), import("@/lib/plan")]);
   if (!isPremiumPlan(await getPlan())) return { status: "blocked", reason: "not_premium" };
   const { listGoogleReviews } = await import("@/app/actions/googleReviews");
@@ -50,7 +50,12 @@ export async function draftWeekReplies(businessId: string): Promise<WeekRepliesR
   const db = createClient();
   const voice = await loadReplyVoice(db, businessId);
   const saved = await loadSavedReplyDrafts(db, businessId, voice);
-  const { list, more } = replyTargets(page.reviews, new Set((page.pending ?? []).map((p: { reviewId: string }) => p.reviewId)));
+  const pendingIds = new Set((page.pending ?? []).map((p: { reviewId: string }) => p.reviewId));
+  // `all` (Fix plan's "Approve fixes", Reviews' "Approve all replies" — one set, one count): every unanswered review
+  // on Google's first page, newest first. Otherwise the week's newest 10 (today's Growth "Approve all").
+  const { list, more } = opts.all
+    ? { list: page.reviews.filter((r) => !r.reply && !pendingIds.has(r.reviewId)).sort((a, b) => (b.createTime ?? "").localeCompare(a.createTime ?? "")), more: 0 }
+    : replyTargets(page.reviews, pendingIds);
   const byId = new Map((saved.ok ? saved.drafts : []).map((d) => [d.reviewId, d]));
   const items: WeekReply[] = list.map((r) => {
     const d = byId.get(r.reviewId);

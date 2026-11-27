@@ -181,6 +181,8 @@ export async function loadGoogleResults(businessId: string, gbpParam?: string): 
       visitShare,
       actionEvents,
       websiteHours,
+      savedPostDraft: await savedPostDraftFor(businessId, timeZone, base.business.language ?? null),
+      readyReplies: await readyReplyCount(businessId),
     },
   };
 }
@@ -265,4 +267,21 @@ export async function loadGoogleListing(businessId: string, gbpParam?: string): 
 async function viewerIsDevTestLogin(): Promise<boolean> {
   const { data } = await createClient().auth.getUser();
   return isDevTestLoginEmail(data.user?.email);
+}
+
+/** §2d: this week's post draft as the background run saved it (lib/postDrafts.server.ts) — shown at once. */
+async function savedPostDraftFor(businessId: string, timeZone: string, language: string | null): Promise<string | null> {
+  const [{ savedDraft }, { weekStartOf }, { viewLocale }] = await Promise.all([import("@/lib/postDrafts.server"), import("@/lib/gbpPosts"), import("@/lib/viewLocale.server")]);
+  const text = await savedDraft(createAdminClient(), businessId, weekStartOf(Date.now(), timeZone), viewLocale(language)).catch(() => null);
+  return typeof text === "string" ? text : null;
+}
+
+/** §2d: pre-drafted replies ready to approve on Fix plan (left in Approve, at most the newest 10 it sends) — for the
+ * Growth plan's "quickest way to make this week count". */
+async function readyReplyCount(businessId: string): Promise<number> {
+  const [{ loadSavedReplyDrafts }, { loadReplyVoice }, { MAX_REPLIES }] = await Promise.all([import("@/lib/replyBatch.server"), import("@/lib/reviewReplyDraft.server"), import("@/lib/googleRecommendations")]);
+  const db = createClient();
+  const saved = await loadSavedReplyDrafts(db, businessId, await loadReplyVoice(db, businessId)).catch(() => null);
+  if (!saved?.ok) return 0;
+  return Math.min(MAX_REPLIES, saved.drafts.filter((d) => d.status === "ready" && d.reply && d.include && d.current).length);
 }

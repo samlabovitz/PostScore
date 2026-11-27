@@ -31,7 +31,9 @@ interface PracticeReview extends RawGbpReview {
 const DAY = 86_400_000;
 
 function samples(now: number): PracticeReview[] {
-  const at = (days: number) => new Date(now - days * DAY).toISOString();
+  // From the start of today (UTC), so every process (the dev server, a script) gives each sample the same times —
+  // a saved draft is matched to its review's update time.
+  const at = (days: number) => new Date(Math.floor(now / DAY) * DAY - days * DAY).toISOString();
   const review = (reviewId: string, name: string | null, stars: string, comment: string | undefined, days: number, reply?: string): PracticeReview => ({
     name: `${PRACTICE_ACCOUNT}/${PRACTICE_LOCATION}/reviews/${reviewId}`,
     reviewId,

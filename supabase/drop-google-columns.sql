@@ -12,6 +12,10 @@
 -- cleanup), owner_details, owner_website_url, verified_website_url,
 -- biz_type_resolved, the niche columns, website_analysis_json.
 
+-- One transaction: if any step fails, nothing at all is changed (the
+-- policies below included).
+begin;
+
 -- Stop unless every one of these columns is empty on every row.
 do $$
 declare
@@ -40,6 +44,59 @@ create unique index if not exists businesses_owner_website_only_site_idx
   on public.businesses (owner_id, lower(owner_website_url))
   where listing_mode = 'website_only';
 
+-- The two owner-write policies on the website-screenshots bucket (schema.sql)
+-- were meant to compare the FILE's name (storage.objects.name) with
+-- "<business id>.png". Inside their "exists (select … from businesses b)"
+-- the bare word "name" resolved to businesses.name instead, so they compared
+-- the business name with "<id>.png" (never true) and tied themselves to that
+-- column. Recreated first with the same permission (the owner may write the
+-- file named after their own business id), keyed on the business id and
+-- owner id only. "name" now sits outside the subquery, where it can only
+-- mean the file's name. Uploads themselves run server-side with the service
+-- role and don't go through these policies.
+drop policy if exists "Owners can write their business's website screenshot" on storage.objects;
+create policy "Owners can write their business's website screenshot"
+  on storage.objects for insert
+  with check (
+    bucket_id = 'website-screenshots'
+    and name in (select b.id::text || '.png' from public.businesses b where b.owner_id = auth.uid ())
+  );
+
+drop policy if exists "Owners can update their business's website screenshot" on storage.objects;
+create policy "Owners can update their business's website screenshot"
+  on storage.objects for update
+  using (
+    bucket_id = 'website-screenshots'
+    and name in (select b.id::text || '.png' from public.businesses b where b.owner_id = auth.uid ())
+  );
+
+-- Stop, listing them, if anything else (a policy or a view) still depends on
+-- a column about to be dropped. No CASCADE: nothing is ever dropped along
+-- with them.
+do $$
+declare
+  deps text;
+begin
+  select string_agg(distinct coalesce(
+           (select format('policy "%s" on %s', pol.polname, pol.polrelid::regclass) from pg_policy pol where pol.oid = d.objid),
+           (select format('view %s', r.ev_class::regclass) from pg_rewrite r where r.oid = d.objid),
+           format('%s %s', d.classid::regclass, d.objid)
+         ) || ' (uses ' || a.attname || ')', '; ')
+    into deps
+  from pg_depend d
+  join pg_attribute a on a.attrelid = d.refobjid and a.attnum = d.refobjsubid
+  where d.refobjid = 'public.businesses'::regclass
+    and d.classid in ('pg_policy'::regclass, 'pg_rewrite'::regclass)
+    and a.attname in ('name', 'address', 'phone', 'website', 'rating', 'review_count', 'category', 'categories',
+                      'primary_type', 'opening_hours', 'opening_hours_periods', 'photo_count', 'business_status',
+                      'price_level', 'google_maps_uri', 'google_service_options', 'has_recent_review',
+                      'recent_reviews_seen', 'listing_has_accessibility', 'listing_has_payment',
+                      'listing_has_parking', 'pure_service_area_business');
+  if deps is not null then
+    raise exception 'Not dropped: still in use by %. Nothing was changed.', deps;
+  end if;
+end $$;
+
 alter table public.businesses
   drop column if exists name,
   drop column if exists address,
@@ -63,5 +120,7 @@ alter table public.businesses
   drop column if exists listing_has_payment,
   drop column if exists listing_has_parking,
   drop column if exists pure_service_area_business;
+
+commit;
 
 notify pgrst, 'reload schema';

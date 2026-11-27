@@ -805,9 +805,14 @@ export function buildActionPlan(
   suggestions: Suggestion[],
   taskRows: TaskRow[],
   input: BusinessScoringInput,
-  locale: Locale = DEFAULT_LOCALE
+  locale: Locale = DEFAULT_LOCALE,
+  /** The last full scan: marks it found no change for, older than MARK_EXPIRES_DAYS, read as open (markExpired). */
+  marks: { lastScanAt: string | null; now?: Date } | null = null
 ): ActionPlanTask[] {
-  const rowByCheckId = new Map(taskRows.map((row) => [row.check_id, row]));
+  // A pending row whose check is now full is confirmed on the scan itself (reconcileTasks), so any pending row
+  // left here is still short of full points.
+  const live = marks ? taskRows.filter((row) => !markExpired(row, marks.lastScanAt, marks.now ?? new Date())) : taskRows;
+  const rowByCheckId = new Map(live.map((row) => [row.check_id, row]));
 
   return suggestions.map((s) => {
     const check = breakdown.checks.find((c) => c.id === s.checkId)!;
@@ -1291,6 +1296,24 @@ export interface TaskReconciliation {
  * breakdown is truth. Called after every re-scan (see
  * saveScoreSnapshot in app/actions/scoring.ts).
  */
+/** "I did this" lasts this long without a change: then the row goes back to normal (no "You marked this done",
+ * no "Google still doesn't show this"). */
+export const MARK_EXPIRES_DAYS = 14;
+
+/**
+ * A mark that has run out: marked more than MARK_EXPIRES_DAYS ago, a scan since then (`lastScanAt`) still finds
+ * the check short of full points, with no progress on it (no new reviews our scans recorded, for a review goal).
+ * Display only: the row stays (it's the Growth tier's record of "I did this"), the task just reads as open again.
+ * The same for test rows and real owners. Pure.
+ */
+export function markExpired(row: TaskRow, lastScanAt: string | null, now: Date): boolean {
+  if (row.status !== "pending_verification" || !row.marked_done_at || !lastScanAt || lastScanAt <= row.marked_done_at) return false;
+  const marked = Date.parse(row.marked_done_at);
+  if (!Number.isFinite(marked) || now.getTime() - marked < MARK_EXPIRES_DAYS * 86_400_000) return false;
+  // A review goal expires only when our scans know no review came in (null: only the direction is known).
+  return row.marked_metric_value === null || row.reviews_gained_since_mark === 0;
+}
+
 export function reconcileTasks(breakdown: ScoreBreakdown, taskRows: TaskRow[]): TaskReconciliation {
   const toComplete: string[] = [];
   const toReopen: string[] = [];

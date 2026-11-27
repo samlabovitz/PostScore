@@ -19,7 +19,7 @@ const check = (input: BusinessScoringInput, id: string) => v112(input).checks.fi
 
 describe("the version bump", () => {
   test("SCORING_VERSION is 1.14.0 (keeping every 1.12.0 check); v1.11.0 still scores the old way", () => {
-    expect(SCORING_VERSION).toBe("1.17.0");
+    expect(SCORING_VERSION).toBe("1.18.0");
     expect(checksFor(SCORING_VERSION_V112)).toBe(CHECKS_V112);
     expect(checksFor(SCORING_VERSION)).toBe(CHECKS_V112);
     expect(checksFor("1.11.0")).toBe(CHECKS);

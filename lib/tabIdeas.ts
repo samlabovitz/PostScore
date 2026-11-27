@@ -6,6 +6,7 @@ import type { GoogleProfileTabProps } from "@/components/gbp/googleTabParts";
 import { ideaTypeOf, listingIdeas, type Idea } from "@/lib/listingIdeas";
 import { recommendations, type Rec, type RecInputs } from "@/lib/googleRecommendations";
 import { answersPlan } from "@/lib/googleAnswers";
+import { NEW_PAGES_LIVE } from "@/lib/routes";
 
 export function tabIdeasFor(props: GoogleProfileTabProps, timeZone: string, now: number): { ideas: Idea[]; recs: Rec[]; type: ReturnType<typeof ideaTypeOf> } {
   const extras = props.extras ?? null;
@@ -42,6 +43,10 @@ export function tabIdeasFor(props: GoogleProfileTabProps, timeZone: string, now:
 }
 
 /** This week's to-dos: the replies, photos, the post and the answers. */
-export function weekKinds(recs: Rec[]): Rec[] {
-  return recs.filter((r) => r.kind === "replies" || r.kind === "photos" || r.kind === "posts" || r.kind === "answers");
+/** §2d (new design): the Growth week's Google tasks — the post and fresh photos. Replies and the answers
+ * (description, services, customer details) are Presence fixes: they live on Fix plan, Reviews and the Google
+ * listing, never here too. Today's design (NEW_PAGES_LIVE off) keeps all four until the new pages go live. */
+export function weekKinds(recs: Rec[], newDesign: boolean = NEW_PAGES_LIVE): Rec[] {
+  if (!newDesign) return recs.filter((r) => r.kind === "replies" || r.kind === "photos" || r.kind === "posts" || r.kind === "answers");
+  return recs.filter((r) => r.kind === "photos" || r.kind === "posts");
 }

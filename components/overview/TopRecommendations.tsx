@@ -14,7 +14,7 @@ import { pointsText, recRangeText, websiteRangeText, wholePointRange } from "@/l
 import { FixButton, FIX_BUTTON_CLASS } from "@/components/scoring/FixButton";
 import { DetailsMismatchTasks, DetailsVersions, MergedActions, mergedTitle } from "@/components/overview/DetailsMismatchTasks";
 import { mergedKind, mismatchesCoveredBy, URGENT_DETAILS, type DetailsMismatch } from "@/lib/detailsMismatch";
-import { hoursWaitingOnGoogle, isHoursCheck, type HoursCheckState } from "@/lib/hoursCheck";
+import { hoursWaitingOnGoogle, shownHoursState, type HoursCheckState } from "@/lib/hoursCheck";
 import { HoursDiffLines, RescanNowButton, WaitingForGoogleTag } from "@/components/scoring/HoursCheck";
 import type { OwnerDetails } from "@/lib/ownerDetails";
 import { withFromScore } from "@/lib/fixDestination";
@@ -124,8 +124,11 @@ export function TopRecommendations({
   // Day 25B step 3: an hours check that matches now (a re-scan away) or
   // waits on Google (Business Profile ahead of Maps) is never in the top
   // items — after every other one.
-  const staleHours = (r: Recommendation) =>
-    (hoursCheck?.kind === "stale" || hoursWaitingOnGoogle(hoursCheck)) && covered(r).length === 0 && r.source.kind === "task" && isHoursCheck(r.source.task);
+  const staleHours = (r: Recommendation) => {
+    if (covered(r).length > 0 || r.source.kind !== "task") return false;
+    const shown = shownHoursState(r.source.task, hoursCheck);
+    return shown?.kind === "stale" || hoursWaitingOnGoogle(shown);
+  };
   const recommendations =
     allRecommendations === null
       ? null
@@ -176,7 +179,7 @@ export function TopRecommendations({
               // Google and the website agree: only the confirmed details differ — no points to win.
               const ownerOnly = merged.length > 0 && mergedKind(merged) === "owner_only";
               // The scored hours check, as it is now: matching (re-scan) or the exact days that differ.
-              const hours = merged.length === 0 && rec.source.kind === "task" && isHoursCheck(rec.source.task) ? hoursCheck : null;
+              const hours = merged.length === 0 && rec.source.kind === "task" ? shownHoursState(rec.source.task, hoursCheck) : null;
               const stale = hours?.kind === "stale";
               const waiting = hoursWaitingOnGoogle(hours);
               const priority = merged.some((m) => URGENT_DETAILS.includes(m.field)) ? "urgent" : rec.priority;
